@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Gringo",
+  "description": "Stedelijk Onderwijs Antwerpen. Helper extension voor Ariba.",
+  "version": "1.0",
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": "images/gringo.png"
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "generated/bundle.js"
+      ],
+      "css": [
+        "css/general.css",
+        "css/light_colors.css",
+        "css/dark_colors.css"
+      ],
+      "matches": [
+        "https://s1-eu.ariba.com/*"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "generated/serviceworker.js"
+  },
+  "options_page": "options.html",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "web_accessible_resources": [ {
+    "matches": ["https://s1-eu.ariba.com/*"],
+    "_comment": "typescript folder included for debugging in browser!",
+    "resources": [
+      "generated/*",
+      "typescript/*",
+      "images/*"
+    ]
+  }
+  ]
+}

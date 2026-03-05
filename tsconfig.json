@@ -1,0 +1,19 @@
+{
+  "include": ["typescript/**/*"],
+  "exclude": [],
+  "compilerOptions": {
+    "outDir": "./generated",
+    "target": "es2021",
+    "sourceMap": true,
+    "noEmit": true,
+    "incremental": false,
+    "moduleResolution": "bundler",
+    "paths": {
+      "default_items": []
+    },
+    "typeRoots": ["node_modules/@types"]
+  },
+  "types": [
+    "chrome"
+  ]
+}

@@ -1,0 +1,352 @@
+@import "light_colors.css";
+@import "dark_colors.css";
+
+:root {
+    --dko3-blue: #007bff;
+}
+
+.btn-outline-secondary.toggled,
+.btn-outline-info.toggled
+{
+    color: #fff;
+    background-color: var(--dko3-blue);
+    border-color: #6c757d;
+}
+
+body.otherSchool {
+    background: repeating-linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0),
+            rgba(255, 255, 255, 0) 10px,
+            rgba(255, 0, 100, .05) 10px,
+            rgba(255, 0, 100, .05) 12px
+    );
+}
+
+.oldYear {
+    #leerling_inschrijvingen_btn_nieuwe_inschrijving,
+    #leerling_inschrijvingen_btn_nieuwe_inschrijving + button    {
+        background-color: var(--old-year-background-color);
+        border-color: var(--old-year-border-color);
+        color: var(--old-year-color);
+    }
+    #leerling_inschrijvingen_weergave button.btn_inschrijvingen_toewijzing_ongedaan_maken,
+    #leerling_inschrijvingen_weergave button.btn_inschrijvingen_toewijzen,
+    #leerling_inschrijvingen_weergave button.btn_leerling_inschrijvingen_verwijder_of_schrijf_uit,
+    #attesten button.btn-outline-success {
+        opacity: 0.1;
+    }
+
+}
+
+@keyframes barberpole {
+    from {
+        background-position: 0 0;
+    }
+    to {
+        background-position: 60px 30px;
+    }
+}
+
+.runningStripes {
+    background-size: 30px 30px;
+    background-image: linear-gradient(45deg, var(--running-stripes-color) 0%, transparent 0%, transparent 48%, var(--running-stripes-color) 48%, var(--running-stripes-color) 51%, transparent 51%, transparent);
+    animation: barberpole 0.5s linear infinite;
+}
+
+#werklijst_uren {
+    tr.darkRow {
+        background-color: rgba(72, 61, 139, 0.08);
+    }
+    th, td {
+        border-style: solid;
+        border-width: 1px;
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+    th {
+        background-color: lightgray;
+    }
+    button {
+        padding: 0 3px;
+        margin: 0;
+        border-style: none;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 119, 0.07);
+        &:focus, &:focus-visible {
+            border-style: none;
+            outline-style: none;
+        }
+    }
+    td.yellow {
+        background-color: rgba(255, 255, 0, 0.71);
+    }
+    td.blueish {
+        background-color: rgba(70, 104, 149, 0.48);
+    }
+    td.creme {
+        background-color: rgba(189, 141, 1, 0.2);
+    }
+}
+.infoMessage {
+    text-align: center;
+}
+
+.infoLine {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .progressText {
+        font-size: .7em;
+        opacity: 0.7;
+    }
+    .progressBar {
+        margin-bottom: 6px;
+    }
+}
+
+.progressBlock {
+    margin-left: 2px;
+    width: 30px;
+    height: 5px;
+    background-color: slategray;
+    display: inline-block;
+    &.iddle {
+        background-color: slategray;
+        opacity: .5;
+    }
+    &.loading {
+        background-size: 10px 10px;
+        background-image: linear-gradient(45deg, white 0%, transparent 0%, transparent 48%, white 48%, white 51%, transparent 51%, transparent);
+        animation: barberpole 1s linear infinite;
+    }
+    &.loaded {
+        background-color: slategray;
+    }
+}
+
+.cacheInfo {
+    text-align: center;
+    font-size: .7em;
+    color: darkslateblue;
+    opacity: .5;
+    padding: 0;
+    margin: 0;
+}
+
+#powerQuery {
+    background-color: var(--power-query-background) !important;
+    margin-top: 200px;
+    border: none;
+    border-radius: 3px;
+    padding: 5px;
+    box-shadow: 3px 3px 10px 1px rgb(0 0 0 / 20%);
+    min-width: 300px;
+    font-family: "Open Sans", sans-serif;
+    label {
+        height: 23px;
+        padding: 0 3px;
+        border-radius: 3px;
+        background-color: var(--power-query-label-color);
+        display: block;
+    }
+    div.list {
+        padding: 0;
+        background-color: var(--power-query-list-color) !important;
+        @media (prefers-color-scheme: dark) {
+            background-color: darkgray;
+        }
+        border-radius: 3px;
+        max-height: 800px;
+        overflow-y: hidden;
+        div {
+            padding: 0 3px;
+            &:hover {
+                background-color: var(--power-query-selected-item-color);
+            }
+        }
+        div.selected {
+            background-color: var(--power-query-selected-item-color);
+        }
+    }
+}
+table tfoot.separatorLine {
+    border-top-style: solid;
+    border-top-color: black;
+    border-top-width: 2px;
+}
+
+.tableFilter {
+    margin-left: 5px;
+}
+a.bold {
+    font-weight: bold;
+}
+
+a.leerlingLabel {
+    margin-left: 1ch;
+}
+
+div.collapsed {
+    display: none;
+}
+
+span.searchButton {
+    border-style: solid;
+    border-width: thin;
+    display: inline-block;
+    margin-left: .5ch;
+    & input {
+        border: none;
+        &:focus {
+            outline: none;
+        }
+    }
+    & button {
+        background-color: transparent;
+        border: none;
+        color: white;
+        padding: 0;
+        margin: 0;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        width: 1.5em;
+        height: 1.5em;
+        opacity: 0.5;
+        &:hover {
+            opacity: 1;
+        }
+        & img {
+            width: 20px;
+            height: 20px;
+            position: relative;
+            top: -.1em;
+        }
+    }
+}
+
+button.naked {
+    background: none;
+    border: none;
+    color: inherit;
+    padding: 0;
+}
+
+button.btn.svg img {
+    width: 1em;
+    position: relative;
+    top: -.15em;
+}
+
+button.miniButton {
+    & i {
+        margin-left: .5ch;
+    }
+
+    & i:before {
+        font-size: .7em !important;
+    }
+
+}
+
+.dropDownMenu {
+    --menu-width:  30ch;
+    display: none;
+    position: absolute;
+    background-color: white;
+    width: var(--menu-width);
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+    z-index: 1;
+    & .menuIndent1
+    {
+        padding-left: 26px;
+    }
+
+    & .menuIndent2
+    {
+        padding-left: 46px;
+    }
+
+    & .menuIndent3
+    {
+        padding-left: 66px;
+    }
+    & .dropDownSeparator.menuIndent1 {
+        margin-left: 26px;
+        padding-left: 0;
+        background-color: transparent;
+    }
+
+}
+.shiftMenuLeft .dropDownMenu {
+    left: calc(2ch - var(--menu-width)); /*subtract estimated widto of buttonn from offset*/
+}
+
+
+.dropDownContainer {
+    position: relative;
+    display: inline-block;
+}
+
+button.dropDownItem {
+    color: black;
+    padding: 5px 16px;
+    text-decoration: none;
+    text-align: left;
+    display: block;
+    /*noinspection CssInvalidPropertyValue*/
+    width: -webkit-fill-available;
+}
+
+div.dropDownSeparator {
+    color: rgba(0,0,0, 0.7);
+    background-color: rgba(0,0,0, 0.05);
+    padding: 4px 16px 0 16px;
+    text-decoration: none;
+    text-align: left;
+    display: block;
+    /*noinspection CssInvalidPropertyValue*/
+    width: -webkit-fill-available;
+}
+
+
+/* Change color of dropdown links on hover */
+.dropDownItem:hover {background-color: #8080a030;}
+
+/* Show the dropdown menu on hover */
+/*.dropDownContainer:hover .dropDownMenu {display: block;}*/
+
+.dropDownMenu.show {
+    display:block;
+}
+
+button.likeLink {
+    background: none!important;
+    border: none;
+    padding: 0!important;
+    color: var(--dko3-blue);
+    cursor: pointer;
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+span.filterInfo {
+    margin-left: 1ch;
+}
+
+.werklijstButtonWrapper {
+    display: flex;
+    gap: .5em;
+}
+
+.lastName {
+    font-weight: 500;
+}
+.officialName {
+    font-weight: 500;
+    font-style: italic;
+}

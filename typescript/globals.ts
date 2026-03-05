@@ -1,0 +1,162 @@
+import {Observer} from "./pageObserver";
+import {emmet} from "../libs/Emmeter/html";
+import {fetchGlobalSettings, getGlobalSettings, GlobalSettings, options, setGlobalSetting} from "./plugin_options/options";
+import {Actions, sendRequest, TabType} from "./messaging";
+
+export let observers: Observer[] = [];
+export let settingsObservers: (() => void)[] = [];
+
+export function registerObserver(observer: Observer) {
+    observers.push(observer);
+    if(observers.length > 20) //just in case...
+        console.error("Too many observers!");
+}
+
+export function registerSettingsObserver(observer: () => void) {
+    settingsObservers.push(observer);
+    if(settingsObservers.length > 20) //just in case...
+        console.error("Too many settingsObservers!");
+}
+
+export function clamp(value: number, min: number, max: number) {
+    return Math.min(Math.max(value, min), max);
+}
+
+export function isAlphaNumeric(str: string) {
+    if (str.length > 1)
+        return false;
+    let code: number;
+    let i: number;
+    let len: number;
+
+    for (i = 0, len = str.length; i < len; i++) {
+        code = str.charCodeAt(i);
+        if (!(code > 47 && code < 58) && // numeric (0-9)
+            !(code > 64 && code < 91) && // upper alpha (A-Z)
+            !(code > 96 && code < 123)) { // lower alpha (a-z)
+            return false;
+        }
+    }
+    return true;
+}
+
+export function rangeGenerator(start: number, stop: number, step = 1): number[] {
+    return Array(Math.ceil((stop - start) / step)).fill(start).map((x, y) => x + y * step);
+}
+
+export function distinct<Type>(array: Type[]): Type[] {
+    return [...new Set(array)];
+}
+
+export function equals(g1: GlobalSettings, g2: GlobalSettings){
+    return (
+        g1.globalHide === g2.globalHide
+    );
+}
+
+export let rxEmail = /\w[\w.\-]*@\w+\.\w+/gm;
+
+export type Nominal<T> = T & { readonly '': unique symbol };
+export type DataCacheId = Nominal<string>;
+
+export async function openHtmlTab(cacheId: DataCacheId, pageTitle: string) {
+    return sendRequest(Actions.OpenHtmlTab, TabType.Main, TabType.Html, undefined, {cacheId}, pageTitle);
+}
+
+export interface HtmlData {
+    title: string,
+    html: string,
+}
+
+export function writeTableToClipboardForExcel(table: HTMLTableElement) {
+    let html = table.outerHTML
+        .replaceAll('\n','<br style="mso-data-placement:same-cell;"/>')  // new lines inside html cells => Alt+Enter in Excel
+        .replaceAll('<td','<td style="vertical-align: top;"');  // align top
+    return navigator.clipboard.writeText(html);
+}
+
+export function createHtmlTable(headers: Iterable<string>, cols: Iterable<Iterable<string>>) {
+    let tmpDiv = document.createElement("div");
+    let {first: tmpTable, last: tmpThead} = emmet.appendChild(tmpDiv, "table>thead");
+    for (let th of headers) {
+        emmet.appendChild(tmpThead as HTMLElement, `th{${th}}`);
+    }
+    let tmpTbody = tmpTable.appendChild(document.createElement("tbody"));
+    for (let tr of cols) {
+        let tmpTr = tmpTbody.appendChild(document.createElement("tr"));
+        for (let cell of tr) {
+            emmet.appendChild(tmpTr, `td{${cell}}`);
+        }
+    }
+    return tmpTable as HTMLTableElement;
+}
+
+export type ResultOk<T> = {
+    result: T
+}
+
+export type ResultFail = {
+    error: NonNullable<string>
+}
+
+type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
+type XOR<T, U> = (T | U) extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
+
+export type Result<T> = XOR<ResultOk<T>,ResultFail>
+
+export function range(startAt: number, upTo: number) {
+    if (upTo > startAt)
+        return [...Array(upTo - startAt).keys()].map(n => n + startAt);
+    else
+        return [...Array(startAt - upTo).keys()].reverse().map(n => n + upTo + 1);
+}
+
+export async function getOptions() {
+    let items = await chrome.storage.sync.get(null); //get all
+    // xxx @ts-ignore
+    Object.assign(options, items);
+    setGlobalSetting(await fetchGlobalSettings(getGlobalSettings()));
+}
+
+export function arrayIsEqual(a: string[], b: string[]) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+    let aSet = new Set(a);
+    return b.every((value, _) => aSet.has(value));
+}
+
+export function escapeRegexChars(text: string): string {
+    return text
+        .replaceAll("\\", "\\\\")
+        .replaceAll("^", "\\^")
+        .replaceAll("$", "\\$")
+        .replaceAll(".", "\\.")
+        .replaceAll("|", "\\|")
+        .replaceAll("?", "\\?")
+        .replaceAll("*", "\\*")
+        .replaceAll("+", "\\+")
+        .replaceAll("(", "\\(")
+        .replaceAll(")", "\\)")
+        .replaceAll("[", "\\[")
+        .replaceAll("]", "\\]")
+        .replaceAll("{", "\\{")
+        .replaceAll("}", "\\}")
+}
+
+export function getImmediateText(element: HTMLElement) {
+    return [...element.childNodes].map(c => c.nodeType === 3 ? c.textContent : "").join("");
+}
+
+export function tryUntil(func: () => boolean) {
+    if (!func())
+        setTimeout(() => tryUntil(func), 100);
+}
+
+export function tryUntilThen(func: () => boolean, then: () => void) {
+    if (func()) {
+        then();
+    } else {
+        setTimeout(() => tryUntilThen(func, then), 100);
+    }
+}
