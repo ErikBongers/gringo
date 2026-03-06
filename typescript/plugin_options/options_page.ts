@@ -28,7 +28,6 @@ const saveOptionsFromGui = () => {
         newOptions[option.id] = document.getElementById(option.id)[option.property];
 
     }
-    // @ts-ignore
     chrome.storage.sync.set(
         newOptions, () => {
             // Update status to let user know options were saved.

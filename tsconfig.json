@@ -9,7 +9,6 @@
     "incremental": false,
     "moduleResolution": "bundler",
     "paths": {
-      "default_items": []
     },
     "typeRoots": ["node_modules/@types"]
   },
