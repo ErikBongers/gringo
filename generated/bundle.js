@@ -133,7 +133,11 @@
 		decorateAllPRs();
 	}
 	function onMutation(mutation) {
-		return true;
+		if (document.querySelector("fd-pagination")) {
+			gringo("found pagination.");
+			return true;
+		}
+		return false;
 	}
 	function gringo(...args) {
 		console.log("gringo", ...args);

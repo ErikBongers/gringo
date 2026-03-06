@@ -17,8 +17,11 @@ function onPageRefreshed() {
 }
 
 function onMutation(mutation: MutationRecord) {
-    // gringo("mutation: ", mutation);
-        return true; //todo: not needed?
+    if(document.querySelector("fd-pagination")) {
+        decorateAllPRs();
+        return true;
+    }
+    return false;
 }
 
 function gringo(...args) {
