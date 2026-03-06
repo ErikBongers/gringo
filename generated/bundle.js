@@ -38,6 +38,10 @@
 	//#region typescript/globals.ts
 	let observers = [];
 	let settingsObservers = [];
+	function registerObserver(observer) {
+		observers.push(observer);
+		if (observers.length > 20) console.error("Too many observers!");
+	}
 	function equals(g1, g2) {
 		return g1.globalHide === g2.globalHide;
 	}
@@ -45,6 +49,98 @@
 		let items = await chrome.storage.sync.get(null);
 		Object.assign(options, items);
 		setGlobalSetting(await fetchGlobalSettings(getGlobalSettings()));
+	}
+	function tryUntilThen(func, then) {
+		if (func()) then();
+		else setTimeout(() => tryUntilThen(func, then), 100);
+	}
+	//#endregion
+	//#region typescript/pageObserver.ts
+	var PartialUrlPageFilter = class {
+		constructor(partialUrl) {
+			this.partialUrl = partialUrl;
+		}
+		match() {
+			return window.location.href.includes(this.partialUrl);
+		}
+	};
+	var BaseObserver = class {
+		constructor(onPageChangedCallback, pageFilter, onMutationCallback, trackModal = false, onPageRefreshedCallback = void 0) {
+			this.isPageMatching = () => this.pageFilter.match();
+			this.onPageChangedCallback = onPageChangedCallback;
+			this.onPageRefreshedCallback = onPageRefreshedCallback;
+			this.pageFilter = pageFilter;
+			this.onMutation = onMutationCallback;
+			this.trackModal = trackModal;
+			if (onMutationCallback) this.observer = new MutationObserver((mutationList, observer) => this.observerCallback(mutationList, observer));
+		}
+		observerCallback(mutationList, _observer) {
+			for (const mutation of mutationList) {
+				if (mutation.type !== "childList") continue;
+				if (this.onMutation(mutation)) break;
+			}
+		}
+		onPageRefreshed() {
+			if (this.onPageRefreshedCallback) {
+				if (this.isPageMatching()) tryUntilThen(this.isPageReallyLoaded, this.onPageRefreshedCallback);
+			}
+		}
+		onPageChanged() {
+			if (!this.pageFilter.match()) {
+				this.disconnect();
+				return;
+			}
+			if (this.onPageChangedCallback) this.onPageChangedCallback();
+			if (!this.onMutation) return;
+			console.log("Observing main element.");
+			if (!document.querySelector("main")) console.error("Can't attach observer to element.");
+			this.observeElement(document.querySelector("main"));
+			if (this.trackModal) this.observeElement(document.getElementById("dko3_modal"));
+		}
+		observeElement(element) {
+			if (!element) {
+				console.error("Can't attach observer to element.");
+				return;
+			}
+			this.observer.observe(element, {
+				attributes: false,
+				childList: true,
+				subtree: true
+			});
+		}
+		disconnect() {
+			this.observer?.disconnect();
+		}
+	};
+	var PartialUrlObserver = class extends BaseObserver {
+		constructor(partialUrl, onMutationCallback, trackModal = false, onPageRefreshedCallback = void 0) {
+			super(void 0, new PartialUrlPageFilter(partialUrl), onMutationCallback, trackModal, onPageRefreshedCallback);
+		}
+	};
+	//#endregion
+	//#region typescript/aanvragen/observer.ts
+	var AanvragenObserver = class extends PartialUrlObserver {
+		constructor() {
+			super("request-info-list/requisition", onMutation, false, onPageRefreshed$1);
+		}
+		isPageReallyLoaded() {
+			return true;
+		}
+	};
+	var observer_default = new AanvragenObserver();
+	function onPageRefreshed$1() {
+		gringo("page Aanvragen refreshed xxx.");
+		decorateAllPRs();
+	}
+	function onMutation(mutation) {
+		return true;
+	}
+	function gringo(...args) {
+		console.log("gringo", ...args);
+	}
+	function decorateAllPRs() {
+		let requests = document.querySelectorAll("request-info-item");
+		gringo("ids: ", Array.from(requests).map((e) => e.id));
 	}
 	//#endregion
 	//#region typescript/main.ts
@@ -60,6 +156,7 @@
 				checkGlobalSettings();
 				onPageChanged();
 			});
+			registerObserver(observer_default);
 			onPageChanged();
 			if (document.readyState == "complete") {
 				console.log("document ready. firing onPageRefreshed.");

@@ -1,5 +1,6 @@
 import {equals, getOptions, observers, registerObserver, settingsObservers} from "./globals";
-import {fetchGlobalSettings, getGlobalSettings, options, setGlobalSetting} from "./plugin_options/options";
+import {fetchGlobalSettings, getGlobalSettings, setGlobalSetting} from "./plugin_options/options";
+import aanvragenObserver from "./aanvragen/observer";
 
 init();
 
@@ -23,7 +24,7 @@ function init() {
         });
 
         //do registrations here to get all these observers/pages into the same compilation unit.
-        // registerObserver(xxxObserver);
+        registerObserver(aanvragenObserver);
         onPageChanged();
         if(document.readyState == "complete") {
             console.log("document ready. firing onPageRefreshed.");
