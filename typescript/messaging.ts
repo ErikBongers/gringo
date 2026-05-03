@@ -6,7 +6,9 @@ export enum Actions {
     TabData = "tab_data",
     GetParentTabId = "get_parent_tab_id",
     OpenHoursSettings = "open_hours_settings",
+    OpenDiffSettings = "open_diff_settings",
     HoursSettingsChanged = "open_hours_settings_changed",
+    DiffSettingsChanged = "diff_settings_changed",
     GreetingsFromParent = "greetingsFromParent",
     GreetingsFromChild = "greetingsFromChild",
 }
@@ -15,6 +17,7 @@ export enum TabType {
     Undefined= "Undefined",
     Main = "Main",
     HoursSettings = "HoursSettings",
+    DiffSettings = "diffSettings",
     Html = "Html"
 }
 
@@ -28,7 +31,7 @@ export interface ServiceRequest {
     targetTabId?: number,
 }
 
-export function sendRequest(action: Actions, from: TabType, to: TabType,  toId: number, data: any, pageTitle?: string) {
+export function sendRequest(action: Actions, from: TabType, to: TabType,  toId: number | undefined, data: any, pageTitle?: string) {
     let req: ServiceRequest = {
         action,
         data,
@@ -47,6 +50,7 @@ export interface ServiceResponse {
 
 export enum DataRequestTypes {
     HoursSettings = "HoursSettings",
+    DiffSettings = "DiffSettings",
     Html = "Html" //todo: this is just for tests.
 }
 
@@ -54,20 +58,24 @@ export type HourSettingsDataRequestParams = {
     schoolYear: string,
 }
 
+export type DiffSettingsDataRequestParams = {
+    academie: string,
+    schoolYear: string,
+}
+
 export type HtmlDataRequestParams = {
     cacheId: DataCacheId,
 }
 
-export type RequestParams = HourSettingsDataRequestParams | HtmlDataRequestParams;
+export type RequestParams = HourSettingsDataRequestParams | HtmlDataRequestParams | DiffSettingsDataRequestParams;
 export interface DataRequestInfo<Params extends RequestParams> {
-    tabId: number,
+    tabId: number | undefined,
     dataType: DataRequestTypes,
     params: Params,
 }
 
 export async function sendDataRequest<T extends RequestParams>(sender: TabType, dataType: DataRequestTypes, params: T) {
-    //@ts-ignore
-    let tab = await chrome.tabs.getCurrent();
+    let tab = (await chrome.tabs.getCurrent())!;
     let dataRequestInfo: DataRequestInfo<T> = {
         tabId: tab.id,
         dataType: dataType,
@@ -77,16 +85,16 @@ export async function sendDataRequest<T extends RequestParams>(sender: TabType, 
 }
 
 export type MessageHandler = {
-    getListener: () => (request: ServiceRequest, _sender, _sendResponse) => void;
+    getListener: () => (request: ServiceRequest, _sender: any, _sendResponse: any) => void;
     onMessageForMyTabType: (callback: (msg: ServiceRequest) => void) => MessageHandler;
     onMessageForMe: (callback: (msg: ServiceRequest) => void) => MessageHandler;
     onData: (callback: (data: any) => void) => MessageHandler;
 }
 
 export interface InternalMessageHandler extends MessageHandler {
-    _onMessageForMyTabType(request: ServiceRequest): void;
-    _onMessageForMe(request: ServiceRequest): void;
-    _onData(data: any): void;
+    _onMessageForMyTabType?(request: ServiceRequest): void;
+    _onMessageForMe?(request: ServiceRequest): void;
+    _onData?(data: any): void;
 }
 
 export function createMessageHandler(tabType: TabType): MessageHandler {
@@ -97,8 +105,7 @@ export function createMessageHandler(tabType: TabType): MessageHandler {
                 console.log(`tab received: `, request);
                 if (request.targetTabType === tabType) {
                     self._onMessageForMyTabType?.(request);
-                    //@ts-ignore
-                    let tab = await chrome.tabs.getCurrent();
+                    let tab = (await chrome.tabs.getCurrent())!;
                     if (request.targetTabId === tab.id) {
                         if(request.action === Actions.TabData && self._onData) {
                             self._onData(request);

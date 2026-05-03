@@ -29,13 +29,13 @@ export interface Observer {
 }
 
 export abstract class BaseObserver implements Observer {
-    private readonly onPageChangedCallback: () => void;
-    private readonly onPageRefreshedCallback: () => void;
+    private readonly onPageChangedCallback?: () => void;
+    private readonly onPageRefreshedCallback?: () => void;
     private pageFilter: PageFilter;
-    private readonly onMutation: (mutation: MutationRecord) => boolean;
+    private readonly onMutation?: (mutation: MutationRecord) => boolean;
     private observer: MutationObserver;
     private readonly trackModal: boolean;
-    protected constructor(onPageChangedCallback: () => void, pageFilter: PageFilter, onMutationCallback: (mutation: MutationRecord) => boolean, trackModal: boolean = false, onPageRefreshedCallback: () => void = undefined) {
+    protected constructor(onPageChangedCallback: (() => void) | undefined, pageFilter: PageFilter, onMutationCallback: ((mutation: MutationRecord) => boolean) | undefined, trackModal: boolean = false, onPageRefreshedCallback?: () => void) {
         this.onPageChangedCallback = onPageChangedCallback;
         this.onPageRefreshedCallback = onPageRefreshedCallback;
         this.pageFilter = pageFilter;
@@ -47,6 +47,8 @@ export abstract class BaseObserver implements Observer {
     }
 
     observerCallback(mutationList: MutationRecord[] , _observer: MutationObserver) {
+        if(!this.onMutation)
+            return;
         for (const mutation of mutationList) {
             if (mutation.type !== "childList") {
                 continue;
@@ -76,11 +78,11 @@ export abstract class BaseObserver implements Observer {
         if (!this.onMutation)
             return;
         console.log("Observing main element.");
-        if(!document.querySelector("main"))
+        if(!document.querySelector("main")) //TODO
             console.error("Can't attach observer to element.");
-        this.observeElement(document.querySelector("main"));
+        this.observeElement(document.querySelector("main")!);
         if(this.trackModal)
-            this.observeElement(document.getElementById("dko3_modal"));
+            this.observeElement(document.getElementById("dko3_modal")!);
     }
 
     observeElement(element: HTMLElement) {
@@ -105,7 +107,7 @@ export abstract class BaseObserver implements Observer {
 }
 
 export abstract class PartialUrlObserver extends BaseObserver {
-    protected constructor(partialUrl: string, onMutationCallback: (mutation: MutationRecord) => boolean, trackModal: boolean = false, onPageRefreshedCallback: () => void = undefined) {
+    protected constructor(partialUrl: string, onMutationCallback: (mutation: MutationRecord) => boolean, trackModal: boolean = false, onPageRefreshedCallback?: () => void) {
         super(undefined, new PartialUrlPageFilter(partialUrl), onMutationCallback, trackModal, onPageRefreshedCallback);
     }
 }

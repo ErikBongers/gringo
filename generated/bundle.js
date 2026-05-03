@@ -65,7 +65,7 @@
 		}
 	};
 	var BaseObserver = class {
-		constructor(onPageChangedCallback, pageFilter, onMutationCallback, trackModal = false, onPageRefreshedCallback = void 0) {
+		constructor(onPageChangedCallback, pageFilter, onMutationCallback, trackModal = false, onPageRefreshedCallback) {
 			this.isPageMatching = () => this.pageFilter.match();
 			this.onPageChangedCallback = onPageChangedCallback;
 			this.onPageRefreshedCallback = onPageRefreshedCallback;
@@ -75,6 +75,7 @@
 			if (onMutationCallback) this.observer = new MutationObserver((mutationList, observer) => this.observerCallback(mutationList, observer));
 		}
 		observerCallback(mutationList, _observer) {
+			if (!this.onMutation) return;
 			for (const mutation of mutationList) {
 				if (mutation.type !== "childList") continue;
 				if (this.onMutation(mutation)) break;
@@ -113,7 +114,7 @@
 		}
 	};
 	var PartialUrlObserver = class extends BaseObserver {
-		constructor(partialUrl, onMutationCallback, trackModal = false, onPageRefreshedCallback = void 0) {
+		constructor(partialUrl, onMutationCallback, trackModal = false, onPageRefreshedCallback) {
 			super(void 0, new PartialUrlPageFilter(partialUrl), onMutationCallback, trackModal, onPageRefreshedCallback);
 		}
 	};
@@ -134,7 +135,7 @@
 	}
 	function onMutation(mutation) {
 		if (document.querySelector("fd-pagination")) {
-			gringo("found pagination.");
+			decorateAllPRs();
 			return true;
 		}
 		return false;

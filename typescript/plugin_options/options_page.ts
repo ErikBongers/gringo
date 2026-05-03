@@ -25,13 +25,15 @@ const saveOptionsFromGui = () => {
         touched: Date.now() // needed to trigger the storage changed event.
     };
     for (let option of htmlOptionDefs.values()) {
+        // @ts-ignore
         newOptions[option.id] = document.getElementById(option.id)[option.property];
 
     }
+    // @ts-ignore
     chrome.storage.sync.set(
         newOptions, () => {
             // Update status to let user know options were saved.
-            const status = document.getElementById('status');
+            const status = document.getElementById('status')!;
             status.textContent = 'Opties bewaard.';
             setTimeout(() => {
                 status.textContent = '';
@@ -48,6 +50,7 @@ async function restoreOptionsToGui(){
         let optionDef = htmlOptionDefs.get(key);
         if(!optionDef)
             continue; //no GUI for this option.
+        // @ts-ignore
         document.getElementById(optionDef.id)[optionDef.property] = value;
     }
 }
@@ -56,11 +59,11 @@ async function fillOptionsInGui() {
     for(let optiondDef of htmlOptionDefs.values()){
         if(!optiondDef.blockId)
             continue;
-        let block = document.getElementById(optiondDef.blockId);
+        let block = document.getElementById(optiondDef.blockId)!;
         emmet.appendChild(block, `label>input#${optiondDef.id}[type="checkbox"]+{${optiondDef.label}}`);
     }
     await restoreOptionsToGui();
 }
 
 document.addEventListener('DOMContentLoaded', fillOptionsInGui);
-document.getElementById('save').addEventListener('click', saveOptionsFromGui);
+document.getElementById('save')!.addEventListener('click', saveOptionsFromGui);

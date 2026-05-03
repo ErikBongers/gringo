@@ -6,7 +6,9 @@
 		Actions["TabData"] = "tab_data";
 		Actions["GetParentTabId"] = "get_parent_tab_id";
 		Actions["OpenHoursSettings"] = "open_hours_settings";
+		Actions["OpenDiffSettings"] = "open_diff_settings";
 		Actions["HoursSettingsChanged"] = "open_hours_settings_changed";
+		Actions["DiffSettingsChanged"] = "diff_settings_changed";
 		Actions["GreetingsFromParent"] = "greetingsFromParent";
 		Actions["GreetingsFromChild"] = "greetingsFromChild";
 		return Actions;
@@ -15,6 +17,7 @@
 		TabType["Undefined"] = "Undefined";
 		TabType["Main"] = "Main";
 		TabType["HoursSettings"] = "HoursSettings";
+		TabType["DiffSettings"] = "diffSettings";
 		TabType["Html"] = "Html";
 		return TabType;
 	}({});
@@ -70,6 +73,16 @@
 					sendResponse({ tabId: tab.id });
 				});
 				return true;
+			case Actions.OpenDiffSettings:
+				setTabId(TabType.Main, sender.tab.id).then(() => {});
+				let params = new URLSearchParams({
+					academie: message.data.academie,
+					schoolyear: message.data.schoolyear
+				});
+				chrome.tabs.create({ url: chrome.runtime.getURL(`resources/diffSettings.html?${params.toString()}`) }).then((tab) => {
+					sendResponse({ tabId: tab.id });
+				});
+				return true;
 			case Actions.RequestTabData:
 				getTabId(TabType.Main).then((tabId) => {
 					chrome.tabs.sendMessage(tabId, message).then(() => {});
@@ -87,6 +100,7 @@
 				});
 				break;
 		}
+		return false;
 	}
 	//#endregion
 })();

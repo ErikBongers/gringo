@@ -5,7 +5,12 @@
     "target": "es2021",
     "sourceMap": true,
     "noEmit": true,
-    "incremental": false
+    "incremental": false,
+    "noImplicitOverride": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true
   },
   "files": ["./typescript/plugin_options/options_page.ts"]
 }

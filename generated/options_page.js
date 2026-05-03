@@ -108,7 +108,7 @@
 		nested = tokenize(text);
 		let tempRoot = document.createElement("div");
 		let result = parseAndBuild(tempRoot, onIndex, hook);
-		let first = void 0;
+		let first = null;
 		let insertPos = target;
 		let children = [...tempRoot.childNodes];
 		for (let child of children) if (!first) if (child.nodeType === Node.TEXT_NODE) first = insertPos = insertAdjacentText(target, position, child.wholeText);
@@ -155,11 +155,14 @@
 	function parseMult() {
 		let el = parseElement();
 		if (!el) return el;
-		if (match("*")) return {
-			count: parseInt(nested.shift()),
-			child: el
-		};
-		else return el;
+		if (match("*")) {
+			let mustBeNumber = nested.shift();
+			if (!mustBeNumber) throw "Number expecting after multiplier symbol '*'";
+			return {
+				count: parseInt(mustBeNumber),
+				child: el
+			};
+		} else return el;
 	}
 	function parseElement() {
 		let el;
@@ -181,6 +184,7 @@
 		let atts = [];
 		let classList = [];
 		let text = void 0;
+		if (!tag) throw "Unexpected end of stream. Tag expected.";
 		while (nested.length) if (match(".")) {
 			let className = nested.shift();
 			if (!className) throw "Unexpected end of stream. Class name expected.";
@@ -221,11 +225,12 @@
 			let eq = tokens.shift();
 			let sub = "";
 			if (eq === ".") {
-				sub = tokens.shift();
+				sub = tokens.shift() ?? "";
 				eq = tokens.shift();
 			}
 			if (eq != "=") throw "Equal sign expected.";
 			let value = tokens.shift();
+			if (!value) throw "Value expected";
 			if (value[0] === "\"") value = stripStringDelimiters(value);
 			if (!value) throw "Value expected.";
 			attDefs.push({
@@ -245,6 +250,7 @@
 	}
 	function matchStartsWith(expected) {
 		let next = nested.shift();
+		if (!next) return void 0;
 		if (next.startsWith(expected)) return next;
 		if (next) nested.unshift(next);
 	}

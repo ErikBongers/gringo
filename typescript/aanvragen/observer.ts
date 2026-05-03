@@ -24,7 +24,7 @@ function onMutation(mutation: MutationRecord) {
     return false;
 }
 
-function gringo(...args) {
+function gringo(...args: any[]) {
     console.log("gringo", ...args);
 }
 
