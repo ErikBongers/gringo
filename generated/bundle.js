@@ -427,7 +427,7 @@
 		decorateAllPRs();
 	}
 	function onMutation(mutation) {
-		gringo("MUTATION!!!");
+		document.querySelector("fd-pagination");
 		if (document.querySelector("fd-pagination")) {
 			decorateAllPRs();
 			return true;
@@ -438,7 +438,10 @@
 		console.log("gringo", ...args);
 	}
 	function decorateAllPRs() {
-		[...document.querySelectorAll("request-info-item")].map(scrapeInfoItem).forEach(decoratePr);
+		scrapePRs().forEach(decoratePr);
+	}
+	function scrapePRs() {
+		return [...document.querySelectorAll("request-info-item")].map(scrapeInfoItem);
 	}
 	function scrapeInfoItem(requestDiv) {
 		let id = requestDiv.id.substring(8);

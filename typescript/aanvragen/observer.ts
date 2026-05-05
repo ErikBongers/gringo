@@ -18,7 +18,9 @@ function onPageRefreshed() {
 }
 
 function onMutation(mutation: MutationRecord) {
-    gringo("MUTATION!!!");
+    let pagination = document.querySelector("fd-pagination") as HTMLElement | null;
+    // if(pagination)
+    //     gotoNextPage(pagination);
     if(document.querySelector("fd-pagination")) {
         decorateAllPRs();
         return true;
@@ -26,15 +28,34 @@ function onMutation(mutation: MutationRecord) {
     return false;
 }
 
+let globalPrs: RequestBasicInfo[] = [];
+
+function gotoNextPage(pagination: HTMLElement) {
+    let activeButton = pagination.querySelector("button.is-active") as HTMLButtonElement | null;
+    gringo("At page " + activeButton?.textContent.trim());
+    let nextButton = pagination.querySelector("button[glyph='navigation-right-arrow']") as HTMLButtonElement | null;
+    if(!nextButton)
+        return;
+    globalPrs.push(...scrapePRs());
+    if(nextButton.classList.contains("is-disabled")) {
+        gringo("THIE END");
+        gringo(globalPrs);
+    }
+    else
+        nextButton.click();
+}
 function gringo(...args: any[]) {
     console.log("gringo", ...args);
 }
 
 function decorateAllPRs() {
-    let requestsDivs = document.querySelectorAll("request-info-item");
-    let requests  = [...requestsDivs].map(scrapeInfoItem);
+    let requests  = scrapePRs();
     requests.forEach(decoratePr);
+}
 
+function scrapePRs() {
+    let requestsDivs = document.querySelectorAll("request-info-item");
+    return [...requestsDivs].map(scrapeInfoItem);
 }
 
 export type RequestBasicInfo = {
