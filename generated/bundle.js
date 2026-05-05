@@ -453,7 +453,7 @@
 		if (request.div.dataset.gringo == "decorated") return;
 		request.div.dataset.gringo = "decorated";
 		request.orderAnchors.forEach((a) => {
-			let button = emmet.insertAfter(a, `button.copyAnchorText{x}`).last;
+			let button = emmet.insertAfter(a, `button.copyAnchorText.naked{x}`).last;
 			button.onmousedown = async (ev) => {
 				await navigator.clipboard.writeText(a.innerText);
 				ev.stopPropagation();

@@ -58,7 +58,7 @@ function decoratePr(request: RequestBasicInfo) {
         return;
     request.div.dataset.gringo = "decorated";
     request.orderAnchors.forEach(a => {
-        let button = emmet.insertAfter(a, `button.copyAnchorText{x}`).last as HTMLButtonElement;
+        let button = emmet.insertAfter(a, `button.copyAnchorText.naked{x}`).last as HTMLButtonElement;
         button.onmousedown = async (ev) => {
             await navigator.clipboard.writeText(a.innerText);
             ev.stopPropagation();
