@@ -350,3 +350,7 @@ span.filterInfo {
     font-weight: 500;
     font-style: italic;
 }
+
+.copyAnchorText {
+    margin-left: .5ch;
+}

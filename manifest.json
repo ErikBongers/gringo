@@ -15,7 +15,8 @@
       "css": [
         "css/general.css",
         "css/light_colors.css",
-        "css/dark_colors.css"
+        "css/dark_colors.css",
+        "fa720web/css/all.css"
       ],
       "matches": [
         "https://s1-eu.ariba.com/*"
@@ -36,7 +37,8 @@
     "resources": [
       "generated/*",
       "typescript/*",
-      "images/*"
+      "images/*",
+      "fa720web/webfonts/*"
     ]
   }
   ]
