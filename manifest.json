@@ -38,7 +38,7 @@
       "generated/*",
       "typescript/*",
       "images/*",
-      "fa720web/webfonts/*"
+      "fa720web/webfonts/*.woff2"
     ]
   }
   ]

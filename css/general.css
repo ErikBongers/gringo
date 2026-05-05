@@ -1,6 +1,14 @@
 @import "light_colors.css";
 @import "dark_colors.css";
 
+@font-face {
+    font-family: "Font Awesome 7 Free";
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url('chrome-extension://__MSG_@@extension_id__/fa720web/webfonts/fa-regular-400.woff2');
+}
+
 :root {
     --dko3-blue: #007bff;
 }
