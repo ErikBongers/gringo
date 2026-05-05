@@ -29,7 +29,23 @@ function gringo(...args: any[]) {
 }
 
 function decorateAllPRs() {
-    let requests = document.querySelectorAll("request-info-item");
-    let ids = Array.from(requests).map(e => e.id);
-    gringo("ids: ", ids);
+    let requestsDivs = document.querySelectorAll("request-info-item");
+    let requests  = [...requestsDivs].map(scrapeInfoItem);
+    gringo("ids: ", requests);
+}
+
+export type RequestBasicInfo = {
+    id: string,
+    orderAnchors: HTMLAnchorElement[],
+
+}
+
+function scrapeInfoItem(requestDiv: HTMLDivElement): RequestBasicInfo {
+    let id = requestDiv.id.substring("request-".length);
+    let divOrders = requestDiv.querySelector(".item-orders");
+    let orderAnchors: HTMLAnchorElement[] = [];
+    if(divOrders) {
+         orderAnchors = [...divOrders.querySelectorAll(".request-po-list-container ul > li a") as NodeListOf<HTMLAnchorElement>];
+    }
+    return {id, orderAnchors};
 }

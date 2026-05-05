@@ -144,8 +144,17 @@
 		console.log("gringo", ...args);
 	}
 	function decorateAllPRs() {
-		let requests = document.querySelectorAll("request-info-item");
-		gringo("ids: ", Array.from(requests).map((e) => e.id));
+		gringo("ids: ", [...document.querySelectorAll("request-info-item")].map(scrapeInfoItem));
+	}
+	function scrapeInfoItem(requestDiv) {
+		let id = requestDiv.id.substring(8);
+		let divOrders = requestDiv.querySelector(".item-orders");
+		let orderAnchors = [];
+		if (divOrders) orderAnchors = [...divOrders.querySelectorAll(".request-po-list-container ul > li a")];
+		return {
+			id,
+			orderAnchors
+		};
 	}
 	//#endregion
 	//#region typescript/main.ts

@@ -1,2 +1,7 @@
-* Make typescript strict!
-* Alter some page.
+* Create observer based on url.
+
+"Database"
+============"
+* Every pr/bb is stored in a separate json file.
+  > name is pr id.
+* Dir is "Gringo/prs/"
