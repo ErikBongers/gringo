@@ -78,14 +78,16 @@ export abstract class BaseObserver implements Observer {
         if (!this.onMutation)
             return;
         console.log("Observing main element.");
-        if(!document.querySelector("main")) //TODO
+        let observedElement = document.querySelector("div#wrapper");
+        if(!observedElement) //TODO
             console.error("Can't attach observer to element.");
-        this.observeElement(document.querySelector("main")!);
+        else
+            this.observeElement(observedElement);
         if(this.trackModal)
             this.observeElement(document.getElementById("dko3_modal")!);
     }
 
-    observeElement(element: HTMLElement) {
+    observeElement(element: Element) {
         if (!element) {
             console.error("Can't attach observer to element.");
             return;

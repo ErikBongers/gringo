@@ -18,6 +18,7 @@ function onPageRefreshed() {
 }
 
 function onMutation(mutation: MutationRecord) {
+    gringo("MUTATION!!!");
     if(document.querySelector("fd-pagination")) {
         decorateAllPRs();
         return true;

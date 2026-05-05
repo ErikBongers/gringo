@@ -386,8 +386,9 @@
 			if (this.onPageChangedCallback) this.onPageChangedCallback();
 			if (!this.onMutation) return;
 			console.log("Observing main element.");
-			if (!document.querySelector("main")) console.error("Can't attach observer to element.");
-			this.observeElement(document.querySelector("main"));
+			let observedElement = document.querySelector("div#wrapper");
+			if (!observedElement) console.error("Can't attach observer to element.");
+			else this.observeElement(observedElement);
 			if (this.trackModal) this.observeElement(document.getElementById("dko3_modal"));
 		}
 		observeElement(element) {
@@ -426,6 +427,7 @@
 		decorateAllPRs();
 	}
 	function onMutation(mutation) {
+		gringo("MUTATION!!!");
 		if (document.querySelector("fd-pagination")) {
 			decorateAllPRs();
 			return true;
