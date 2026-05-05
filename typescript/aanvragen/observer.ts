@@ -1,4 +1,5 @@
 import {PartialUrlObserver} from "../pageObserver";
+import {emmet} from "../../libs/Emmeter/html";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -31,11 +32,13 @@ function gringo(...args: any[]) {
 function decorateAllPRs() {
     let requestsDivs = document.querySelectorAll("request-info-item");
     let requests  = [...requestsDivs].map(scrapeInfoItem);
-    gringo("ids: ", requests);
+    requests.forEach(decoratePr);
+
 }
 
 export type RequestBasicInfo = {
     id: string,
+    div: HTMLDivElement,
     orderAnchors: HTMLAnchorElement[],
 
 }
@@ -47,5 +50,21 @@ function scrapeInfoItem(requestDiv: HTMLDivElement): RequestBasicInfo {
     if(divOrders) {
          orderAnchors = [...divOrders.querySelectorAll(".request-po-list-container ul > li a") as NodeListOf<HTMLAnchorElement>];
     }
-    return {id, orderAnchors};
+    return {id, div: requestDiv, orderAnchors};
+}
+
+function decoratePr(request: RequestBasicInfo) {
+    if(request.div.dataset.gringo == "decorated")
+        return;
+    request.div.dataset.gringo = "decorated";
+    request.orderAnchors.forEach(a => {
+        let button = emmet.insertAfter(a, `button.copyAnchorText{x}`).last as HTMLButtonElement;
+        button.onmousedown = async (ev) => {
+            await navigator.clipboard.writeText(a.innerText);
+            ev.stopPropagation();
+            ev.preventDefault();
+        };
+        button.onmouseup = (ev) => {ev.stopPropagation(); ev.preventDefault();};
+        button.onclick = (ev) => {ev.stopPropagation(); ev.preventDefault();};
+    });
 }
