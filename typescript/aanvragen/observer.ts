@@ -122,12 +122,26 @@ async function decoratePr(request: RequestBasicInfo) {
     request.div.dataset.gringo = "decorated";
     addOrderCopyButton(request);
     stripSections(request);
-    try {
-        let meta: PrMeta = await cloud.json.fetch("gringo/pr/meta/" + request.id);
-        addMeta(meta);
-    } catch {}
+    let meta = await fetchMetaCached(request.id);
+    addMeta(meta);
 }
 
 function addMeta(meta: PrMeta) {
 
+}
+
+
+async function fetchMetaCached(prId: string) {
+    //todo: this assumes that localStorage is synced with cloud.
+    let jsonMeta = localStorage.getItem("gringo."+prId); //todo: eventually replace with indexedDb
+    if(jsonMeta)
+        return JSON.parse(jsonMeta) as PrMeta;
+    let meta: PrMeta =  {tags: []};
+    try {
+        meta = await cloud.json.fetch("gringo/pr/meta/" + prId);
+    } catch {
+        await cloud.json.upload("gringo/pr/meta/" + prId, meta);
+    }
+    localStorage.setItem("gringo."+prId, JSON.stringify(meta));
+    return meta;
 }

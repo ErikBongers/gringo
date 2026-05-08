@@ -1,3 +1,9 @@
+* get meta: reduce traffic with local first.
+  > batch fetch all meta since last sync.
+  1. fetchCached(prid)
+  2. if not cached, fetch(prid)
+
+
 * Make list item hiding user options.
   > local first with cloud backup.
     > user in footer

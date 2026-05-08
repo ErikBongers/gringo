@@ -487,11 +487,21 @@
 		request.div.dataset.gringo = "decorated";
 		addOrderCopyButton(request);
 		stripSections(request);
-		try {
-			addMeta(await cloud.json.fetch("gringo/pr/meta/" + request.id));
-		} catch {}
+		addMeta(await fetchMetaCached(request.id));
 	}
 	function addMeta(meta) {}
+	async function fetchMetaCached(prId) {
+		let jsonMeta = localStorage.getItem("gringo." + prId);
+		if (jsonMeta) return JSON.parse(jsonMeta);
+		let meta = { tags: [] };
+		try {
+			meta = await cloud.json.fetch("gringo/pr/meta/" + prId);
+		} catch {
+			await cloud.json.upload("gringo/pr/meta/" + prId, meta);
+		}
+		localStorage.setItem("gringo." + prId, JSON.stringify(meta));
+		return meta;
+	}
 	//#endregion
 	//#region typescript/main.ts
 	init();
