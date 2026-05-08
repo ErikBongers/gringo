@@ -58,6 +58,15 @@ function decoratePage() {
 
     let requests  = scrapePRs();
     requests.forEach(decoratePr);
+    if(!document.body.dataset.hasGringoDialog) {
+        document.body.dataset.hasGringoDialog = "true";
+        emmet.appendChild(document.body, `
+            dialog#gringo-tags-popover[popover=""]> (
+                p{Tadaaa!}+
+                button{x}[commandfor="gringo-tags-popover" command="close"]
+            )        
+        `);
+    }
 }
 
 function scrapePRs() {
@@ -138,10 +147,21 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
     let button = emmet.appendChild(divStatusContainer, `
-        button{TAGS}
+        button.naked.tagButton[popovertarget="gringo-tags-popover"]
+            >li.far.fa-circle-down
     `).first as HTMLButtonElement;
     addButtonClickNoPropagation(button, (ev) => {
-        gringo("TAGS clicked");
+        let dialog = document.getElementById("gringo-tags-popover") as HTMLDialogElement;
+        if(!dialog)
+            return;
+        dialog.showModal();
+        // let ul = dialog.querySelector("ul") as HTMLUListElement;
+        // ul.innerHTML = "";
+        // meta.tags.forEach(tag => {
+        //     let li = document.createElement("li");
+        //     li.innerText = tag;
+        //     ul.appendChild(li);
+        // });
     });
 }
 

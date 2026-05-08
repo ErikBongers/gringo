@@ -384,3 +384,7 @@ main.hideTeam {
         }
     }
 }
+
+.tagButton {
+    font-size: 1.2rem;
+}

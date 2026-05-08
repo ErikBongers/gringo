@@ -233,7 +233,6 @@
 			let value = tokens.shift();
 			if (!value) throw "Value expected";
 			if (value[0] === "\"") value = stripStringDelimiters(value);
-			if (!value) throw "Value expected.";
 			attDefs.push({
 				name,
 				sub,
@@ -443,6 +442,15 @@
 		main.classList.toggle("hideOnBehalfOf", true);
 		main.classList.toggle("hideTeam", true);
 		scrapePRs().forEach(decoratePr);
+		if (!document.body.dataset.hasGringoDialog) {
+			document.body.dataset.hasGringoDialog = "true";
+			emmet.appendChild(document.body, `
+            dialog#gringo-tags-popover[popover=""]> (
+                p{Tadaaa!}+
+                button{x}[commandfor="gringo-tags-popover" command="close"]
+            )        
+        `);
+		}
 	}
 	function scrapePRs() {
 		return [...document.querySelectorAll("request-info-item")].map(scrapeInfoItem);
@@ -499,10 +507,13 @@
 		if (!divStatusContainer) return;
 		divStatusContainer = divStatusContainer.parentElement;
 		let button = emmet.appendChild(divStatusContainer, `
-        button{TAGS}
+        button.naked.tagButton[popovertarget="gringo-tags-popover"]
+            >li.far.fa-circle-down
     `).first;
 		addButtonClickNoPropagation(button, (ev) => {
-			gringo("TAGS clicked");
+			let dialog = document.getElementById("gringo-tags-popover");
+			if (!dialog) return;
+			dialog.showModal();
 		});
 	}
 	async function fetchMetaCached(prId) {
