@@ -1,15 +1,15 @@
-* get meta: reduce traffic with local first.
-  > batch fetch all meta since last sync.
-  1. fetchCached(prid)
-  2. if not cached, fetch(prid)
+meta UI.
+=========
+ - tags is list of strings, icons.
+ - add: button with popup.
+ - popup:
+   > how to show a tag is selected?
+     > the selected ones on top
+     > highlight?
+       > background color?
+
 
 
 * Make list item hiding user options.
   > local first with cloud backup.
     > user in footer
-
-"Database"
-============"
-* Every pr/bb is stored in a separate json file.
-  > name is pr id.
-* Dir is "Gringo/prs/"

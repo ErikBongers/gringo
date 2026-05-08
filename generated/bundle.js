@@ -464,20 +464,25 @@
             button.copyAnchorText.naked
                 >li.far.fa-copy 
             `).first;
-			button.onmousedown = async (ev) => {
+			addButtonClickNoPropagation(button, async (ev) => {
 				await navigator.clipboard.writeText(a.innerText);
-				ev.stopPropagation();
-				ev.preventDefault();
-			};
-			button.onmouseup = (ev) => {
-				ev.stopPropagation();
-				ev.preventDefault();
-			};
-			button.onclick = (ev) => {
-				ev.stopPropagation();
-				ev.preventDefault();
-			};
+			});
 		});
+	}
+	function addButtonClickNoPropagation(button, onClick) {
+		button.onmousedown = async (ev) => {
+			onClick(ev);
+			ev.stopPropagation();
+			ev.preventDefault();
+		};
+		button.onmouseup = (ev) => {
+			ev.stopPropagation();
+			ev.preventDefault();
+		};
+		button.onclick = (ev) => {
+			ev.stopPropagation();
+			ev.preventDefault();
+		};
 	}
 	function stripSections(request) {
 		if (request.div.querySelector("div.item-obo")) {}
@@ -487,9 +492,19 @@
 		request.div.dataset.gringo = "decorated";
 		addOrderCopyButton(request);
 		stripSections(request);
-		addMeta(await fetchMetaCached(request.id));
+		addMeta(request, await fetchMetaCached(request.id));
 	}
-	function addMeta(meta) {}
+	function addMeta(request, meta) {
+		let divStatusContainer = request.div.querySelector("div.item-status-container");
+		if (!divStatusContainer) return;
+		divStatusContainer = divStatusContainer.parentElement;
+		let button = emmet.appendChild(divStatusContainer, `
+        button{TAGS}
+    `).first;
+		addButtonClickNoPropagation(button, (ev) => {
+			gringo("TAGS clicked");
+		});
+	}
 	async function fetchMetaCached(prId) {
 		let jsonMeta = localStorage.getItem("gringo." + prId);
 		if (jsonMeta) return JSON.parse(jsonMeta);

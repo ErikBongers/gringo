@@ -92,20 +92,26 @@ function addOrderCopyButton(request: RequestBasicInfo) {
             button.copyAnchorText.naked
                 >li.far.fa-copy 
             `).first as HTMLButtonElement;
-        button.onmousedown = async (ev) => {
+        addButtonClickNoPropagation(button, async (ev) => {
             await navigator.clipboard.writeText(a.innerText);
-            ev.stopPropagation();
-            ev.preventDefault();
-        };
-        button.onmouseup = (ev) => {
-            ev.stopPropagation();
-            ev.preventDefault();
-        };
-        button.onclick = (ev) => {
-            ev.stopPropagation();
-            ev.preventDefault();
-        };
+        });
     });
+}
+
+function addButtonClickNoPropagation(button: HTMLButtonElement, onClick: (ev: any) => any) {
+    button.onmousedown = async (ev) => {
+        onClick(ev);
+        ev.stopPropagation();
+        ev.preventDefault();
+    };
+    button.onmouseup = (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+    };
+    button.onclick = (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+    };
 }
 
 function stripSections(request: RequestBasicInfo) {
@@ -123,11 +129,20 @@ async function decoratePr(request: RequestBasicInfo) {
     addOrderCopyButton(request);
     stripSections(request);
     let meta = await fetchMetaCached(request.id);
-    addMeta(meta);
+    addMeta(request, meta);
 }
 
-function addMeta(meta: PrMeta) {
-
+function addMeta(request: RequestBasicInfo, meta: PrMeta) {
+    let divStatusContainer = request.div.querySelector("div.item-status-container") as HTMLDivElement | null;
+    if(!divStatusContainer)
+        return;
+    divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
+    let button = emmet.appendChild(divStatusContainer, `
+        button{TAGS}
+    `).first as HTMLButtonElement;
+    addButtonClickNoPropagation(button, (ev) => {
+        gringo("TAGS clicked");
+    });
 }
 
 
