@@ -362,3 +362,25 @@ span.filterInfo {
 .copyAnchorText {
     margin-left: .5ch;
 }
+
+main.hideOnBehalfOf {
+    & request-info-item {
+        & span.item-obo-text.padding {
+            display: none;
+        }
+        & span.item-obo-user.requester {
+            display: none;
+        }
+        & profile-icon:has(+ span.item-obo-user.requester) {
+            display: none;
+        }
+    }
+}
+
+main.hideTeam {
+    & request-info-item {
+        & div.item-team-buying {
+            display: none;
+        }
+    }
+}

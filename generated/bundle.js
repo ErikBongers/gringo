@@ -424,12 +424,12 @@
 	var observer_default = new AanvragenObserver();
 	function onPageRefreshed$1() {
 		gringo("page Aanvragen refreshed xxx.");
-		decorateAllPRs();
+		decoratePage();
 	}
 	function onMutation(mutation) {
 		document.querySelector("fd-pagination");
 		if (document.querySelector("fd-pagination")) {
-			decorateAllPRs();
+			decoratePage();
 			return true;
 		}
 		return false;
@@ -437,7 +437,11 @@
 	function gringo(...args) {
 		console.log("gringo", ...args);
 	}
-	function decorateAllPRs() {
+	function decoratePage() {
+		let main = document.querySelector("main");
+		if (!main) return;
+		main.classList.toggle("hideOnBehalfOf", true);
+		main.classList.toggle("hideTeam", true);
 		scrapePRs().forEach(decoratePr);
 	}
 	function scrapePRs() {
@@ -454,9 +458,7 @@
 			orderAnchors
 		};
 	}
-	function decoratePr(request) {
-		if (request.div.dataset.gringo == "decorated") return;
-		request.div.dataset.gringo = "decorated";
+	function addOrderCopyButton(request) {
 		request.orderAnchors.forEach((a) => {
 			let button = emmet.insertAfter(a, `
             button.copyAnchorText.naked
@@ -477,6 +479,19 @@
 			};
 		});
 	}
+	function stripSections(request) {
+		if (request.div.querySelector("div.item-obo")) {}
+	}
+	async function decoratePr(request) {
+		if (request.div.dataset.gringo == "decorated") return;
+		request.div.dataset.gringo = "decorated";
+		addOrderCopyButton(request);
+		stripSections(request);
+		try {
+			addMeta(await cloud.json.fetch("gringo/pr/meta/" + request.id));
+		} catch {}
+	}
+	function addMeta(meta) {}
 	//#endregion
 	//#region typescript/main.ts
 	init();

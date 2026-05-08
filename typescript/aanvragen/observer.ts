@@ -1,5 +1,6 @@
 import {PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter/html";
+import {cloud} from "../cloud";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -14,7 +15,7 @@ export default new AanvragenObserver();
 
 function onPageRefreshed() {
     gringo("page Aanvragen refreshed xxx.");
-    decorateAllPRs();
+    decoratePage();
 }
 
 function onMutation(mutation: MutationRecord) {
@@ -22,7 +23,7 @@ function onMutation(mutation: MutationRecord) {
     // if(pagination)
     //     gotoNextPage(pagination);
     if(document.querySelector("fd-pagination")) {
-        decorateAllPRs();
+        decoratePage();
         return true;
     }
     return false;
@@ -48,7 +49,13 @@ function gringo(...args: any[]) {
     console.log("gringo", ...args);
 }
 
-function decorateAllPRs() {
+function decoratePage() {
+    let main = document.querySelector("main");
+    if(!main)
+        return;
+    main.classList.toggle("hideOnBehalfOf", true);
+    main.classList.toggle("hideTeam", true);
+
     let requests  = scrapePRs();
     requests.forEach(decoratePr);
 }
@@ -75,10 +82,11 @@ function scrapeInfoItem(requestDiv: HTMLDivElement): RequestBasicInfo {
     return {id, div: requestDiv, orderAnchors};
 }
 
-function decoratePr(request: RequestBasicInfo) {
-    if(request.div.dataset.gringo == "decorated")
-        return;
-    request.div.dataset.gringo = "decorated";
+interface PrMeta {
+    tags: string[],
+}
+
+function addOrderCopyButton(request: RequestBasicInfo) {
     request.orderAnchors.forEach(a => {
         let button = emmet.insertAfter(a, `
             button.copyAnchorText.naked
@@ -89,7 +97,37 @@ function decoratePr(request: RequestBasicInfo) {
             ev.stopPropagation();
             ev.preventDefault();
         };
-        button.onmouseup = (ev) => {ev.stopPropagation(); ev.preventDefault();};
-        button.onclick = (ev) => {ev.stopPropagation(); ev.preventDefault();};
+        button.onmouseup = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+        };
+        button.onclick = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+        };
     });
+}
+
+function stripSections(request: RequestBasicInfo) {
+    let divWho = request.div.querySelector("div.item-obo");
+    if(divWho) {
+        // strip "aangemaakt namens Team X"
+
+    }
+}
+
+async function decoratePr(request: RequestBasicInfo) {
+    if(request.div.dataset.gringo == "decorated")
+        return;
+    request.div.dataset.gringo = "decorated";
+    addOrderCopyButton(request);
+    stripSections(request);
+    try {
+        let meta: PrMeta = await cloud.json.fetch("gringo/pr/meta/" + request.id);
+        addMeta(meta);
+    } catch {}
+}
+
+function addMeta(meta: PrMeta) {
+
 }

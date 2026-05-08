@@ -1,4 +1,6 @@
-* Create observer based on url.
+* Make list item hiding user options.
+  > local first with cloud backup.
+    > user in footer
 
 "Database"
 ============"
