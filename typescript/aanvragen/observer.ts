@@ -1,6 +1,7 @@
 import {PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter/html";
 import {cloud} from "../cloud";
+import request = chrome.permissions.request;
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -58,23 +59,27 @@ function decoratePage() {
 
     let requests  = scrapePRs();
     requests.forEach(decoratePr);
-    if(!document.body.dataset.hasGringoDialog) {
-        document.body.dataset.hasGringoDialog = "true";
-        let popover = emmet.appendChild(document.body, `
-            div#gringo-tags-popover[popover=""]> (
-                (div.flexRow>button.closePopup.naked{x})+
-                div.popoverContainer{Container...}
-            )        
-        `).first as HTMLDivElement;
-        let button = popover.querySelector("button.closePopup") as HTMLButtonElement;
-        addButtonClickNoPropagation(button as HTMLButtonElement, (ev) => {
-            let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
-            if(!popover)
-                return;
-            // @ts-ignore
-            popover.togglePopover({source:button});
-        });
-    }
+    if(document.body.dataset.gringoPageDecorated)
+        return;
+    document.body.dataset.gringoPageDecorated = "true";
+    let popover = emmet.appendChild(document.body, `
+        div#gringo-tags-popover[popover=""]> (
+            (div.flexRow>button.closePopup.naked{x})+
+            div.popoverContainer{Container...}
+        )        
+    `).first as HTMLDivElement;
+    let button = popover.querySelector("button.closePopup") as HTMLButtonElement;
+    addButtonClickNoPropagation(button as HTMLButtonElement, (ev) => {
+        let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
+        if(!popover)
+            return;
+        // @ts-ignore
+        popover.togglePopover({source:button});
+    });
+
+    let requestSearchPanel = main.querySelector(".request-search-panel") as HTMLDivElement;
+    let divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first as HTMLDivElement;
+    fillSearchPanel(divSearchPanel);
 
     // let requestInfoListPanel = document.querySelector(".request-info-list-panel") as HTMLElement | null;
     // if(requestInfoListPanel) {
@@ -85,6 +90,28 @@ function decoratePage() {
     //     `);
     //     }
     // }
+}
+
+function fillSearchPanel(divSearchPanel: HTMLDivElement) {
+    let tagsCollapse = emmet.appendChild(divSearchPanel, `
+        details>(
+            summary{Tags}+
+            table#tagsFilterTable>tbody
+        )    
+    `).first as HTMLDetailsElement;
+    let tbody = tagsCollapse.querySelector("tbody") as HTMLTableSectionElement
+    defaultTags
+        .sort((a, b) => a.order - b.order)
+        .forEach(tagDef => {
+            let tr = emmet.appendChild(tbody, "tr").first as HTMLTableRowElement;
+            emmet.appendChild(tr, `
+                (td>span.naked.gringoTag{${tagDef.name}})+
+                (td>button.naked.filter{✔})+
+                (td>button.naked.solo{solo})
+            `);
+            let tagSpan = tr.querySelector("span")!;
+            paintTag(tagSpan, tagDef, true);
+        });
 }
 
 function scrapePRs() {
@@ -170,13 +197,14 @@ interface TagDef  {
 }
 const defaultTags: TagDef[] = [
     { name: "BB>", description: "Bestelbon verzonden", color: "", bkgColor: "orange", order: 0},
+    { name: "✔", description: "Bestelling ontvangen", color: "green", bkgColor: "", order: 100},
+    { name: "MW", description: "", color: "", bkgColor: "", order: 300},
+    { name: "brol", description: "", color: "", bkgColor: "", order: 330},
+    { name: "Zever", description: "", color: "blue", bkgColor: "", order: 300},
     { name: "En", description: "", color: "blue", bkgColor: "", order: 400},
     { name: "Nog", description: "", color: "blue", bkgColor: "", order: 500},
     { name: "Veel", description: "", color: "blue", bkgColor: "", order: 600},
     { name: "Langer", description: "", color: "blue", bkgColor: "", order: 700},
-    { name: "✔", description: "Bestelling ontvangen", color: "green", bkgColor: "", order: 100},
-    { name: "brol", description: "", color: "", bkgColor: "", order: 200},
-    { name: "Zever", description: "", color: "blue", bkgColor: "", order: 300},
 ];
 const defaultTagsMap: Map<string, TagDef> = new Map(defaultTags.map(t => [t.name, t]));
 

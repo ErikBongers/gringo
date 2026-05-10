@@ -1,3 +1,8 @@
+* Tags sync
+  > keep a local last_sync z-timestamp
+  > fetch all tags since.
+    > create a cloud function.
+
 * Available tags
   > personal, general or both?
     > personal only visible to user

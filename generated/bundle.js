@@ -442,20 +442,39 @@
 		main.classList.toggle("hideOnBehalfOf", true);
 		main.classList.toggle("hideTeam", true);
 		scrapePRs().forEach(decoratePr);
-		if (!document.body.dataset.hasGringoDialog) {
-			document.body.dataset.hasGringoDialog = "true";
-			let button = emmet.appendChild(document.body, `
-            div#gringo-tags-popover[popover=""]> (
-                (div.flexRow>button.closePopup.naked{x})+
-                div.popoverContainer{Container...}
-            )        
-        `).first.querySelector("button.closePopup");
-			addButtonClickNoPropagation(button, (ev) => {
-				let popover = document.getElementById("gringo-tags-popover");
-				if (!popover) return;
-				popover.togglePopover({ source: button });
-			});
-		}
+		if (document.body.dataset.gringoPageDecorated) return;
+		document.body.dataset.gringoPageDecorated = "true";
+		let button = emmet.appendChild(document.body, `
+        div#gringo-tags-popover[popover=""]> (
+            (div.flexRow>button.closePopup.naked{x})+
+            div.popoverContainer{Container...}
+        )        
+    `).first.querySelector("button.closePopup");
+		addButtonClickNoPropagation(button, (ev) => {
+			let popover = document.getElementById("gringo-tags-popover");
+			if (!popover) return;
+			popover.togglePopover({ source: button });
+		});
+		let requestSearchPanel = main.querySelector(".request-search-panel");
+		let divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first;
+		fillSearchPanel(divSearchPanel);
+	}
+	function fillSearchPanel(divSearchPanel) {
+		let tbody = emmet.appendChild(divSearchPanel, `
+        details>(
+            summary{Tags}+
+            table#tagsFilterTable>tbody
+        )    
+    `).first.querySelector("tbody");
+		defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			let tr = emmet.appendChild(tbody, "tr").first;
+			emmet.appendChild(tr, `
+                (td>span.naked.gringoTag{${tagDef.name}})+
+                (td>button.naked.filter{✔})+
+                (td>button.naked.solo{solo})
+            `);
+			paintTag(tr.querySelector("span"), tagDef, true);
+		});
 	}
 	function scrapePRs() {
 		return [...document.querySelectorAll("request-info-item")].map(scrapeInfoItem);
@@ -518,6 +537,34 @@
 			order: 0
 		},
 		{
+			name: "✔",
+			description: "Bestelling ontvangen",
+			color: "green",
+			bkgColor: "",
+			order: 100
+		},
+		{
+			name: "MW",
+			description: "",
+			color: "",
+			bkgColor: "",
+			order: 300
+		},
+		{
+			name: "brol",
+			description: "",
+			color: "",
+			bkgColor: "",
+			order: 330
+		},
+		{
+			name: "Zever",
+			description: "",
+			color: "blue",
+			bkgColor: "",
+			order: 300
+		},
+		{
 			name: "En",
 			description: "",
 			color: "blue",
@@ -544,27 +591,6 @@
 			color: "blue",
 			bkgColor: "",
 			order: 700
-		},
-		{
-			name: "✔",
-			description: "Bestelling ontvangen",
-			color: "green",
-			bkgColor: "",
-			order: 100
-		},
-		{
-			name: "brol",
-			description: "",
-			color: "",
-			bkgColor: "",
-			order: 200
-		},
-		{
-			name: "Zever",
-			description: "",
-			color: "blue",
-			bkgColor: "",
-			order: 300
 		}
 	];
 	const defaultTagsMap = new Map(defaultTags.map((t) => [t.name, t]));
