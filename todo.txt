@@ -1,3 +1,11 @@
+* Available tags
+  > personal, general or both?
+    > personal only visible to user
+    > UI difference? italic? border?
+    > global: start with hard-coded list.
+
+
+
 Goals
 ==========
 * Reduce work to copy pr/order to Excel...or...

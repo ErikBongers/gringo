@@ -63,6 +63,7 @@ function decoratePage() {
         let button = emmet.appendChild(document.body, `
             div#gringo-tags-popover[popover=""]> (
                 p{Tadaaa!}+
+                div.popoverContainer{Container...}+
                 button{x}
             )        
         `).last;
@@ -158,6 +159,20 @@ async function decoratePr(request: RequestBasicInfo) {
     addMeta(request, meta);
 }
 
+interface TagDef  {
+    name: string,
+    description: string,
+    color: string,
+    bkgColor: string,
+}
+const defaultTags: TagDef[] = [
+    { name: "BB>", description: "Bestelbon verzonden", color: "", bkgColor: "orange"},
+    { name: "✔", description: "Bestelbon ontvangen", color: "green", bkgColor: ""},
+    { name: "brol", description: "", color: "", bkgColor: ""},
+    { name: "Zever", description: "", color: "blue", bkgColor: ""},
+];
+const defaultTagsMap: Map<string, TagDef> = new Map(defaultTags.map(t => [t.name, t]));
+
 function addMeta(request: RequestBasicInfo, meta: PrMeta) {
     let divStatusContainer = request.div.querySelector("div.item-status-container") as HTMLDivElement | null;
     if(!divStatusContainer)
@@ -174,13 +189,18 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
             return;
         // @ts-ignore
         popover.togglePopover({source:button});
-        // let ul = dialog.querySelector("ul") as HTMLUListElement;
-        // ul.innerHTML = "";
-        // meta.tags.forEach(tag => {
-        //     let li = document.createElement("li");
-        //     li.innerText = tag;
-        //     ul.appendChild(li);
-        // });
+        let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
+        container.innerHTML = "";
+        defaultTags.forEach(tagDef => {
+            if(!tagDef)
+                return;
+            let tagDiv = emmet.appendChild(container, `
+                div{${tagDef.name}}
+            `).first as HTMLDivElement;
+            tagDiv.style.color = tagDef.color != "" ? tagDef.color : "inherit";
+            tagDiv.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
+            tagDiv.title = tagDef.description;
+        });
     });
 }
 

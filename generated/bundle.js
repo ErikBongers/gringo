@@ -447,6 +447,7 @@
 			let button = emmet.appendChild(document.body, `
             div#gringo-tags-popover[popover=""]> (
                 p{Tadaaa!}+
+                div.popoverContainer{Container...}+
                 button{x}
             )        
         `).last;
@@ -507,6 +508,33 @@
 		stripSections(request);
 		addMeta(request, await fetchMetaCached(request.id));
 	}
+	const defaultTags = [
+		{
+			name: "BB>",
+			description: "Bestelbon verzonden",
+			color: "",
+			bkgColor: "orange"
+		},
+		{
+			name: "✔",
+			description: "Bestelbon ontvangen",
+			color: "green",
+			bkgColor: ""
+		},
+		{
+			name: "brol",
+			description: "",
+			color: "",
+			bkgColor: ""
+		},
+		{
+			name: "Zever",
+			description: "",
+			color: "blue",
+			bkgColor: ""
+		}
+	];
+	new Map(defaultTags.map((t) => [t.name, t]));
 	function addMeta(request, meta) {
 		let divStatusContainer = request.div.querySelector("div.item-status-container");
 		if (!divStatusContainer) return;
@@ -519,6 +547,17 @@
 			let popover = document.getElementById("gringo-tags-popover");
 			if (!popover) return;
 			popover.togglePopover({ source: button });
+			let container = popover.querySelector(".popoverContainer");
+			container.innerHTML = "";
+			defaultTags.forEach((tagDef) => {
+				if (!tagDef) return;
+				let tagDiv = emmet.appendChild(container, `
+                div{${tagDef.name}}
+            `).first;
+				tagDiv.style.color = tagDef.color != "" ? tagDef.color : "inherit";
+				tagDiv.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
+				tagDiv.title = tagDef.description;
+			});
 		});
 	}
 	async function fetchMetaCached(prId) {
