@@ -233,7 +233,6 @@
 			let value = tokens.shift();
 			if (!value) throw "Value expected";
 			if (value[0] === "\"") value = stripStringDelimiters(value);
-			if (!value) throw "Value expected.";
 			attDefs.push({
 				name,
 				sub,

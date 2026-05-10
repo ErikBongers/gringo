@@ -505,43 +505,101 @@
 		request.div.dataset.gringo = "decorated";
 		addOrderCopyButton(request);
 		stripSections(request);
-		addMeta(request, await fetchMetaCached(request.id));
+		let meta = await fetchMetaCached(request.id);
+		addMeta(request, meta);
+		updatePrLine(request, meta);
 	}
 	const defaultTags = [
 		{
 			name: "BB>",
 			description: "Bestelbon verzonden",
 			color: "",
-			bkgColor: "orange"
+			bkgColor: "orange",
+			order: 0
+		},
+		{
+			name: "En",
+			description: "",
+			color: "blue",
+			bkgColor: "",
+			order: 400
+		},
+		{
+			name: "Nog",
+			description: "",
+			color: "blue",
+			bkgColor: "",
+			order: 500
+		},
+		{
+			name: "Veel",
+			description: "",
+			color: "blue",
+			bkgColor: "",
+			order: 600
+		},
+		{
+			name: "Langer",
+			description: "",
+			color: "blue",
+			bkgColor: "",
+			order: 700
 		},
 		{
 			name: "✔",
 			description: "Bestelling ontvangen",
 			color: "green",
-			bkgColor: ""
+			bkgColor: "",
+			order: 100
 		},
 		{
 			name: "brol",
 			description: "",
 			color: "",
-			bkgColor: ""
+			bkgColor: "",
+			order: 200
 		},
 		{
 			name: "Zever",
 			description: "",
 			color: "blue",
-			bkgColor: ""
+			bkgColor: "",
+			order: 300
 		}
 	];
-	new Map(defaultTags.map((t) => [t.name, t]));
+	const defaultTagsMap = new Map(defaultTags.map((t) => [t.name, t]));
+	function updatePrLine(request, meta) {
+		let tagsContainer = request.div.querySelector(".tagsContainer");
+		if (!tagsContainer) return;
+		tagsContainer.innerHTML = "";
+		meta.tags.map((tag) => {
+			return defaultTagsMap.get(tag);
+		}).filter((t) => !!t).sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			let tagSpan = emmet.appendChild(tagsContainer, `
+                span    
+            `).first;
+			paintTag(tagSpan, tagDef, true);
+		});
+	}
+	function paintTag(tagElement, tagDef, selected) {
+		tagElement.innerText = tagDef.name;
+		tagElement.classList.add("gringoTag");
+		tagElement.style.color = tagDef.color != "" ? tagDef.color : "inherit";
+		tagElement.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
+		tagElement.title = tagDef.description;
+		tagElement.classList.toggle("selected", selected);
+	}
 	function addMeta(request, meta) {
 		let divStatusContainer = request.div.querySelector("div.item-status-container");
 		if (!divStatusContainer) return;
 		divStatusContainer = divStatusContainer.parentElement;
 		let button = emmet.appendChild(divStatusContainer, `
-        button.naked.tagButton
-            >li.far.fa-circle-down
-    `).first;
+        div.tagsWrapper.flexRow>(
+            (button.naked.tagButton
+                >li.far.fa-circle-down)+
+            div.tagsContainer
+        )
+    `).first.querySelector("button.tagButton");
 		addButtonClickNoPropagation(button, (ev) => {
 			let popover = document.getElementById("gringo-tags-popover");
 			if (!popover) return;
@@ -549,21 +607,35 @@
 			let container = popover.querySelector(".popoverContainer");
 			container.classList.add("tagList");
 			container.innerHTML = "";
-			defaultTags.forEach((tagDef) => {
+			defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
 				let tagButton = emmet.appendChild(container, `
-                button.naked.tag{${tagDef.name}}
-            `).first;
-				tagButton.style.color = tagDef.color != "" ? tagDef.color : "inherit";
-				tagButton.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
-				tagButton.title = tagDef.description;
-				tagButton.classList.toggle("selected", meta.tags.includes(tagDef.name));
+                    button.naked.gringoTag{${tagDef.name}}
+                `).first;
+				paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
+				tagButton.onclick = async (ev) => {
+					tagButton.classList.toggle("selected");
+					let selected = tagButton.classList.contains("selected");
+					gringo(`clicked ${tagDef.name} for ${request.id}(meta:${meta.prId})`);
+					if (selected) meta.tags.push(tagDef.name);
+					else meta.tags = meta.tags.filter((t) => t != tagDef.name);
+					meta.prId = request.id;
+					await saveMeta(request.id, meta);
+					updatePrLine(request, meta);
+				};
 			});
 		});
+	}
+	async function saveMeta(prId, meta) {
+		await cloud.json.upload("gringo/pr/meta/" + prId, meta);
+		localStorage.setItem("gringo." + prId, JSON.stringify(meta));
 	}
 	async function fetchMetaCached(prId) {
 		let jsonMeta = localStorage.getItem("gringo." + prId);
 		if (jsonMeta) return JSON.parse(jsonMeta);
-		let meta = { tags: [] };
+		let meta = {
+			prId,
+			tags: []
+		};
 		try {
 			meta = await cloud.json.fetch("gringo/pr/meta/" + prId);
 		} catch {

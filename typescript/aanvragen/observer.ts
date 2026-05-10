@@ -110,6 +110,7 @@ function scrapeInfoItem(requestDiv: HTMLDivElement): RequestBasicInfo {
 }
 
 interface PrMeta {
+    prId: string,
     tags: string[],
 }
 
@@ -157,6 +158,7 @@ async function decoratePr(request: RequestBasicInfo) {
     stripSections(request);
     let meta = await fetchMetaCached(request.id);
     addMeta(request, meta);
+    updatePrLine(request, meta);
 }
 
 interface TagDef  {
@@ -164,24 +166,62 @@ interface TagDef  {
     description: string,
     color: string,
     bkgColor: string,
+    order: number
 }
 const defaultTags: TagDef[] = [
-    { name: "BB>", description: "Bestelbon verzonden", color: "", bkgColor: "orange"},
-    { name: "✔", description: "Bestelling ontvangen", color: "green", bkgColor: ""},
-    { name: "brol", description: "", color: "", bkgColor: ""},
-    { name: "Zever", description: "", color: "blue", bkgColor: ""},
+    { name: "BB>", description: "Bestelbon verzonden", color: "", bkgColor: "orange", order: 0},
+    { name: "En", description: "", color: "blue", bkgColor: "", order: 400},
+    { name: "Nog", description: "", color: "blue", bkgColor: "", order: 500},
+    { name: "Veel", description: "", color: "blue", bkgColor: "", order: 600},
+    { name: "Langer", description: "", color: "blue", bkgColor: "", order: 700},
+    { name: "✔", description: "Bestelling ontvangen", color: "green", bkgColor: "", order: 100},
+    { name: "brol", description: "", color: "", bkgColor: "", order: 200},
+    { name: "Zever", description: "", color: "blue", bkgColor: "", order: 300},
 ];
 const defaultTagsMap: Map<string, TagDef> = new Map(defaultTags.map(t => [t.name, t]));
+
+function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
+    let tagsContainer = request.div.querySelector(".tagsContainer") as HTMLButtonElement | null;
+    if(!tagsContainer)
+        return;
+    tagsContainer.innerHTML = "";
+    meta.tags
+        .map(tag => {
+            return defaultTagsMap.get(tag);
+        })
+        .filter(t  => !!t)
+        .sort((a, b) => a.order - b.order)
+        .forEach(tagDef => {
+            let tagSpan = emmet.appendChild(tagsContainer, `
+                span    
+            `).first as HTMLSpanElement;
+                paintTag(tagSpan, tagDef, true);
+        });
+}
+
+function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
+    tagElement.innerText = tagDef.name;
+    tagElement.classList.add("gringoTag");
+    tagElement.style.color = tagDef.color != "" ? tagDef.color : "inherit";
+    tagElement.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
+    tagElement.title = tagDef.description;
+    tagElement.classList.toggle("selected", selected);
+}
 
 function addMeta(request: RequestBasicInfo, meta: PrMeta) {
     let divStatusContainer = request.div.querySelector("div.item-status-container") as HTMLDivElement | null;
     if(!divStatusContainer)
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
-    let button = emmet.appendChild(divStatusContainer, `
-        button.naked.tagButton
-            >li.far.fa-circle-down
-    `).first as HTMLButtonElement;
+    let tagsWrapper = emmet.appendChild(divStatusContainer, `
+        div.tagsWrapper.flexRow>(
+            (button.naked.tagButton
+                >li.far.fa-circle-down)+
+            div.tagsContainer
+        )
+    `).first as HTMLDivElement;
+
+    let button = tagsWrapper.querySelector("button.tagButton") as HTMLButtonElement;
 
     addButtonClickNoPropagation(button, (ev) => {
         let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
@@ -192,25 +232,40 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
         let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
         container.classList.add("tagList");
         container.innerHTML = "";
-        defaultTags.forEach(tagDef => {
-            let tagButton = emmet.appendChild(container, `
-                button.naked.tag{${tagDef.name}}
-            `).first as HTMLDivElement;
-            tagButton.style.color = tagDef.color != "" ? tagDef.color : "inherit";
-            tagButton.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
-            tagButton.title = tagDef.description;
-            tagButton.classList.toggle("selected", meta.tags.includes(tagDef.name));
-        });
+        defaultTags
+            .sort((a, b) => a.order - b.order)
+            .forEach(tagDef => {
+                let tagButton = emmet.appendChild(container, `
+                    button.naked.gringoTag{${tagDef.name}}
+                `).first as HTMLButtonElement;
+                paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
+                tagButton.onclick = async (ev) => {
+                    tagButton.classList.toggle("selected");
+                    let selected = tagButton.classList.contains("selected");
+                    gringo(`clicked ${tagDef.name} for ${request.id}(meta:${meta.prId})`);
+                    if(selected)
+                        meta.tags.push(tagDef.name);
+                    else
+                        meta.tags = meta.tags.filter(t => t != tagDef.name);
+                    meta.prId = request.id; //temp!
+                    await saveMeta(request.id, meta);
+                    updatePrLine(request, meta);
+                };
+            });
     });
 }
 
+async function saveMeta(prId: string, meta: PrMeta) {
+    await cloud.json.upload("gringo/pr/meta/" + prId, meta);
+    localStorage.setItem("gringo."+prId, JSON.stringify(meta));
+}
 
 async function fetchMetaCached(prId: string) {
     //todo: this assumes that localStorage is synced with cloud.
     let jsonMeta = localStorage.getItem("gringo."+prId); //todo: eventually replace with indexedDb
     if(jsonMeta)
         return JSON.parse(jsonMeta) as PrMeta;
-    let meta: PrMeta =  {tags: []};
+    let meta: PrMeta =  {prId, tags: []};
     try {
         meta = await cloud.json.fetch("gringo/pr/meta/" + prId);
     } catch {

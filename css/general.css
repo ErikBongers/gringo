@@ -6,6 +6,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: block;
+    /*noinspection CssUnknownTarget*/
     src: url('chrome-extension://__MSG_@@extension_id__/fa720web/webfonts/fa-regular-400.woff2');
 }
 
@@ -165,22 +166,32 @@ main.hideTeam {
     z-index: 1000;
 }
 
+.gringoTag, button.gringoTag {
+    padding: .2ch .7ch;
+    width: fit-content;
+    border-radius: 2ch;
+    border-width: 1px;
+    border-style: solid;
+    border-color: transparent;
+}
+
 .tagList {
-    & button.tag {
-        margin-block: .2ch;
-        padding: .2ch .7ch;
-        width: fit-content;
-        border-radius: 2ch;
-        border-width: 1px;
-        border-style: solid;
-        border-color: transparent;
-        opacity: .5;
+    & button.gringoTag {
+        opacity: .2;
+        margin-inline: .2ch;
         &.selected {
             opacity: 1;
+            border-color: rgba(0, 0, 0, 1);
         }
-        &:hover {
-            border-color: rgba(0, 0, 0, 0.2);
+       &:hover {
             opacity: 1;
+            border-color: rgba(0, 0, 255, 0.5);
+            border-width: 2px;
         }
+    }
+}
+.tagsContainer {
+    .gringoTag {
+        font-size: .8em;
     }
 }
