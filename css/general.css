@@ -388,3 +388,9 @@ main.hideTeam {
 .tagButton {
     font-size: 1.2rem;
 }
+
+#gringo-tags-popover {
+    margin: 0;
+    top: anchor(bottom);
+    left: anchor(left);
+}

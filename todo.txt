@@ -1,3 +1,19 @@
+Goals
+==========
+* Reduce work to copy pr/order to Excel...or...
+* Replace Excel?
+  > requires assigning a project to each pr.
+    >  Perhaps only assign projects for MW prs.
+    > Assign project in pr, before copying to Excel.
+  > this disables alterations to excel data.
+
+Data exchange
+=============
+* Plugin should be able to login with SSO to sharepoint.
+  > "how to use sso in a chrome plugin"
+    > enable 'identity' permission in manifest.json
+    > Microsoft Enterprise SSO: On managed Windows/macOS, use the Microsoft Single Sign-On extension for Chrome to enable seamless authentication with Entra ID (formerly Azure AD) [5.2, 5.9].
+
 meta UI.
 =========
  - tags is list of strings, icons.

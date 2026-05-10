@@ -60,12 +60,19 @@ function decoratePage() {
     requests.forEach(decoratePr);
     if(!document.body.dataset.hasGringoDialog) {
         document.body.dataset.hasGringoDialog = "true";
-        emmet.appendChild(document.body, `
-            dialog#gringo-tags-popover[popover=""]> (
+        let button = emmet.appendChild(document.body, `
+            div#gringo-tags-popover[popover=""]> (
                 p{Tadaaa!}+
-                button{x}[commandfor="gringo-tags-popover" command="close"]
+                button{x}
             )        
-        `);
+        `).last;
+        addButtonClickNoPropagation(button as HTMLButtonElement, (ev) => {
+            let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
+            if(!popover)
+                return;
+            // @ts-ignore
+            popover.togglePopover({source:button});
+        });
     }
 }
 
@@ -109,11 +116,11 @@ function addOrderCopyButton(request: RequestBasicInfo) {
 
 function addButtonClickNoPropagation(button: HTMLButtonElement, onClick: (ev: any) => any) {
     button.onmousedown = async (ev) => {
-        onClick(ev);
         ev.stopPropagation();
         ev.preventDefault();
     };
     button.onmouseup = (ev) => {
+        onClick(ev);
         ev.stopPropagation();
         ev.preventDefault();
     };
@@ -147,14 +154,16 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
     let button = emmet.appendChild(divStatusContainer, `
-        button.naked.tagButton[popovertarget="gringo-tags-popover"]
+        button.naked.tagButton
             >li.far.fa-circle-down
     `).first as HTMLButtonElement;
+
     addButtonClickNoPropagation(button, (ev) => {
-        let dialog = document.getElementById("gringo-tags-popover") as HTMLDialogElement;
-        if(!dialog)
+        let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
+        if(!popover)
             return;
-        dialog.showModal();
+        // @ts-ignore
+        popover.togglePopover({source:button});
         // let ul = dialog.querySelector("ul") as HTMLUListElement;
         // ul.innerHTML = "";
         // meta.tags.forEach(tag => {
