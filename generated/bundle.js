@@ -516,7 +516,7 @@
 		},
 		{
 			name: "✔",
-			description: "Bestelbon ontvangen",
+			description: "Bestelling ontvangen",
 			color: "green",
 			bkgColor: ""
 		},
@@ -550,13 +550,13 @@
 			container.classList.add("tagList");
 			container.innerHTML = "";
 			defaultTags.forEach((tagDef) => {
-				let tagDiv = emmet.appendChild(container, `
-                div{${tagDef.name}}
+				let tagButton = emmet.appendChild(container, `
+                button.naked.tag{${tagDef.name}}
             `).first;
-				tagDiv.style.color = tagDef.color != "" ? tagDef.color : "inherit";
-				tagDiv.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
-				tagDiv.title = tagDef.description;
-				tagDiv.classList.toggle("selected", meta.tags.includes(tagDef.name));
+				tagButton.style.color = tagDef.color != "" ? tagDef.color : "inherit";
+				tagButton.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
+				tagButton.title = tagDef.description;
+				tagButton.classList.toggle("selected", meta.tags.includes(tagDef.name));
 			});
 		});
 	}

@@ -166,9 +166,20 @@ main.hideTeam {
 }
 
 .tagList {
-    & div {
+    & button.tag {
+        margin-block: .2ch;
+        padding: .2ch .7ch;
+        width: fit-content;
+        border-radius: 2ch;
+        border-width: 1px;
+        border-style: solid;
+        border-color: transparent;
         opacity: .5;
-        & .selected {
+        &.selected {
+            opacity: 1;
+        }
+        &:hover {
+            border-color: rgba(0, 0, 0, 0.2);
             opacity: 1;
         }
     }
