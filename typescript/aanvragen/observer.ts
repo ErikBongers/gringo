@@ -74,6 +74,16 @@ function decoratePage() {
             popover.togglePopover({source:button});
         });
     }
+
+    // let requestInfoListPanel = document.querySelector(".request-info-list-panel") as HTMLElement | null;
+    // if(requestInfoListPanel) {
+    //     if (!requestInfoListPanel.dataset.hasOverlay) {
+    //         requestInfoListPanel.dataset.hasOverlay = "true";
+    //         emmet.appendChild(requestInfoListPanel, `
+    //         div.gringoOverlay
+    //     `);
+    //     }
+    // }
 }
 
 function scrapePRs() {
