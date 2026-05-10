@@ -200,6 +200,11 @@ main.hideTeam {
     background: white;
     padding-inline: 5ch;
     padding-block: 1ch;
+    & summary {
+        margin-block-start: .5ch;
+        margin-block-end: 1.5ch;
+    }
+
 }
 
 #tagsFilterTable {
@@ -212,9 +217,19 @@ main.hideTeam {
         corner-inline-start-shape: bevel;
         background-color: #00000020;
         padding-inline: 1ch;
-        padding-block: .2ch;        &.selected {
+        padding-block: .2ch;
+        &.selected {
             background-color: rgb(94 108 133 / 0.49);
             color: white;
         }
+    }
+    & button.filter {
+        opacity: .5;
+        &.selected {
+            opacity: 1;
+        }
+    }
+    & button.disabled {
+        opacity: .15;
     }
 }

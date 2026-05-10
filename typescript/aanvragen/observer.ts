@@ -92,6 +92,23 @@ function decoratePage() {
     // }
 }
 
+function updateTagsFilters(filters: TagsFilter[]) {
+    let hasSolo = filters.some(f => f.solo);
+    let table = document.getElementById("tagsFilterTable") as HTMLTableElement;
+    for(let tr of table.tBodies[0].rows) {
+        let tagName = tr.dataset.tagName!;
+        let filter = filters.find(f => f.name == tagName);
+        if(!filter) {
+            debugger;
+            throw new Error("Damned");
+        }
+        let btnFilter = tr.querySelector("button.filter") as HTMLButtonElement;
+        btnFilter.classList.toggle("disabled", hasSolo);
+        btnFilter.classList.toggle("selected", filter.selected);
+        (tr.querySelector("button.solo") as HTMLButtonElement).classList.toggle("selected", filter.solo);
+    }
+}
+
 function fillSearchPanel(divSearchPanel: HTMLDivElement) {
     let tagsCollapse = emmet.appendChild(divSearchPanel, `
         details>(
@@ -103,7 +120,8 @@ function fillSearchPanel(divSearchPanel: HTMLDivElement) {
     defaultTags
         .sort((a, b) => a.order - b.order)
         .forEach(tagDef => {
-            let tr = emmet.appendChild(tbody, "tr").first as HTMLTableRowElement;
+            let tr = emmet.appendChild(tbody, `tr`).first as HTMLTableRowElement;
+            tr.dataset.tagName = tagDef.name;
             emmet.appendChild(tr, `
                 (td>span.naked.gringoTag{${tagDef.name}})+
                 (td>button.naked.filter{✔})+
@@ -111,7 +129,24 @@ function fillSearchPanel(divSearchPanel: HTMLDivElement) {
             `);
             let tagSpan = tr.querySelector("span")!;
             paintTag(tagSpan, tagDef, true);
+            let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
+            filterButton.onclick = (ev) => {
+                let filters = getTagsFilters();
+                let filter = filters.find(t => t.name == tagDef.name)!;
+                filter.selected = !filter.selected;
+                saveTagsFilters(filters);
+                updateTagsFilters(filters);
+            };
+            let soloButton = tr.querySelector("button.solo") as HTMLButtonElement;
+            soloButton.onclick = (ev) => {
+                let filters = getTagsFilters();
+                let filter = filters.find(t => t.name == tagDef.name)!;
+                filter.solo = !filter.solo;
+                saveTagsFilters(filters);
+                updateTagsFilters(filters);
+            };
         });
+    updateTagsFilters(getTagsFilters());
 }
 
 function scrapePRs() {
@@ -139,6 +174,12 @@ function scrapeInfoItem(requestDiv: HTMLDivElement): RequestBasicInfo {
 interface PrMeta {
     prId: string,
     tags: string[],
+}
+
+interface TagsFilter {
+    name: string,
+    selected: boolean,
+    solo: boolean
 }
 
 function addOrderCopyButton(request: RequestBasicInfo) {
@@ -207,6 +248,21 @@ const defaultTags: TagDef[] = [
     { name: "Langer", description: "", color: "blue", bkgColor: "", order: 700},
 ];
 const defaultTagsMap: Map<string, TagDef> = new Map(defaultTags.map(t => [t.name, t]));
+
+function getTagsFilters() {
+    let json = localStorage.getItem('gringo.tagsFilters');
+    if(!json) {
+        return defaultTags
+            .map(tag => {
+                return {name: tag.name, selected: false, solo: false} satisfies TagsFilter as TagsFilter
+            });
+    }
+    return JSON.parse(json) as TagsFilter[];
+}
+
+function saveTagsFilters(tagsFilters: TagsFilter[]) {
+    localStorage.setItem('gringo.tagsFilters', JSON.stringify(tagsFilters));
+}
 
 function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     let tagsContainer = request.div.querySelector(".tagsContainer") as HTMLButtonElement | null;

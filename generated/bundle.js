@@ -459,6 +459,22 @@
 		let divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first;
 		fillSearchPanel(divSearchPanel);
 	}
+	function updateTagsFilters(filters) {
+		let hasSolo = filters.some((f) => f.solo);
+		let table = document.getElementById("tagsFilterTable");
+		for (let tr of table.tBodies[0].rows) {
+			let tagName = tr.dataset.tagName;
+			let filter = filters.find((f) => f.name == tagName);
+			if (!filter) {
+				debugger;
+				throw new Error("Damned");
+			}
+			let btnFilter = tr.querySelector("button.filter");
+			btnFilter.classList.toggle("disabled", hasSolo);
+			btnFilter.classList.toggle("selected", filter.selected);
+			tr.querySelector("button.solo").classList.toggle("selected", filter.solo);
+		}
+	}
 	function fillSearchPanel(divSearchPanel) {
 		let tbody = emmet.appendChild(divSearchPanel, `
         details>(
@@ -467,14 +483,32 @@
         )    
     `).first.querySelector("tbody");
 		defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			let tr = emmet.appendChild(tbody, "tr").first;
+			let tr = emmet.appendChild(tbody, `tr`).first;
+			tr.dataset.tagName = tagDef.name;
 			emmet.appendChild(tr, `
                 (td>span.naked.gringoTag{${tagDef.name}})+
                 (td>button.naked.filter{✔})+
                 (td>button.naked.solo{solo})
             `);
 			paintTag(tr.querySelector("span"), tagDef, true);
+			let filterButton = tr.querySelector("button.filter");
+			filterButton.onclick = (ev) => {
+				let filters = getTagsFilters();
+				let filter = filters.find((t) => t.name == tagDef.name);
+				filter.selected = !filter.selected;
+				saveTagsFilters(filters);
+				updateTagsFilters(filters);
+			};
+			let soloButton = tr.querySelector("button.solo");
+			soloButton.onclick = (ev) => {
+				let filters = getTagsFilters();
+				let filter = filters.find((t) => t.name == tagDef.name);
+				filter.solo = !filter.solo;
+				saveTagsFilters(filters);
+				updateTagsFilters(filters);
+			};
 		});
+		updateTagsFilters(getTagsFilters());
 	}
 	function scrapePRs() {
 		return [...document.querySelectorAll("request-info-item")].map(scrapeInfoItem);
@@ -594,6 +628,20 @@
 		}
 	];
 	const defaultTagsMap = new Map(defaultTags.map((t) => [t.name, t]));
+	function getTagsFilters() {
+		let json = localStorage.getItem("gringo.tagsFilters");
+		if (!json) return defaultTags.map((tag) => {
+			return {
+				name: tag.name,
+				selected: false,
+				solo: false
+			};
+		});
+		return JSON.parse(json);
+	}
+	function saveTagsFilters(tagsFilters) {
+		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
+	}
 	function updatePrLine(request, meta) {
 		let tagsContainer = request.div.querySelector(".tagsContainer");
 		if (!tagsContainer) return;
