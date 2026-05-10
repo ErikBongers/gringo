@@ -1,3 +1,10 @@
+Filters
+===========
+* I want to see the PRs that are
+  -  MW <and> not finished.
+  -  written by me <or>  Bahati
+
+
 * Tags sync
   > keep a local last_sync z-timestamp
   > fetch all tags since.

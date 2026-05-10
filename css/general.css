@@ -212,24 +212,25 @@ main.hideTeam {
         padding-inline: 1ch;
         padding-block: .2ch;
     }
-    & button.solo {
-        border-radius: 1rem;
-        corner-inline-start-shape: bevel;
-        background-color: #00000020;
-        padding-inline: 1ch;
-        padding-block: .2ch;
-        &.selected {
-            background-color: rgb(94 108 133 / 0.49);
-            color: white;
-        }
-    }
     & button.filter {
-        opacity: .5;
-        &.selected {
-            opacity: 1;
+        &.equal {
+            span.empty, span.notEqual {
+                display: none;
+            }
+        }
+        &.notEqual {
+            span.empty, span.equal {
+                display: none;
+            }
+        }
+        &.empty {
+            span.notEqual, span.equal {
+                display: none;
+            }
         }
     }
-    & button.disabled {
-        opacity: .15;
-    }
+}
+
+request-info-item.hidden {
+    display: none;
 }

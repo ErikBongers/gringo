@@ -19,11 +19,15 @@ function onPageRefreshed() {
     decoratePage();
 }
 
+let currentPage = "";
 function onMutation(mutation: MutationRecord) {
     let pagination = document.querySelector("fd-pagination") as HTMLElement | null;
-    // if(pagination)
-    //     gotoNextPage(pagination);
-    if(document.querySelector("fd-pagination")) {
+    if(pagination) {
+        let newPage = pagination.querySelector('input')!.value;
+        if(currentPage != newPage) {
+            document.body.dataset.gringoPageScraped = "";
+            currentPage = newPage;
+        }
         decoratePage();
         return true;
     }
@@ -38,7 +42,7 @@ function gotoNextPage(pagination: HTMLElement) {
     let nextButton = pagination.querySelector("button[glyph='navigation-right-arrow']") as HTMLButtonElement | null;
     if(!nextButton)
         return;
-    globalPrs.push(...scrapePRs());
+    scrapePRs();
     if(nextButton.classList.contains("is-disabled")) {
         gringo("THIE END");
         gringo(globalPrs);
@@ -50,6 +54,19 @@ function gringo(...args: any[]) {
     console.log("gringo", ...args);
 }
 
+async function applyFilters(requests: RequestBasicInfo[]) {
+    gringo("Applying filters...");
+    let filters = getTagsFilters();
+    let selectedTags = filters.filter(t => t.filterType == "==");
+    let excludedTags = filters.filter(t => t.filterType == "!=");
+    for(let request of requests) {
+        let meta = await fetchMetaCached(request.id);
+        let hasAllSelectedTags = selectedTags.every(t => meta.tags.includes(t.name));
+        let hasNoExcludedTags = excludedTags.every(t => !meta.tags.includes(t.name));
+        request.div.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
+    }
+}
+
 function decoratePage() {
     let main = document.querySelector("main");
     if(!main)
@@ -59,7 +76,10 @@ function decoratePage() {
 
     let requests  = scrapePRs();
     requests.forEach(decoratePr);
-    if(document.body.dataset.gringoPageDecorated)
+    applyFilters(requests);
+
+    //from here on, only set thngs that need to be done once! (not per pagination)
+    if(document.body.dataset.gringoPageDecorated == "true")
         return;
     document.body.dataset.gringoPageDecorated = "true";
     let popover = emmet.appendChild(document.body, `
@@ -79,7 +99,8 @@ function decoratePage() {
 
     let requestSearchPanel = main.querySelector(".request-search-panel") as HTMLDivElement;
     let divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first as HTMLDivElement;
-    fillSearchPanel(divSearchPanel);
+    fillSearchPanel(divSearchPanel, requests);
+
 
     // let requestInfoListPanel = document.querySelector(".request-info-list-panel") as HTMLElement | null;
     // if(requestInfoListPanel) {
@@ -93,23 +114,24 @@ function decoratePage() {
 }
 
 function updateTagsFilters(filters: TagsFilter[]) {
-    let hasSolo = filters.some(f => f.solo);
     let table = document.getElementById("tagsFilterTable") as HTMLTableElement;
     for(let tr of table.tBodies[0].rows) {
         let tagName = tr.dataset.tagName!;
         let filter = filters.find(f => f.name == tagName);
-        if(!filter) {
-            debugger;
-            throw new Error("Damned");
-        }
         let btnFilter = tr.querySelector("button.filter") as HTMLButtonElement;
-        btnFilter.classList.toggle("disabled", hasSolo);
-        btnFilter.classList.toggle("selected", filter.selected);
-        (tr.querySelector("button.solo") as HTMLButtonElement).classList.toggle("selected", filter.solo);
+        if(!filter) {
+            btnFilter.classList.toggle("equal", false);
+            btnFilter.classList.toggle("notEqual", false);
+            btnFilter.classList.toggle("empty", true);
+            continue;
+        }
+        btnFilter.classList.toggle("empty", false);
+        btnFilter.classList.toggle("equal", filter.filterType=="==");
+        btnFilter.classList.toggle("notEqual", filter.filterType=="!=");
     }
 }
 
-function fillSearchPanel(divSearchPanel: HTMLDivElement) {
+function fillSearchPanel(divSearchPanel: HTMLDivElement, requests: RequestBasicInfo[]) {
     let tagsCollapse = emmet.appendChild(divSearchPanel, `
         details>(
             summary{Tags}+
@@ -124,34 +146,50 @@ function fillSearchPanel(divSearchPanel: HTMLDivElement) {
             tr.dataset.tagName = tagDef.name;
             emmet.appendChild(tr, `
                 (td>span.naked.gringoTag{${tagDef.name}})+
-                (td>button.naked.filter{✔})+
-                (td>button.naked.solo{solo})
+                (td>button.naked.filter>(
+                    span.equal{✔}+
+                    span.notEqual{❌}+
+                    span.empty{▢}
+                    )
+                )
             `);
             let tagSpan = tr.querySelector("span")!;
             paintTag(tagSpan, tagDef, true);
             let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
-            filterButton.onclick = (ev) => {
+            filterButton.onclick = async (ev) => {
                 let filters = getTagsFilters();
-                let filter = filters.find(t => t.name == tagDef.name)!;
-                filter.selected = !filter.selected;
+                let filter = filters.find(t => t.name == tagDef.name);
+                if(!filter) {
+                    let filter: TagsFilter = {
+                        name: tagDef.name,
+                        filterType: "=="
+                    }
+                    filters.push(filter);
+                } else {
+                    if (filter.filterType == "==")
+                        filter.filterType = "!=";
+                    else
+                        filters = filters.filter(f => f.name != tagDef.name);
+                }
                 saveTagsFilters(filters);
                 updateTagsFilters(filters);
-            };
-            let soloButton = tr.querySelector("button.solo") as HTMLButtonElement;
-            soloButton.onclick = (ev) => {
-                let filters = getTagsFilters();
-                let filter = filters.find(t => t.name == tagDef.name)!;
-                filter.solo = !filter.solo;
-                saveTagsFilters(filters);
-                updateTagsFilters(filters);
+                await applyFilters(requests);
             };
         });
     updateTagsFilters(getTagsFilters());
 }
 
 function scrapePRs() {
+    if(document.body.dataset.gringoPageScraped == "true")
+        return globalPrs;
+    gringo("Scraping...");
     let requestsDivs = document.querySelectorAll("request-info-item");
-    return [...requestsDivs].map(scrapeInfoItem);
+    let infos = [...requestsDivs].map(scrapeInfoItem);
+    gringo(`Found ${infos.length} items.`);
+    if(infos.length > 0)
+        document.body.dataset.gringoPageScraped = "true";
+    globalPrs.push(...infos);
+    return globalPrs;
 }
 
 export type RequestBasicInfo = {
@@ -176,10 +214,11 @@ interface PrMeta {
     tags: string[],
 }
 
+type FilterType = "==" | "!=";
+
 interface TagsFilter {
     name: string,
-    selected: boolean,
-    solo: boolean
+    filterType: FilterType,
 }
 
 function addOrderCopyButton(request: RequestBasicInfo) {
@@ -240,8 +279,9 @@ const defaultTags: TagDef[] = [
     { name: "BB>", description: "Bestelbon verzonden", color: "", bkgColor: "orange", order: 0},
     { name: "✔", description: "Bestelling ontvangen", color: "green", bkgColor: "", order: 100},
     { name: "MW", description: "", color: "", bkgColor: "", order: 300},
+    { name: "BK", description: "", color: "", bkgColor: "", order: 301},
     { name: "brol", description: "", color: "", bkgColor: "", order: 330},
-    { name: "Zever", description: "", color: "blue", bkgColor: "", order: 300},
+    { name: "Zever", description: "", color: "blue", bkgColor: "", order: 390},
     { name: "En", description: "", color: "blue", bkgColor: "", order: 400},
     { name: "Nog", description: "", color: "blue", bkgColor: "", order: 500},
     { name: "Veel", description: "", color: "blue", bkgColor: "", order: 600},
@@ -251,12 +291,8 @@ const defaultTagsMap: Map<string, TagDef> = new Map(defaultTags.map(t => [t.name
 
 function getTagsFilters() {
     let json = localStorage.getItem('gringo.tagsFilters');
-    if(!json) {
-        return defaultTags
-            .map(tag => {
-                return {name: tag.name, selected: false, solo: false} satisfies TagsFilter as TagsFilter
-            });
-    }
+    if(!json)
+        return [];
     return JSON.parse(json) as TagsFilter[];
 }
 
