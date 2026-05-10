@@ -446,11 +446,10 @@
 			document.body.dataset.hasGringoDialog = "true";
 			let button = emmet.appendChild(document.body, `
             div#gringo-tags-popover[popover=""]> (
-                p{Tadaaa!}+
-                div.popoverContainer{Container...}+
-                button{x}
+                (div.flexRow>button.closePopup.naked{x})+
+                div.popoverContainer{Container...}
             )        
-        `).last;
+        `).first.querySelector("button.closePopup");
 			addButtonClickNoPropagation(button, (ev) => {
 				let popover = document.getElementById("gringo-tags-popover");
 				if (!popover) return;
@@ -548,15 +547,16 @@
 			if (!popover) return;
 			popover.togglePopover({ source: button });
 			let container = popover.querySelector(".popoverContainer");
+			container.classList.add("tagList");
 			container.innerHTML = "";
 			defaultTags.forEach((tagDef) => {
-				if (!tagDef) return;
 				let tagDiv = emmet.appendChild(container, `
                 div{${tagDef.name}}
             `).first;
 				tagDiv.style.color = tagDef.color != "" ? tagDef.color : "inherit";
 				tagDiv.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
 				tagDiv.title = tagDef.description;
+				tagDiv.classList.toggle("selected", meta.tags.includes(tagDef.name));
 			});
 		});
 	}

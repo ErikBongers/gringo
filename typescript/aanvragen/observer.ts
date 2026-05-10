@@ -60,13 +60,13 @@ function decoratePage() {
     requests.forEach(decoratePr);
     if(!document.body.dataset.hasGringoDialog) {
         document.body.dataset.hasGringoDialog = "true";
-        let button = emmet.appendChild(document.body, `
+        let popover = emmet.appendChild(document.body, `
             div#gringo-tags-popover[popover=""]> (
-                p{Tadaaa!}+
-                div.popoverContainer{Container...}+
-                button{x}
+                (div.flexRow>button.closePopup.naked{x})+
+                div.popoverContainer{Container...}
             )        
-        `).last;
+        `).first as HTMLDivElement;
+        let button = popover.querySelector("button.closePopup") as HTMLButtonElement;
         addButtonClickNoPropagation(button as HTMLButtonElement, (ev) => {
             let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
             if(!popover)
@@ -167,7 +167,7 @@ interface TagDef  {
 }
 const defaultTags: TagDef[] = [
     { name: "BB>", description: "Bestelbon verzonden", color: "", bkgColor: "orange"},
-    { name: "✔", description: "Bestelbon ontvangen", color: "green", bkgColor: ""},
+    { name: "✔", description: "Bestelling ontvangen", color: "green", bkgColor: ""},
     { name: "brol", description: "", color: "", bkgColor: ""},
     { name: "Zever", description: "", color: "blue", bkgColor: ""},
 ];
@@ -190,16 +190,16 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
         // @ts-ignore
         popover.togglePopover({source:button});
         let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
+        container.classList.add("tagList");
         container.innerHTML = "";
         defaultTags.forEach(tagDef => {
-            if(!tagDef)
-                return;
             let tagDiv = emmet.appendChild(container, `
                 div{${tagDef.name}}
             `).first as HTMLDivElement;
             tagDiv.style.color = tagDef.color != "" ? tagDef.color : "inherit";
             tagDiv.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
             tagDiv.title = tagDef.description;
+            tagDiv.classList.toggle("selected", meta.tags.includes(tagDef.name));
         });
     });
 }
