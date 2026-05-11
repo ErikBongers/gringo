@@ -75,8 +75,13 @@ function decoratePage() {
     main.classList.toggle("hideTeam", true);
 
     let requests  = scrapePRs();
-    requests.forEach(decoratePr);
-    applyFilters(requests);
+
+    fetchChangedMetas().then(async (changedFiles) => {
+        gringo(changedFiles);
+        gringo("Todo: update local cache and UI");
+        requests.forEach(decoratePr);
+        await applyFilters(requests);
+    });
 
     //from here on, only set thngs that need to be done once! (not per pagination)
     if(document.body.dataset.gringoPageDecorated == "true")
@@ -393,4 +398,16 @@ async function fetchMetaCached(prId: string) {
     }
     localStorage.setItem("gringo."+prId, JSON.stringify(meta));
     return meta;
+}
+
+interface ChangedFile<T> {
+    name: string;
+    data: T,
+    changed: string
+}
+async function fetchChangedMetas() {
+    let startDate = new Date();
+    startDate = new Date(startDate.getTime() - 5 * 60 * 1000);
+    let strZTimseStamp = startDate.toISOString();
+    return await cloud.json.fetchSince("gringo/pr/meta/", strZTimseStamp) as Promise<ChangedFile<PrMeta>[]>;
 }

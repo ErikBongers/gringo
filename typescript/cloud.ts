@@ -3,6 +3,7 @@ import * as def from "./def";
 export let cloud = {
     json: {
         fetch: fetchJson,
+        fetchSince: fetchJsonSince,
         upload: uploadJson
     }
 };
@@ -20,3 +21,9 @@ async function uploadJson(fileName: string, data: any) {
     });
     return await res.text();
 }
+
+async function fetchJsonSince(folderName: string, zTimeStamp: string) {
+    let res = await fetch(def.JSON_SINCE_URL + "?folderName="+folderName+"&changedSince="+zTimeStamp, {method: "GET"});
+    return res.json();
+}
+
