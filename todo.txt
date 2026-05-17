@@ -7,6 +7,11 @@ Meta sync
       at startup and...
       > every x time?
         5 min ok?
+  Currently, when no last-sync date is present, all local metas are removed and last-sync date is set to now.
+  This forces a read of every single meta to be fetched separately.
+  On subsequent fetchChangedSince() calls, only the most recently changed metas are fetched.
+  > Is this waterproof?
+
 
 
 Filters

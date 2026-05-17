@@ -294,6 +294,8 @@
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
 	const JSON_SINCE_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json-since";
 	const GLOBAL_SETTINGS_FILENAME = "gringo_global_settings.json";
+	const KEY_LAST_FETCHED_METAS = "gringo.lastFetchedMetas";
+	const KEY_CLOUD_METAS_FOLDER = "gringo/pr/meta/";
 	//#endregion
 	//#region typescript/cloud.ts
 	let cloud = { json: {
@@ -422,7 +424,7 @@
 			super("request-info-list/requisition", onMutation, false, onPageRefreshed$1);
 		}
 		isPageReallyLoaded() {
-			return true;
+			return isPageProbablyLoaded();
 		}
 	};
 	var observer_default = new AanvragenObserver();
@@ -430,13 +432,20 @@
 		gringo("page Aanvragen refreshed xxx.");
 		decoratePage();
 	}
+	function isPageProbablyLoaded() {
+		let pagination = document.querySelector("fd-pagination");
+		if (!pagination) return false;
+		return !!pagination.querySelector("button.is-active");
+	}
 	let currentPage = "";
 	function onMutation(mutation) {
+		if (!isPageProbablyLoaded()) return false;
 		let pagination = document.querySelector("fd-pagination");
 		if (pagination) {
 			let newPage = pagination.querySelector("input").value;
 			if (currentPage != newPage) {
 				document.body.dataset.gringoPageScraped = "";
+				globalPrs = [];
 				currentPage = newPage;
 			}
 			decoratePage();
@@ -461,6 +470,8 @@
 		}
 	}
 	function decoratePage() {
+		if (document.body.dataset.gringoPageDecorated == "true") return;
+		document.body.dataset.gringoPageDecorated = "true";
 		let main = document.querySelector("main");
 		if (!main) return;
 		main.classList.toggle("hideOnBehalfOf", true);
@@ -469,11 +480,10 @@
 		fetchChangedMetas().then(async (changedFiles) => {
 			gringo(changedFiles);
 			gringo("Todo: update local cache and UI");
+			for (let meta of changedFiles);
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
 		});
-		if (document.body.dataset.gringoPageDecorated == "true") return;
-		document.body.dataset.gringoPageDecorated = "true";
 		let button = emmet.appendChild(document.body, `
         div#gringo-tags-popover[popover=""]> (
             (div.flexRow>button.closePopup.naked{x})+
@@ -742,7 +752,7 @@
 		});
 	}
 	async function saveMeta(prId, meta) {
-		await cloud.json.upload("gringo/pr/meta/" + prId, meta);
+		await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
 		localStorage.setItem("gringo." + prId, JSON.stringify(meta));
 	}
 	async function fetchMetaCached(prId) {
@@ -753,18 +763,25 @@
 			tags: []
 		};
 		try {
-			meta = await cloud.json.fetch("gringo/pr/meta/" + prId);
+			meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
 		} catch {
-			await cloud.json.upload("gringo/pr/meta/" + prId, meta);
+			await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
 		}
 		localStorage.setItem("gringo." + prId, JSON.stringify(meta));
 		return meta;
 	}
 	async function fetchChangedMetas() {
-		let startDate = /* @__PURE__ */ new Date();
-		startDate = /* @__PURE__ */ new Date(startDate.getTime() - 300 * 1e3);
-		let strZTimseStamp = startDate.toISOString();
-		return await cloud.json.fetchSince("gringo/pr/meta/", strZTimseStamp);
+		let changedMetas;
+		let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
+		if (!zSince) {
+			for (let key in localStorage) if (key.startsWith("gringo.PR")) localStorage.removeItem(key);
+			changedMetas = [];
+		} else changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
+		let fetchedDate = /* @__PURE__ */ new Date();
+		fetchedDate = /* @__PURE__ */ new Date(fetchedDate.getTime() - 300 * 1e3);
+		let zFetchedDate = fetchedDate.toISOString();
+		localStorage.setItem(KEY_LAST_FETCHED_METAS, zFetchedDate);
+		return changedMetas;
 	}
 	//#endregion
 	//#region typescript/main.ts

@@ -2,13 +2,14 @@ import {PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter/html";
 import {cloud} from "../cloud";
 import request = chrome.permissions.request;
+import {KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
         super( "request-info-list/requisition", onMutation, false, onPageRefreshed );
     }
     isPageReallyLoaded(): boolean {
-        return true;
+        return isPageProbablyLoaded();
     }
 }
 
@@ -19,13 +20,23 @@ function onPageRefreshed() {
     decoratePage();
 }
 
+function isPageProbablyLoaded(): boolean {
+    let pagination = document.querySelector("fd-pagination") as HTMLElement | null;
+    if (!pagination)
+        return false;
+    return !!pagination.querySelector("button.is-active");
+}
+
 let currentPage = "";
 function onMutation(mutation: MutationRecord) {
+    if(!isPageProbablyLoaded())
+        return false;
     let pagination = document.querySelector("fd-pagination") as HTMLElement | null;
     if(pagination) {
         let newPage = pagination.querySelector('input')!.value;
         if(currentPage != newPage) {
             document.body.dataset.gringoPageScraped = "";
+            globalPrs = [];
             currentPage = newPage;
         }
         decoratePage();
@@ -68,6 +79,9 @@ async function applyFilters(requests: RequestBasicInfo[]) {
 }
 
 function decoratePage() {
+    if(document.body.dataset.gringoPageDecorated == "true")
+        return;
+    document.body.dataset.gringoPageDecorated = "true";
     let main = document.querySelector("main");
     if(!main)
         return;
@@ -79,14 +93,12 @@ function decoratePage() {
     fetchChangedMetas().then(async (changedFiles) => {
         gringo(changedFiles);
         gringo("Todo: update local cache and UI");
+        for(let meta of changedFiles) {
+        }
         requests.forEach(decoratePr);
         await applyFilters(requests);
     });
 
-    //from here on, only set thngs that need to be done once! (not per pagination)
-    if(document.body.dataset.gringoPageDecorated == "true")
-        return;
-    document.body.dataset.gringoPageDecorated = "true";
     let popover = emmet.appendChild(document.body, `
         div#gringo-tags-popover[popover=""]> (
             (div.flexRow>button.closePopup.naked{x})+
@@ -381,7 +393,7 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
 }
 
 async function saveMeta(prId: string, meta: PrMeta) {
-    await cloud.json.upload("gringo/pr/meta/" + prId, meta);
+    await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     localStorage.setItem("gringo."+prId, JSON.stringify(meta));
 }
 
@@ -392,9 +404,9 @@ async function fetchMetaCached(prId: string) {
         return JSON.parse(jsonMeta) as PrMeta;
     let meta: PrMeta =  {prId, tags: []};
     try {
-        meta = await cloud.json.fetch("gringo/pr/meta/" + prId);
+        meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
     } catch {
-        await cloud.json.upload("gringo/pr/meta/" + prId, meta);
+        await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     }
     localStorage.setItem("gringo."+prId, JSON.stringify(meta));
     return meta;
@@ -406,8 +418,21 @@ interface ChangedFile<T> {
     changed: string
 }
 async function fetchChangedMetas() {
-    let startDate = new Date();
-    startDate = new Date(startDate.getTime() - 5 * 60 * 1000);
-    let strZTimseStamp = startDate.toISOString();
-    return await cloud.json.fetchSince("gringo/pr/meta/", strZTimseStamp) as Promise<ChangedFile<PrMeta>[]>;
+    let changedMetas: ChangedFile<PrMeta>[];
+    let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
+    if(!zSince) {
+        //clear all local metas, since we have no idea if they are up-to-date.
+        for(let key in localStorage) {
+            if(key.startsWith("gringo.PR"))
+                localStorage.removeItem(key);
+        }
+        changedMetas = [];
+    } else {
+     changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
+    }
+    let fetchedDate = new Date();
+    fetchedDate = new Date(fetchedDate.getTime() - 5 * 60 * 1000);
+    let zFetchedDate = fetchedDate.toISOString();
+    localStorage.setItem(KEY_LAST_FETCHED_METAS, zFetchedDate);
+    return changedMetas;
 }
