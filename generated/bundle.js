@@ -352,6 +352,9 @@
 		if (func()) then();
 		else setTimeout(() => tryUntilThen(func, then), 100);
 	}
+	function gringo(...args) {
+		console.log("gringo", ...args);
+	}
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
@@ -421,18 +424,18 @@
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("request-info-list/requisition", onMutation, false, onPageRefreshed$1);
+			super("request-info-list/requisition", onMutation$1, false, onPageRefreshed$2);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded();
+			return isPageProbablyLoaded$1();
 		}
 	};
-	var observer_default = new AanvragenObserver();
-	function onPageRefreshed$1() {
+	var observer_default$1 = new AanvragenObserver();
+	function onPageRefreshed$2() {
 		gringo("page Aanvragen refreshed xxx.");
-		decoratePage();
+		decoratePage$1();
 	}
-	function isPageProbablyLoaded() {
+	function isPageProbablyLoaded$1() {
 		return !!getPagination();
 	}
 	function getPagination() {
@@ -447,7 +450,7 @@
 		};
 	}
 	let currentPage = -1;
-	function onMutation(mutation) {
+	function onMutation$1(mutation) {
 		let pagination = getPagination();
 		if (pagination) {
 			let newPage = pagination.currentPage;
@@ -455,16 +458,13 @@
 				document.body.dataset.gringoPageScraped = "";
 				globalPrs = [];
 				currentPage = newPage;
-				decoratePage();
+				decoratePage$1();
 				return true;
 			}
 		}
 		return false;
 	}
 	let globalPrs = [];
-	function gringo(...args) {
-		console.log("gringo", ...args);
-	}
 	async function applyFilters(requests) {
 		gringo("Applying filters...");
 		let filters = getTagsFilters();
@@ -477,7 +477,7 @@
 			request.div.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
 		}
 	}
-	function decoratePage() {
+	function decoratePage$1() {
 		let main = document.querySelector("main");
 		if (!main) return;
 		main.classList.toggle("hideOnBehalfOf", true);
@@ -794,6 +794,31 @@
 		return changedMetas;
 	}
 	//#endregion
+	//#region typescript/aanvraag/observer.ts
+	var AanvraagObserver = class extends PartialUrlObserver {
+		constructor() {
+			super("viewRequisition", onMutation, false, onPageRefreshed$1);
+		}
+		isPageReallyLoaded() {
+			return isPageProbablyLoaded();
+		}
+	};
+	var observer_default = new AanvraagObserver();
+	function onPageRefreshed$1() {
+		gringo("page Aanvraag refreshed.");
+		decoratePage();
+	}
+	function isPageProbablyLoaded() {
+		return true;
+	}
+	function onMutation(mutation) {
+		decoratePage();
+		return true;
+	}
+	function decoratePage() {
+		gringo("Decorating aanvraag page...");
+	}
+	//#endregion
 	//#region typescript/main.ts
 	init();
 	function init() {
@@ -807,6 +832,7 @@
 				checkGlobalSettings();
 				onPageChanged();
 			});
+			registerObserver(observer_default$1);
 			registerObserver(observer_default);
 			onPageChanged();
 			if (document.readyState == "complete") {

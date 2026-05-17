@@ -2,6 +2,7 @@ import {PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter/html";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
+import {gringo} from "../globals";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -74,9 +75,6 @@ function gotoNextPage(pagination: HTMLElement) {
     }
     else
         nextButton.click();
-}
-function gringo(...args: any[]) {
-    console.log("gringo", ...args);
 }
 
 async function applyFilters(requests: RequestBasicInfo[]) {

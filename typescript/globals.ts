@@ -160,3 +160,7 @@ export function tryUntilThen(func: () => boolean, then: () => void) {
         setTimeout(() => tryUntilThen(func, then), 100);
     }
 }
+
+export function gringo(...args: any[]) {
+    console.log("gringo", ...args);
+}
