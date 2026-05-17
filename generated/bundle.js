@@ -480,7 +480,7 @@
 		fetchChangedMetas().then(async (changedFiles) => {
 			gringo(changedFiles);
 			gringo("Todo: update local cache and UI");
-			for (let meta of changedFiles);
+			for (let meta of changedFiles) await saveMeta(meta.data.prId, meta.data);
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
 		});

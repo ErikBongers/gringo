@@ -94,6 +94,7 @@ function decoratePage() {
         gringo(changedFiles);
         gringo("Todo: update local cache and UI");
         for(let meta of changedFiles) {
+            await saveMeta(meta.data.prId, meta.data);
         }
         requests.forEach(decoratePr);
         await applyFilters(requests);
