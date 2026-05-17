@@ -1,7 +1,6 @@
 import {PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter/html";
 import {cloud} from "../cloud";
-import request = chrome.permissions.request;
 import {KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 
 class AanvragenObserver extends PartialUrlObserver {
@@ -21,26 +20,41 @@ function onPageRefreshed() {
 }
 
 function isPageProbablyLoaded(): boolean {
-    let pagination = document.querySelector("fd-pagination") as HTMLElement | null;
-    if (!pagination)
-        return false;
-    return !!pagination.querySelector("button.is-active");
+    return !! getPagination();
 }
 
-let currentPage = "";
+function getPagination(): Pagination | null {
+    let paginationElement = document.querySelector("fd-pagination") as HTMLElement | null;
+    if (!paginationElement)
+        return null;
+    let currentPage = parseInt(paginationElement.querySelector('input')!.value);
+    let nextButton = paginationElement.querySelector("button[glyph='navigation-right-arrow']") as HTMLButtonElement | null;
+    if(!nextButton)
+        return null;
+    let hasNext = nextButton.classList.contains("is-disabled");
+    return {
+        currentPage: currentPage,
+        hasNext: hasNext,
+    }
+}
+
+interface Pagination {
+    currentPage: number;
+    hasNext: boolean;
+}
+
+let currentPage = -1;
 function onMutation(mutation: MutationRecord) {
-    if(!isPageProbablyLoaded())
-        return false;
-    let pagination = document.querySelector("fd-pagination") as HTMLElement | null;
+    let pagination = getPagination();
     if(pagination) {
-        let newPage = pagination.querySelector('input')!.value;
+        let newPage = pagination.currentPage;
         if(currentPage != newPage) {
             document.body.dataset.gringoPageScraped = "";
             globalPrs = [];
             currentPage = newPage;
+            decoratePage();
+            return true;
         }
-        decoratePage();
-        return true;
     }
     return false;
 }
@@ -55,7 +69,7 @@ function gotoNextPage(pagination: HTMLElement) {
         return;
     scrapePRs();
     if(nextButton.classList.contains("is-disabled")) {
-        gringo("THIE END");
+        gringo("THE END");
         gringo(globalPrs);
     }
     else
@@ -79,9 +93,6 @@ async function applyFilters(requests: RequestBasicInfo[]) {
 }
 
 function decoratePage() {
-    if(document.body.dataset.gringoPageDecorated == "true")
-        return;
-    document.body.dataset.gringoPageDecorated = "true";
     let main = document.querySelector("main");
     if(!main)
         return;
@@ -94,7 +105,7 @@ function decoratePage() {
         gringo(changedFiles);
         gringo("Todo: update local cache and UI");
         for(let meta of changedFiles) {
-            await saveMeta(meta.data.prId, meta.data);
+            await saveMeta(meta.data.prId, meta.data, "localStorage");
         }
         requests.forEach(decoratePr);
         await applyFilters(requests);
@@ -386,15 +397,16 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
                     else
                         meta.tags = meta.tags.filter(t => t != tagDef.name);
                     meta.prId = request.id; //temp!
-                    await saveMeta(request.id, meta);
+                    await saveMeta(request.id, meta, "localStorage and cloud");
                     updatePrLine(request, meta);
                 };
             });
     });
 }
 
-async function saveMeta(prId: string, meta: PrMeta) {
-    await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
+async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" | "localStorage and cloud") {
+    if(what == "localStorage and cloud")
+        await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     localStorage.setItem("gringo."+prId, JSON.stringify(meta));
 }
 

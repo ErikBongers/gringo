@@ -433,23 +433,31 @@
 		decoratePage();
 	}
 	function isPageProbablyLoaded() {
-		let pagination = document.querySelector("fd-pagination");
-		if (!pagination) return false;
-		return !!pagination.querySelector("button.is-active");
+		return !!getPagination();
 	}
-	let currentPage = "";
+	function getPagination() {
+		let paginationElement = document.querySelector("fd-pagination");
+		if (!paginationElement) return null;
+		let currentPage = parseInt(paginationElement.querySelector("input").value);
+		let nextButton = paginationElement.querySelector("button[glyph='navigation-right-arrow']");
+		if (!nextButton) return null;
+		return {
+			currentPage,
+			hasNext: nextButton.classList.contains("is-disabled")
+		};
+	}
+	let currentPage = -1;
 	function onMutation(mutation) {
-		if (!isPageProbablyLoaded()) return false;
-		let pagination = document.querySelector("fd-pagination");
+		let pagination = getPagination();
 		if (pagination) {
-			let newPage = pagination.querySelector("input").value;
+			let newPage = pagination.currentPage;
 			if (currentPage != newPage) {
 				document.body.dataset.gringoPageScraped = "";
 				globalPrs = [];
 				currentPage = newPage;
+				decoratePage();
+				return true;
 			}
-			decoratePage();
-			return true;
 		}
 		return false;
 	}
@@ -470,8 +478,6 @@
 		}
 	}
 	function decoratePage() {
-		if (document.body.dataset.gringoPageDecorated == "true") return;
-		document.body.dataset.gringoPageDecorated = "true";
 		let main = document.querySelector("main");
 		if (!main) return;
 		main.classList.toggle("hideOnBehalfOf", true);
@@ -480,7 +486,7 @@
 		fetchChangedMetas().then(async (changedFiles) => {
 			gringo(changedFiles);
 			gringo("Todo: update local cache and UI");
-			for (let meta of changedFiles) await saveMeta(meta.data.prId, meta.data);
+			for (let meta of changedFiles) await saveMeta(meta.data.prId, meta.data, "localStorage");
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
 		});
@@ -745,14 +751,14 @@
 					if (selected) meta.tags.push(tagDef.name);
 					else meta.tags = meta.tags.filter((t) => t != tagDef.name);
 					meta.prId = request.id;
-					await saveMeta(request.id, meta);
+					await saveMeta(request.id, meta, "localStorage and cloud");
 					updatePrLine(request, meta);
 				};
 			});
 		});
 	}
-	async function saveMeta(prId, meta) {
-		await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
+	async function saveMeta(prId, meta, what) {
+		if (what == "localStorage and cloud") await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
 		localStorage.setItem("gringo." + prId, JSON.stringify(meta));
 	}
 	async function fetchMetaCached(prId) {
