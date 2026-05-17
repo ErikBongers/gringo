@@ -501,9 +501,7 @@
 			if (!popover) return;
 			popover.togglePopover({ source: button });
 		});
-		let requestSearchPanel = main.querySelector(".request-search-panel");
-		let divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first;
-		fillSearchPanel(divSearchPanel, requests);
+		fillSearchPanel(main);
 	}
 	function updateTagsFilters(filters) {
 		let table = document.getElementById("tagsFilterTable");
@@ -522,7 +520,13 @@
 			btnFilter.classList.toggle("notEqual", filter.filterType == "!=");
 		}
 	}
-	function fillSearchPanel(divSearchPanel, requests) {
+	function fillSearchPanel(main) {
+		if (document.body.dataset.gringoPanel == "true") return;
+		document.body.dataset.gringoPanel = "true";
+		let requestSearchPanel = main.querySelector(".request-search-panel");
+		let divSearchPanel = document.querySelector(`div.gringoSearchPanel`);
+		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first;
+		divSearchPanel.innerHTML = "";
 		let tbody = emmet.appendChild(divSearchPanel, `
         details>(
             summary{Tags}+
@@ -556,7 +560,7 @@
 				else filters = filters.filter((f) => f.name != tagDef.name);
 				saveTagsFilters(filters);
 				updateTagsFilters(filters);
-				await applyFilters(requests);
+				await applyFilters(globalPrs);
 			};
 		});
 		updateTagsFilters(getTagsFilters());

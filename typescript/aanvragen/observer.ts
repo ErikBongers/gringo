@@ -126,9 +126,7 @@ function decoratePage() {
         popover.togglePopover({source:button});
     });
 
-    let requestSearchPanel = main.querySelector(".request-search-panel") as HTMLDivElement;
-    let divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first as HTMLDivElement;
-    fillSearchPanel(divSearchPanel, requests);
+    fillSearchPanel(main);
 
 
     // let requestInfoListPanel = document.querySelector(".request-info-list-panel") as HTMLElement | null;
@@ -160,7 +158,15 @@ function updateTagsFilters(filters: TagsFilter[]) {
     }
 }
 
-function fillSearchPanel(divSearchPanel: HTMLDivElement, requests: RequestBasicInfo[]) {
+function fillSearchPanel(main: HTMLElement) {
+    if(document.body.dataset.gringoPanel == "true")
+        return;
+    document.body.dataset.gringoPanel = "true";
+    let requestSearchPanel = main.querySelector(".request-search-panel") as HTMLDivElement;
+    let divSearchPanel = document.querySelector(`div.gringoSearchPanel`) as HTMLDivElement | null;
+    if(!divSearchPanel)
+        divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first as HTMLDivElement;
+    divSearchPanel.innerHTML = "";
     let tagsCollapse = emmet.appendChild(divSearchPanel, `
         details>(
             summary{Tags}+
@@ -202,7 +208,7 @@ function fillSearchPanel(divSearchPanel: HTMLDivElement, requests: RequestBasicI
                 }
                 saveTagsFilters(filters);
                 updateTagsFilters(filters);
-                await applyFilters(requests);
+                await applyFilters(globalPrs);
             };
         });
     updateTagsFilters(getTagsFilters());
