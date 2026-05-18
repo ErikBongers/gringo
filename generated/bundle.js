@@ -835,22 +835,35 @@
 			return isIteratorProp(target, prop) || oldTraps.has(target, prop);
 		}
 	}));
-	openDB("gringo", 1, { upgrade(db) {
+	//#endregion
+	//#region typescript/db/gringoDb.ts
+	const dbGringo = openDB("gringo", 1, { upgrade(db) {
 		db.createObjectStore("PrMetas", { keyPath: "prId" });
 	} });
+	async function get(key) {
+		return (await dbGringo).get("PrMetas", key);
+	}
+	async function set(val) {
+		return (await dbGringo).put("PrMetas", val);
+	}
+	async function clear() {
+		return (await dbGringo).clear("PrMetas");
+	}
+	async function setAll(prMetas) {
+		let tx = (await dbGringo).transaction("PrMetas", "readwrite");
+		await Promise.all(prMetas.map((meta) => tx.store.put(meta)));
+	}
 	async function clearMetasLocal() {
-		for (let key in localStorage) if (key.startsWith("gringo.PR")) localStorage.removeItem(key);
+		return clear();
 	}
 	async function getMetaLocal(prId) {
-		let jsonMeta = localStorage.getItem("gringo." + prId);
-		if (jsonMeta) return JSON.parse(jsonMeta);
-		return null;
+		return get(prId);
 	}
 	async function saveMetaLocal(meta) {
-		localStorage.setItem("gringo." + meta.prId, JSON.stringify(meta));
+		return set(meta);
 	}
 	async function saveMetasLocal(prMetas) {
-		for (let meta of prMetas) await saveMetaLocal(meta);
+		return setAll(prMetas);
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts
@@ -1254,6 +1267,7 @@
 		};
 		try {
 			meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
+			if (!meta.prId) meta.prId = prId;
 		} catch {
 			await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
 		}
@@ -1267,6 +1281,9 @@
 			await clearMetasLocal();
 			changedMetas = [];
 		} else changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
+		changedMetas.forEach((f) => {
+			if (!f.data.prId) f.data.prId = f.name;
+		});
 		let fetchedDate = /* @__PURE__ */ new Date();
 		fetchedDate = /* @__PURE__ */ new Date(fetchedDate.getTime() - 300 * 1e3);
 		let zFetchedDate = fetchedDate.toISOString();

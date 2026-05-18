@@ -485,6 +485,9 @@ async function fetchMetaCached(prId: string) {
     let meta: PrMeta =  {prId, tags: []};
     try {
         meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
+        //update from old version of PrMeta;
+        if(!meta.prId)
+            meta.prId = prId;
     } catch {
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     }
@@ -507,6 +510,11 @@ async function fetchChangedMetas() {
     } else {
      changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
     }
+    //update from old version of PrMeta;
+    changedMetas.forEach(f => {
+        if(!f.data.prId)
+            f.data.prId = f.name;
+    });
     let fetchedDate = new Date();
     fetchedDate = new Date(fetchedDate.getTime() - 5 * 60 * 1000);
     let zFetchedDate = fetchedDate.toISOString();

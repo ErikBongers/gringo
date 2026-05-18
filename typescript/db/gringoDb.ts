@@ -22,8 +22,8 @@ const dbGringo = openDB<GringoDB>('gringo', DB_VERSION, {
 export async function get(key: string) {
     return (await dbGringo).get("PrMetas", key);
 }
-export async function set(key: string, val: PrMeta) {
-    return (await dbGringo).put("PrMetas", val, key);
+export async function set(val: PrMeta) {
+    return (await dbGringo).put("PrMetas", val);
 }
 export async function del(key: string) {
     return (await dbGringo).delete("PrMetas", key);
@@ -36,30 +36,22 @@ export async function keys() {
 }
 export async function setAll(prMetas: PrMeta[]) {
     let tx = (await dbGringo).transaction("PrMetas", 'readwrite');
-    await Promise.all(prMetas.map(meta => tx.store.add(meta)));
+    await Promise.all(prMetas.map(meta => tx.store.put(meta)));
 }
 
 //transition functions:
 export async function clearMetasLocal() {
-    for(let key in localStorage) {
-        if(key.startsWith("gringo.PR"))
-            localStorage.removeItem(key);
-    }
+    return clear();
 }
 export async function getMetaLocal(prId: string) {
-    let jsonMeta = localStorage.getItem("gringo."+prId);
-    if(jsonMeta)
-        return JSON.parse(jsonMeta) as PrMeta;
-    return null;
+    return get(prId);
 }
 
 export async function saveMetaLocal(meta: PrMeta) {
-    localStorage.setItem("gringo."+meta.prId, JSON.stringify(meta));
+    return set(meta);
 }
 
 export async function saveMetasLocal(prMetas: PrMeta[]) {
-    for(let meta of prMetas) {
-        await saveMetaLocal(meta);
-    }
+    return setAll(prMetas);
 }
 
