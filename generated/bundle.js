@@ -1267,7 +1267,6 @@
 		};
 		try {
 			meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
-			if (!meta.prId) meta.prId = prId;
 		} catch {
 			await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
 		}
@@ -1281,9 +1280,6 @@
 			await clearMetasLocal();
 			changedMetas = [];
 		} else changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
-		changedMetas.forEach((f) => {
-			if (!f.data.prId) f.data.prId = f.name;
-		});
 		let fetchedDate = /* @__PURE__ */ new Date();
 		fetchedDate = /* @__PURE__ */ new Date(fetchedDate.getTime() - 300 * 1e3);
 		let zFetchedDate = fetchedDate.toISOString();
