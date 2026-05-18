@@ -4,6 +4,7 @@ import {cloud} from "../cloud";
 import {KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {gringo} from "../globals";
 import {FetchChain} from "../fetchChain";
+import {clearMetasLocal, getMetaLocal, saveMetaLocal, saveMetasLocal} from "../db/gringoDb";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -103,9 +104,7 @@ function decoratePage() {
     fetchChangedMetas().then(async (changedFiles) => {
         gringo(changedFiles);
         gringo("Todo: update local cache and UI");
-        for(let meta of changedFiles) {
-            await saveMeta(meta.data.prId, meta.data, "localStorage");
-        }
+        await saveMetasLocal(changedFiles.map(f => f.data));
         requests.forEach(decoratePr);
         await applyFilters(requests);
     });
@@ -252,7 +251,7 @@ function scrapeInfoItem(requestDiv: HTMLDivElement): RequestBasicInfo {
     return {id, div: requestDiv, orderAnchors};
 }
 
-interface PrMeta {
+export interface PrMeta {
     prId: string,
     tags: string[],
 }
@@ -475,21 +474,21 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
 async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" | "localStorage and cloud") {
     if(what == "localStorage and cloud")
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
-    localStorage.setItem("gringo."+prId, JSON.stringify(meta));
+    await saveMetaLocal(meta);
 }
 
 async function fetchMetaCached(prId: string) {
-    //todo: this assumes that localStorage is synced with cloud.
-    let jsonMeta = localStorage.getItem("gringo."+prId); //todo: eventually replace with indexedDb
-    if(jsonMeta)
-        return JSON.parse(jsonMeta) as PrMeta;
+    let localMeta = await getMetaLocal(prId);
+    if(localMeta)
+        return localMeta
+
     let meta: PrMeta =  {prId, tags: []};
     try {
         meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
     } catch {
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     }
-    localStorage.setItem("gringo."+prId, JSON.stringify(meta));
+    await saveMetaLocal(meta);
     return meta;
 }
 
@@ -498,15 +497,12 @@ interface ChangedFile<T> {
     data: T,
     changed: string
 }
+
 async function fetchChangedMetas() {
     let changedMetas: ChangedFile<PrMeta>[];
     let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
     if(!zSince) {
-        //clear all local metas, since we have no idea if they are up-to-date.
-        for(let key in localStorage) {
-            if(key.startsWith("gringo.PR"))
-                localStorage.removeItem(key);
-        }
+        await clearMetasLocal(); //clear, since we have no idea if they are up-to-date.
         changedMetas = [];
     } else {
      changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);

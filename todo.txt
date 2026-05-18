@@ -1,3 +1,41 @@
+Port to IndexedDB
+====================
+Database: gringo
+Object store: PrMetas
+
+
+Priorities
+===========
+* Make tags usable
+* Create summary of all PRs
+
+
+Tags maintenance
+=================
+CRUD
+----
+* Standard tags
+  - MW, BK, BB>, V,
+  > set by whom? Me, I guess...
+
+* Personal tags
+  > store where?
+Delete
+------
+* Tag stayes attached to the item, but has no color and cannot be filtered.
+  > test!
+Update
+------
+* The rename needs to propagate to all users and local caches.
+  > if you do the rename in all cloud files that contain the tag, the caches are implicitly invalidated. (easier than I thought...)
+Customize
+---------
+User can set local custom colors.
+
+
+* Tag filters, when collapsed you have no idea what is shown or not
+  > summarise them on tag line.
+
 * Already create a total list per ledger.
   > separate page?
   > we need to be in the Aanvragen...or...do we?
