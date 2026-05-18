@@ -3,6 +3,7 @@ import {emmet} from "../../libs/Emmeter/html";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {gringo} from "../globals";
+import {FetchChain} from "../fetchChain";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -361,6 +362,58 @@ function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
     tagElement.classList.toggle("selected", selected);
 }
 
+async function fetchRequestList() {
+    //https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/33e8a2ba14be4e8457dfd4791f19487e1ac0f60ce8ad811e0506bf866c9d6e1d/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435
+    let chain = new FetchChain();
+    await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: load once.
+    let userInfo  = chain.getJson() as Sap.UserInfo | null;
+    if(!userInfo) {
+        console.error("gringo: could not get userInfo.");
+    }
+
+    await chain.post(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435`,
+        {
+            "searchFilters": {
+                "LastUpdatedFromDate": "2026-02-17 23:00:00 GMT",
+                "LastUpdatedToDate": "2026-05-18 21:59:59 GMT"
+            },
+            "requestTypeFilter": "all",
+            "orderByField": "daterequested",
+            "ascendingOrder": false
+        }
+        );
+    let lizt = chain.getJson();
+    debugger;
+    gringo(lizt);
+}
+
+async function fetchFullRequest(request: RequestBasicInfo) {
+    let chain = new FetchChain();
+    await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: load once.
+    let userInfo  = chain.getJson() as Sap.UserInfo | null;
+    if(!userInfo) {
+        console.error("gringo: could not get userInfo.");
+    }
+
+    await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${request.id}`);
+    let pr: Sap.PurchaseRequisition = chain.getJson();
+    let prTitle = pr.title.value;
+    let prStatus = pr.status;
+    for(let lineItem of pr.lineItems) {
+        let accounting = lineItem.accounting;
+        let rekening = "";
+        if(accounting.fields) {
+            for (let field of accounting.fields) {
+                if (field.name == "GeneralLedger")
+                    rekening = field.value as string;
+            }
+        }
+        let price = lineItem.quantity.value;//note that we are using the quantity field to store the price!
+        let orderId = lineItem.orderID??"-";
+        gringo(`${pr.reqId}/${orderId} : ${prTitle} : ${prStatus} : [${rekening}] : ${price}`);
+    }
+}
+
 function addMeta(request: RequestBasicInfo, meta: PrMeta) {
     let divStatusContainer = request.div.querySelector("div.item-status-container") as HTMLDivElement | null;
     if(!divStatusContainer)
@@ -385,6 +438,9 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
         let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
         container.classList.add("tagList");
         container.innerHTML = "";
+        gringo("FETCHING aanvraag...");
+        fetchFullRequest(request);
+        fetchRequestList();
         defaultTags
             .sort((a, b) => a.order - b.order)
             .forEach(tagDef => {

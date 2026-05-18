@@ -348,6 +348,9 @@
 		Object.assign(options, items);
 		setGlobalSetting(await fetchGlobalSettings(getGlobalSettings()));
 	}
+	function escapeRegexChars(text) {
+		return text.replaceAll("\\", "\\\\").replaceAll("^", "\\^").replaceAll("$", "\\$").replaceAll(".", "\\.").replaceAll("|", "\\|").replaceAll("?", "\\?").replaceAll("*", "\\*").replaceAll("+", "\\+").replaceAll("(", "\\(").replaceAll(")", "\\)").replaceAll("[", "\\[").replaceAll("]", "\\]").replaceAll("{", "\\{").replaceAll("}", "\\}");
+	}
 	function tryUntilThen(func, then) {
 		if (func()) then();
 		else setTimeout(() => tryUntilThen(func, then), 100);
@@ -420,6 +423,204 @@
 			super(void 0, new PartialUrlPageFilter(partialUrl), onMutationCallback, trackModal, onPageRefreshedCallback);
 		}
 	};
+	//#endregion
+	//#region typescript/tokenScanner.ts
+	var ScannerElse = class {
+		constructor(scannerIf) {
+			this.scannerIf = scannerIf;
+		}
+		not(callback) {
+			if (!this.scannerIf.yes) callback?.(this.scannerIf.scanner);
+			return this.scannerIf.scanner;
+		}
+	};
+	var ScannerIf = class {
+		constructor(yes, scanner) {
+			this.yes = yes;
+			this.scanner = scanner;
+		}
+		then(callback) {
+			if (this.yes) callback(this.scanner);
+			return new ScannerElse(this);
+		}
+	};
+	var TokenScanner = class TokenScanner {
+		constructor(text) {
+			this.valid = true;
+			this.source = text;
+			this.cursor = text;
+		}
+		static create(text) {
+			return new TokenScanner(text);
+		}
+		result() {
+			if (this.valid) return this.cursor;
+		}
+		find(...tokens) {
+			return this.#find("", tokens);
+		}
+		match(...tokens) {
+			return this.#find("^\\s*", tokens);
+		}
+		#find(prefix, tokens) {
+			if (!this.valid) return this;
+			let rxString = prefix + tokens.map((token) => escapeRegexChars(token) + "\\s*").join("");
+			let match = RegExp(rxString).exec(this.cursor);
+			if (match) {
+				this.cursor = this.cursor.substring(match.index + match[0].length);
+				return this;
+			}
+			this.valid = false;
+			return this;
+		}
+		ifMatch(...tokens) {
+			if (!this.valid) return new ScannerIf(true, this);
+			this.match(...tokens);
+			if (this.valid) return new ScannerIf(true, this);
+			else {
+				this.valid = true;
+				return new ScannerIf(false, this);
+			}
+		}
+		clip(len) {
+			if (!this.valid) return this;
+			this.cursor = this.cursor.substring(0, len);
+			return this;
+		}
+		clipTo(end) {
+			if (!this.valid) return this;
+			let found = this.cursor.indexOf(end);
+			if (found < 0) {
+				this.valid = false;
+				return this;
+			}
+			this.cursor = this.cursor.substring(0, found);
+			return this;
+		}
+		clone() {
+			let newScanner = new TokenScanner(this.cursor);
+			newScanner.valid = this.valid;
+			return newScanner;
+		}
+		clipString() {
+			let isString = false;
+			this.ifMatch("'").then((result) => {
+				isString = true;
+				return result.clipTo("'");
+			}).not().ifMatch("\"").then((result) => {
+				isString = true;
+				return result.clipTo("\"");
+			}).not();
+			this.valid = this.valid && isString;
+			return this;
+		}
+		captureString(callback) {
+			let result = this.clone().clipString().result();
+			if (result) {
+				callback(result);
+				this.ifMatch("'").then((result) => result.find("'")).not().ifMatch("\"").then((result) => result.find("\"")).not();
+			}
+			return this;
+		}
+		getString() {
+			return this.clipString().result();
+		}
+	};
+	//#endregion
+	//#region typescript/fetchChain.ts
+	var FetchChain = class {
+		constructor() {
+			this.lastText = "";
+		}
+		get() {
+			return this.lastText;
+		}
+		getJson() {
+			if (this.lastText === void 0) return null;
+			return JSON.parse(this.lastText);
+		}
+		set(text) {
+			this.lastText = text;
+		}
+		async fetch(url) {
+			this.lastText = await fetchText(url ?? this.lastText ?? "--null--");
+			return this.lastText;
+		}
+		async post(url, body) {
+			this.lastText = await fetchTextPost(url, body);
+			return this.lastText;
+		}
+		findDocReadyLoadUrl() {
+			this.lastText = getDocReadyLoadUrl(this.lastText ?? "--null--");
+			return this.lastText;
+		}
+		findDocReadyLoadScript() {
+			this.lastText = getDocReadyLoadScript(this.lastText ?? "--null--")?.result();
+			return this.lastText;
+		}
+		find(...args) {
+			this.lastText = new TokenScanner(this.lastText ?? "--null--").find(...args).result();
+			return this.lastText;
+		}
+		getQuotedString() {
+			let daString = "";
+			this.lastText = new TokenScanner(this.lastText ?? "--null--").captureString(((res) => daString = res)).result();
+			return daString;
+		}
+		clipTo(end) {
+			this.lastText = new TokenScanner(this.lastText ?? "--null--").clipTo(end).result();
+		}
+		div() {
+			let el = document.createElement("div");
+			el.innerHTML = this.lastText ?? "";
+			return el;
+		}
+		includes(text) {
+			return this.lastText?.includes(text) ?? false;
+		}
+	};
+	function findDocReady(scanner) {
+		return scanner.find("$", "(", "document", ")", ".", "ready", "(");
+	}
+	function getDocReadyLoadUrl(text) {
+		let scanner = new TokenScanner(text);
+		while (true) {
+			let docReady = findDocReady(scanner);
+			if (!docReady.valid) return void 0;
+			let url = docReady.clone().clipTo("<\/script>").find(".", "load", "(").clipString().result();
+			if (url) return url;
+			scanner = docReady;
+		}
+	}
+	function getDocReadyLoadScript(text) {
+		let scanner = new TokenScanner(text);
+		while (true) {
+			let docReady = findDocReady(scanner);
+			if (!docReady.valid) return void 0;
+			let script = docReady.clone().clipTo("<\/script>");
+			if (script.clone().find(".", "load", "(").valid) return script;
+			scanner = docReady;
+		}
+	}
+	async function fetchText(url) {
+		return (await fetch(url)).text();
+	}
+	async function fetchTextPost(url, body) {
+		let bodyText;
+		let headers;
+		if (typeof body == "string") {
+			bodyText = body;
+			headers = { "Content-Type": "text/plain" };
+		} else {
+			bodyText = JSON.stringify(body);
+			headers = { "Content-Type": "application/json" };
+		}
+		return (await fetch(url, {
+			method: "POST",
+			body: bodyText,
+			headers
+		})).text();
+	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
@@ -725,6 +926,44 @@
 		tagElement.title = tagDef.description;
 		tagElement.classList.toggle("selected", selected);
 	}
+	async function fetchRequestList() {
+		let chain = new FetchChain();
+		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
+		let userInfo = chain.getJson();
+		if (!userInfo) console.error("gringo: could not get userInfo.");
+		await chain.post(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435`, {
+			"searchFilters": {
+				"LastUpdatedFromDate": "2026-02-17 23:00:00 GMT",
+				"LastUpdatedToDate": "2026-05-18 21:59:59 GMT"
+			},
+			"requestTypeFilter": "all",
+			"orderByField": "daterequested",
+			"ascendingOrder": false
+		});
+		let lizt = chain.getJson();
+		debugger;
+		gringo(lizt);
+	}
+	async function fetchFullRequest(request) {
+		let chain = new FetchChain();
+		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
+		let userInfo = chain.getJson();
+		if (!userInfo) console.error("gringo: could not get userInfo.");
+		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${request.id}`);
+		let pr = chain.getJson();
+		let prTitle = pr.title.value;
+		let prStatus = pr.status;
+		for (let lineItem of pr.lineItems) {
+			let accounting = lineItem.accounting;
+			let rekening = "";
+			if (accounting.fields) {
+				for (let field of accounting.fields) if (field.name == "GeneralLedger") rekening = field.value;
+			}
+			let price = lineItem.quantity.value;
+			let orderId = lineItem.orderID ?? "-";
+			gringo(`${pr.reqId}/${orderId} : ${prTitle} : ${prStatus} : [${rekening}] : ${price}`);
+		}
+	}
 	function addMeta(request, meta) {
 		let divStatusContainer = request.div.querySelector("div.item-status-container");
 		if (!divStatusContainer) return;
@@ -743,6 +982,9 @@
 			let container = popover.querySelector(".popoverContainer");
 			container.classList.add("tagList");
 			container.innerHTML = "";
+			gringo("FETCHING aanvraag...");
+			fetchFullRequest(request);
+			fetchRequestList();
 			defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
 				let tagButton = emmet.appendChild(container, `
                     button.naked.gringoTag{${tagDef.name}}
