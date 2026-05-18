@@ -211,6 +211,15 @@ function fillSearchPanel(main: HTMLElement) {
             };
         });
     updateTagsFilters(getTagsFilters());
+    let btnTestFetch = emmet.appendChild(tagsCollapse,`div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
+    btnTestFetch.onclick = async (ev) => {
+        if(globalLastRequestTagsClicked)
+            await fetchFullRequest(globalLastRequestTagsClicked);
+    };
+    let btnTestRequestList = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestList{TEST Fetch all}`).last as HTMLButtonElement;
+    btnTestRequestList.onclick = async (ev) => {
+        await fetchRequestList();
+    };
 }
 
 function scrapePRs() {
@@ -363,7 +372,6 @@ function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
 }
 
 async function fetchRequestList() {
-    //https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/33e8a2ba14be4e8457dfd4791f19487e1ac0f60ce8ad811e0506bf866c9d6e1d/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435
     let chain = new FetchChain();
     await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: load once.
     let userInfo  = chain.getJson() as Sap.UserInfo | null;
@@ -382,10 +390,11 @@ async function fetchRequestList() {
             "ascendingOrder": false
         }
         );
-    let lizt = chain.getJson();
-    debugger;
-    gringo(lizt);
+    let requestList: Sap.RequestListResponse = await chain.getJson();
+    gringo(requestList);
 }
+
+let globalLastRequestTagsClicked: RequestBasicInfo | null;
 
 async function fetchFullRequest(request: RequestBasicInfo) {
     let chain = new FetchChain();
@@ -438,9 +447,7 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
         let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
         container.classList.add("tagList");
         container.innerHTML = "";
-        gringo("FETCHING aanvraag...");
-        fetchFullRequest(request);
-        fetchRequestList();
+        globalLastRequestTagsClicked = request;
         defaultTags
             .sort((a, b) => a.order - b.order)
             .forEach(tagDef => {

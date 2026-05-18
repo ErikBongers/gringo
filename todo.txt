@@ -1,5 +1,4 @@
-
-
+* When doing an ariba filter: Tag filter disappears.
 
 Meta sync
 ===========

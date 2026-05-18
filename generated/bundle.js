@@ -728,12 +728,13 @@
 		let divSearchPanel = document.querySelector(`div.gringoSearchPanel`);
 		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first;
 		divSearchPanel.innerHTML = "";
-		let tbody = emmet.appendChild(divSearchPanel, `
+		let tagsCollapse = emmet.appendChild(divSearchPanel, `
         details>(
             summary{Tags}+
             table#tagsFilterTable>tbody
         )    
-    `).first.querySelector("tbody");
+    `).first;
+		let tbody = tagsCollapse.querySelector("tbody");
 		defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			let tr = emmet.appendChild(tbody, `tr`).first;
 			tr.dataset.tagName = tagDef.name;
@@ -765,6 +766,14 @@
 			};
 		});
 		updateTagsFilters(getTagsFilters());
+		let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last;
+		btnTestFetch.onclick = async (ev) => {
+			if (globalLastRequestTagsClicked) await fetchFullRequest(globalLastRequestTagsClicked);
+		};
+		let btnTestRequestList = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch all}`).last;
+		btnTestRequestList.onclick = async (ev) => {
+			await fetchRequestList();
+		};
 	}
 	function scrapePRs() {
 		if (document.body.dataset.gringoPageScraped == "true") return globalPrs;
@@ -940,10 +949,9 @@
 			"orderByField": "daterequested",
 			"ascendingOrder": false
 		});
-		let lizt = chain.getJson();
-		debugger;
-		gringo(lizt);
+		gringo(await chain.getJson());
 	}
+	let globalLastRequestTagsClicked;
 	async function fetchFullRequest(request) {
 		let chain = new FetchChain();
 		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
@@ -982,9 +990,7 @@
 			let container = popover.querySelector(".popoverContainer");
 			container.classList.add("tagList");
 			container.innerHTML = "";
-			gringo("FETCHING aanvraag...");
-			fetchFullRequest(request);
-			fetchRequestList();
+			globalLastRequestTagsClicked = request;
 			defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
 				let tagButton = emmet.appendChild(container, `
                     button.naked.gringoTag{${tagDef.name}}
