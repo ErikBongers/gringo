@@ -1,4 +1,11 @@
+* Already create a total list per ledger.
+  > separate page?
+  > we need to be in the Aanvragen...or...do we?
+    > does the fetch work from any page?
+
+
 * When doing an ariba filter: Tag filter disappears.
+
 
 Meta sync
 ===========
