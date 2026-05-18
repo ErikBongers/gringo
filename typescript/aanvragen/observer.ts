@@ -408,6 +408,7 @@ async function fetchFullRequest(request: RequestBasicInfo) {
     let pr: Sap.PurchaseRequisition = chain.getJson();
     let prTitle = pr.title.value;
     let prStatus = pr.status;
+    gringo(pr);
     for(let lineItem of pr.lineItems) {
         let accounting = lineItem.accounting;
         let rekening = "";
