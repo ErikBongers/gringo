@@ -1248,29 +1248,32 @@
         )
     `).first.querySelector("button.tagButton");
 		addButtonClickNoPropagation(button, (ev) => {
-			let popover = document.getElementById("gringo-tags-popover");
-			if (!popover) return;
-			popover.togglePopover({ source: button });
-			let container = popover.querySelector(".popoverContainer");
-			container.classList.add("tagList");
-			container.innerHTML = "";
-			globalLastRequestTagsClicked = request;
-			defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
-				let tagButton = emmet.appendChild(container, `
+			onTagButtonClick(request, meta, button);
+		});
+	}
+	function onTagButtonClick(request, meta, button) {
+		let popover = document.getElementById("gringo-tags-popover");
+		if (!popover) return;
+		popover.togglePopover({ source: button });
+		let container = popover.querySelector(".popoverContainer");
+		container.classList.add("tagList");
+		container.innerHTML = "";
+		globalLastRequestTagsClicked = request;
+		defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			let tagButton = emmet.appendChild(container, `
                     button.naked.gringoTag{${tagDef.name}}
                 `).first;
-				paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
-				tagButton.onclick = async (ev) => {
-					tagButton.classList.toggle("selected");
-					let selected = tagButton.classList.contains("selected");
-					gringo(`clicked ${tagDef.name} for ${request.id}(meta:${meta.prId})`);
-					if (selected) meta.tags.push(tagDef.name);
-					else meta.tags = meta.tags.filter((t) => t != tagDef.name);
-					meta.prId = request.id;
-					await saveMeta(request.id, meta, "localStorage and cloud");
-					updatePrLine(request, meta);
-				};
-			});
+			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
+			tagButton.onclick = async (ev) => {
+				tagButton.classList.toggle("selected");
+				let selected = tagButton.classList.contains("selected");
+				gringo(`clicked ${tagDef.name} for ${request.id}(meta:${meta.prId})`);
+				if (selected) meta.tags.push(tagDef.name);
+				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
+				meta.prId = request.id;
+				await saveMeta(request.id, meta, "localStorage and cloud");
+				updatePrLine(request, meta);
+			};
 		});
 	}
 	async function saveMeta(prId, meta, what) {

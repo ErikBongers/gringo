@@ -463,36 +463,41 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
     let button = tagsWrapper.querySelector("button.tagButton") as HTMLButtonElement;
 
     addButtonClickNoPropagation(button, (ev) => {
-        let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
-        if(!popover)
-            return;
-        // @ts-ignore
-        popover.togglePopover({source:button});
-        let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
-        container.classList.add("tagList");
-        container.innerHTML = "";
-        globalLastRequestTagsClicked = request;
-        defaultTags
-            .sort((a, b) => a.order - b.order)
-            .forEach(tagDef => {
-                let tagButton = emmet.appendChild(container, `
+        onTagButtonClick(request, meta, button);
+    });
+}
+
+function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button: HTMLButtonElement) {
+    let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
+    if(!popover)
+        return;
+    // @ts-ignore
+    popover.togglePopover({source:button});
+    let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
+    container.classList.add("tagList");
+    container.innerHTML = "";
+    globalLastRequestTagsClicked = request;
+    defaultTags
+        .sort((a, b) => a.order - b.order)
+        .forEach(tagDef => {
+            let tagButton = emmet.appendChild(container, `
                     button.naked.gringoTag{${tagDef.name}}
                 `).first as HTMLButtonElement;
-                paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
-                tagButton.onclick = async (ev) => {
-                    tagButton.classList.toggle("selected");
-                    let selected = tagButton.classList.contains("selected");
-                    gringo(`clicked ${tagDef.name} for ${request.id}(meta:${meta.prId})`);
-                    if(selected)
-                        meta.tags.push(tagDef.name);
-                    else
-                        meta.tags = meta.tags.filter(t => t != tagDef.name);
-                    meta.prId = request.id; //temp!
-                    await saveMeta(request.id, meta, "localStorage and cloud");
-                    updatePrLine(request, meta);
-                };
-            });
-    });
+            paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
+            tagButton.onclick = async (ev) => {
+                tagButton.classList.toggle("selected");
+                let selected = tagButton.classList.contains("selected");
+                gringo(`clicked ${tagDef.name} for ${request.id}(meta:${meta.prId})`);
+                if(selected)
+                    meta.tags.push(tagDef.name);
+                else
+                    meta.tags = meta.tags.filter(t => t != tagDef.name);
+                meta.prId = request.id; //temp!
+                await saveMeta(request.id, meta, "localStorage and cloud");
+                updatePrLine(request, meta);
+            };
+        });
+
 }
 
 async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" | "localStorage and cloud") {
