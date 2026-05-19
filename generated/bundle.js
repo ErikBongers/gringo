@@ -1142,7 +1142,7 @@
 			order: 600
 		},
 		{
-			name: "Langer",
+			name: "Langerx",
 			description: "",
 			color: "blue",
 			bkgColor: "",
@@ -1170,6 +1170,8 @@
             `).first;
 			paintTag(tagSpan, tagDef, true);
 		});
+		let orphans = meta.tags.filter((tag) => !defaultTags.find((tagDef) => tagDef.name == tag));
+		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
 	}
 	function paintTag(tagElement, tagDef, selected) {
 		tagElement.innerText = tagDef.name;

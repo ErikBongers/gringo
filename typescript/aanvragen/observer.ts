@@ -327,7 +327,7 @@ const defaultTags: TagDef[] = [
     { name: "En", description: "", color: "blue", bkgColor: "", order: 400},
     { name: "Nog", description: "", color: "blue", bkgColor: "", order: 500},
     { name: "Veel", description: "", color: "blue", bkgColor: "", order: 600},
-    { name: "Langer", description: "", color: "blue", bkgColor: "", order: 700},
+    { name: "Langerx", description: "", color: "blue", bkgColor: "", order: 700},
 ];
 const defaultTagsMap: Map<string, TagDef> = new Map(defaultTags.map(t => [t.name, t]));
 
@@ -359,6 +359,10 @@ function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
             `).first as HTMLSpanElement;
                 paintTag(tagSpan, tagDef, true);
         });
+    let orphans = meta.tags.filter(tag => !defaultTags.find(tagDef => tagDef.name == tag));
+    if(orphans.length > 0) {
+        emmet.appendChild(tagsContainer, orphans.map(tag => `span.gringoTag{${tag}}`).join("+"));
+    }
 }
 
 function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {

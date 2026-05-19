@@ -1,9 +1,3 @@
-Port to IndexedDB
-====================
-Database: gringo
-Object store: PrMetas
-
-
 Priorities
 ===========
 * Make tags usable
@@ -14,6 +8,12 @@ Tags maintenance
 =================
 CRUD
 ----
+C: OK: hardcoded and global for now: keep colors modest.
+R: OK: only global for now: add local colors later.
+U: OK: can be created when needed.
+D: OK: orphans shown.
+
+
 * Standard tags
   - MW, BK, BB>, V,
   > set by whom? Me, I guess...
@@ -28,6 +28,7 @@ Update
 ------
 * The rename needs to propagate to all users and local caches.
   > if you do the rename in all cloud files that contain the tag, the caches are implicitly invalidated. (easier than I thought...)
+    > this cloud function can be created when needed.
 Customize
 ---------
 User can set local custom colors.
