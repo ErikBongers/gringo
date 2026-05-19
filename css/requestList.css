@@ -1,0 +1,40 @@
+.request-item-container {
+    request-info-item {
+        &:hover {
+            background: rgb(72 61 139 / 0.05);
+        }
+        & div {
+            background: inherit;
+        }
+        & > .request-grid-container {
+            & > .request-info-item {
+                padding: 0;
+                background: none;
+                & > div:nth-child(1) {
+                    min-width: 10%;
+                    max-width: 10%;
+                }
+                & > div:nth-child(2) {
+                    min-width: 90%;
+                    max-width: 90%;
+                }
+                & > div:nth-child(2) {
+                    & > div {
+                        & > div:nth-child(1) {
+                            min-width: 50%;
+                            max-width: 50%;
+                        }
+                        & > div:nth-child(2) {
+                            min-width: 43%;
+                            max-width: 43%;
+                        }
+                        & > div:nth-child(3) {
+                            min-width: 7%;
+                            max-width: 7%;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -16,6 +16,7 @@
         "css/general.css",
         "css/light_colors.css",
         "css/dark_colors.css",
+        "css/requestList.css",
         "fa720web/css/all.css"
       ],
       "matches": [

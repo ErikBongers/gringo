@@ -1,5 +1,6 @@
 @import "light_colors.css";
 @import "dark_colors.css";
+@import "requestList.css";
 
 @font-face {
     font-family: "Font Awesome 7 Free";
