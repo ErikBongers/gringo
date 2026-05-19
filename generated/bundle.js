@@ -1012,11 +1012,15 @@
 		updateTagsFilters(getTagsFilters());
 		let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last;
 		btnTestFetch.onclick = async (ev) => {
-			if (globalLastRequestTagsClicked) await fetchFullRequest(globalLastRequestTagsClicked);
+			if (globalLastRequestTagsClicked) await fetchFullRequest(globalLastRequestTagsClicked.id);
 		};
 		let btnTestRequestList = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch all}`).last;
 		btnTestRequestList.onclick = async (ev) => {
 			await fetchRequestList();
+		};
+		let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last;
+		btnTestRequestListAndDetails.onclick = async (ev) => {
+			await fetchRequestListAndDetails();
 		};
 	}
 	function scrapePRs() {
@@ -1195,15 +1199,27 @@
 			"orderByField": "daterequested",
 			"ascendingOrder": false
 		});
-		gringo(await chain.getJson());
+		let requestList = await chain.getJson();
+		gringo(requestList);
+		return requestList;
+	}
+	async function fetchRequestListAndDetails() {
+		let promises = (await fetchRequestList()).requestList.map((r) => {
+			let requestId = r.id;
+			debugger;
+			return fetchFullRequest(requestId);
+		});
+		let detailsList = await Promise.all(promises);
+		debugger;
+		return detailsList;
 	}
 	let globalLastRequestTagsClicked;
-	async function fetchFullRequest(request) {
+	async function fetchFullRequest(prId) {
 		let chain = new FetchChain();
 		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
 		let userInfo = chain.getJson();
 		if (!userInfo) console.error("gringo: could not get userInfo.");
-		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${request.id}`);
+		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
 		let pr = chain.getJson();
 		let prTitle = pr.title.value;
 		let prStatus = pr.status;
@@ -1218,6 +1234,7 @@
 			let orderId = lineItem.orderID ?? "-";
 			gringo(`${pr.reqId}/${orderId} : ${prTitle} : ${prStatus} : [${rekening}] : ${price}`);
 		}
+		return pr;
 	}
 	function addMeta(request, meta) {
 		let divStatusContainer = request.div.querySelector("div.item-status-container");

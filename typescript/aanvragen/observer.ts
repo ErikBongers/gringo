@@ -213,11 +213,15 @@ function fillSearchPanel(main: HTMLElement) {
     let btnTestFetch = emmet.appendChild(tagsCollapse,`div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
     btnTestFetch.onclick = async (ev) => {
         if(globalLastRequestTagsClicked)
-            await fetchFullRequest(globalLastRequestTagsClicked);
+            await fetchFullRequest(globalLastRequestTagsClicked.id);
     };
     let btnTestRequestList = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestList{TEST Fetch all}`).last as HTMLButtonElement;
     btnTestRequestList.onclick = async (ev) => {
         await fetchRequestList();
+    };
+    let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last as HTMLButtonElement;
+    btnTestRequestListAndDetails.onclick = async (ev) => {
+        await fetchRequestListAndDetails();
     };
 }
 
@@ -382,6 +386,7 @@ async function fetchRequestList() {
         console.error("gringo: could not get userInfo.");
     }
 
+    //todo: is browserrequestid needed? or can I use a custom one?
     await chain.post(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435`,
         {
             "searchFilters": {
@@ -395,11 +400,25 @@ async function fetchRequestList() {
         );
     let requestList: Sap.RequestListResponse = await chain.getJson();
     gringo(requestList);
+    return requestList
+}
+
+async function fetchRequestListAndDetails() {
+    let requestList = await fetchRequestList();
+    let promises = requestList.requestList.map(r => {
+        let requestId = r.id!;
+        debugger;
+        return fetchFullRequest(requestId)
+    })
+
+    let detailsList = await Promise.all(promises);
+    debugger;
+    return detailsList;
 }
 
 let globalLastRequestTagsClicked: RequestBasicInfo | null;
 
-async function fetchFullRequest(request: RequestBasicInfo) {
+async function fetchFullRequest(prId: string) {
     let chain = new FetchChain();
     await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: load once.
     let userInfo  = chain.getJson() as Sap.UserInfo | null;
@@ -407,7 +426,7 @@ async function fetchFullRequest(request: RequestBasicInfo) {
         console.error("gringo: could not get userInfo.");
     }
 
-    await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${request.id}`);
+    await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
     let pr: Sap.PurchaseRequisition = chain.getJson();
     let prTitle = pr.title.value;
     let prStatus = pr.status;
@@ -425,6 +444,7 @@ async function fetchFullRequest(request: RequestBasicInfo) {
         let orderId = lineItem.orderID??"-";
         gringo(`${pr.reqId}/${orderId} : ${prTitle} : ${prStatus} : [${rekening}] : ${price}`);
     }
+    return pr;
 }
 
 function addMeta(request: RequestBasicInfo, meta: PrMeta) {
