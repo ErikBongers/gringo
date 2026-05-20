@@ -258,6 +258,7 @@ function scrapeInfoItem(requestDiv: HTMLDivElement): RequestBasicInfo {
 export interface PrMeta {
     prId: string,
     tags: string[],
+    project?: string,
 }
 
 type FilterType = "==" | "!=";
@@ -367,6 +368,9 @@ function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     if(orphans.length > 0) {
         emmet.appendChild(tagsContainer, orphans.map(tag => `span.gringoTag{${tag}}`).join("+"));
     }
+    let select = request.div.querySelector("div.projectWrapper select")! as HTMLSelectElement;
+    if(meta.project)
+        select.value = meta.project;
 }
 
 function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
@@ -475,15 +479,44 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
     `).first as HTMLDivElement;
     let select = divStatusContainer.querySelector("select")!;
     let options = [
-        "Brood en spelen",
-        "Pauze",
-        "Vakantie"
+        "--selecteer--",
+        "BK - Animatie",
+        "BK - Glaskunst",
+        "BK - 3e graad volwassenen",
+        "BK - Algemeen",
+        "BK - Beeldhouwen",
+        "BK - Boekkunst",
+        "BK - Jongeren digitaal",
+        "BK - 3e graad volwassenen digitaal",
+        "BK - Grafiek",
+        "BK - Grafische vormgeving",
+        "BK - Illustratieve vormgeving",
+        "BK - Jongeren",
+        "BK - Juweel",
+        "BK - Keramiek",
+        "BK - Kinderen",
+        "BK - Kunst en cultuur",
+        "BK - Levend model 2D",
+        "BK - Levend model 3D",
+        "BK - Meubel en interieur",
+        "BK - Projectatelier",
+        "BK - Schilderen",
+        "BK - Secretariaat",
+        "BK - Tekenen",
+        "MWD - Algemeen",
+        "MWD - Dans",
+        "MWD - Muziek",
+        "MWD - Woord",
     ];
     for (let option of options) {
         let optionEl = document.createElement("option");
         optionEl.textContent = option;
         optionEl.value = option;
         select.appendChild(optionEl);
+    }
+
+    select.onchange = async (ev) => {
+        await onSelectProjectClick(request, meta, select);
     }
 
     metaWrapper.onmousedown = (ev) => {
@@ -499,6 +532,11 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
         // ev.preventDefault();
     };
 
+}
+
+async function onSelectProjectClick(request: RequestBasicInfo, meta: PrMeta, select: HTMLSelectElement) {
+    meta.project = select.value;
+    await saveMeta(meta.prId, meta, "localStorage and cloud");
 }
 
 function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button: HTMLButtonElement) {

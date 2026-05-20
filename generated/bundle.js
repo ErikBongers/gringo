@@ -1176,6 +1176,8 @@
 		});
 		let orphans = meta.tags.filter((tag) => !defaultTags.find((tagDef) => tagDef.name == tag));
 		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
+		let select = request.div.querySelector("div.projectWrapper select");
+		if (meta.project) select.value = meta.project;
 	}
 	function paintTag(tagElement, tagDef, selected) {
 		tagElement.innerText = tagDef.name;
@@ -1260,15 +1262,43 @@
     `).first;
 		let select = divStatusContainer.querySelector("select");
 		for (let option of [
-			"Brood en spelen",
-			"Pauze",
-			"Vakantie"
+			"--selecteer--",
+			"BK - Animatie",
+			"BK - Glaskunst",
+			"BK - 3e graad volwassenen",
+			"BK - Algemeen",
+			"BK - Beeldhouwen",
+			"BK - Boekkunst",
+			"BK - Jongeren digitaal",
+			"BK - 3e graad volwassenen digitaal",
+			"BK - Grafiek",
+			"BK - Grafische vormgeving",
+			"BK - Illustratieve vormgeving",
+			"BK - Jongeren",
+			"BK - Juweel",
+			"BK - Keramiek",
+			"BK - Kinderen",
+			"BK - Kunst en cultuur",
+			"BK - Levend model 2D",
+			"BK - Levend model 3D",
+			"BK - Meubel en interieur",
+			"BK - Projectatelier",
+			"BK - Schilderen",
+			"BK - Secretariaat",
+			"BK - Tekenen",
+			"MWD - Algemeen",
+			"MWD - Dans",
+			"MWD - Muziek",
+			"MWD - Woord"
 		]) {
 			let optionEl = document.createElement("option");
 			optionEl.textContent = option;
 			optionEl.value = option;
 			select.appendChild(optionEl);
 		}
+		select.onchange = async (ev) => {
+			await onSelectProjectClick(request, meta, select);
+		};
 		metaWrapper.onmousedown = (ev) => {
 			ev.stopPropagation();
 		};
@@ -1278,6 +1308,10 @@
 		metaWrapper.onclick = (ev) => {
 			ev.stopPropagation();
 		};
+	}
+	async function onSelectProjectClick(request, meta, select) {
+		meta.project = select.value;
+		await saveMeta(meta.prId, meta, "localStorage and cloud");
 	}
 	function onTagButtonClick(request, meta, button) {
 		let popover = document.getElementById("gringo-tags-popover");

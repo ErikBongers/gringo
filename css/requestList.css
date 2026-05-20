@@ -37,4 +37,10 @@
             }
         }
     }
-}
+
+div.metaWrapper select {
+    border: none;
+    padding-inline: .5ch;
+    border-radius: .5ch;
+    opacity: .8;
+}}
