@@ -1,18 +1,11 @@
-Row layout
-===========
-div.request-info-list-panel.request-panel
-  div.request-grid-container <-- header wrapper
-    div.fd-row.header  <-- header: flex
-      div.fd-col.fd-col--9.item-section-group <-- colwidth = 9/12
-        div.fd-row
-
-      div.fd-col.fd-col--3 <-- colwidth = 3/12
-
-
-
-
-<request-info-item>: inline!!!
-  div : flex, w100%
+* Add setup for meta
+  - local setup:
+    - local tags with colors
+    - custom colors for global tags
+    - gear button for global setup with:
+      - warning in big red box.
+      - Project lines
+      - Global tags
 
 Priorities
 ===========

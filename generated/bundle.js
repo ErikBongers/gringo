@@ -1240,20 +1240,49 @@
 		let divStatusContainer = request.div.querySelector("div.item-status-container");
 		if (!divStatusContainer) return;
 		divStatusContainer = divStatusContainer.parentElement;
-		let button = emmet.appendChild(divStatusContainer, `
-        div.tagsWrapper.flexRow>(
-            (button.naked.tagButton
-                >li.far.fa-circle-down)+
-            div.tagsContainer
+		let metaWrapper = emmet.appendChild(divStatusContainer, `
+        div.metaWrapper> (
+            div.tagsWrapper.flexRow>(
+                (button.naked.tagButton
+                    >li.far.fa-circle-down)+
+                div.tagsContainer
+            )
         )
-    `).first.querySelector("button.tagButton");
-		addButtonClickNoPropagation(button, (ev) => {
+    `).first;
+		let button = metaWrapper.querySelector("button.tagButton");
+		button.onclick = (ev) => {
 			onTagButtonClick(request, meta, button);
-		});
+		};
+		emmet.appendChild(metaWrapper, `
+        div.projectWrapper.flexRow>(
+            select
+        )    
+    `).first;
+		let select = divStatusContainer.querySelector("select");
+		for (let option of [
+			"Brood en spelen",
+			"Pauze",
+			"Vakantie"
+		]) {
+			let optionEl = document.createElement("option");
+			optionEl.textContent = option;
+			optionEl.value = option;
+			select.appendChild(optionEl);
+		}
+		metaWrapper.onmousedown = (ev) => {
+			ev.stopPropagation();
+		};
+		metaWrapper.onmouseup = (ev) => {
+			ev.stopPropagation();
+		};
+		metaWrapper.onclick = (ev) => {
+			ev.stopPropagation();
+		};
 	}
 	function onTagButtonClick(request, meta, button) {
 		let popover = document.getElementById("gringo-tags-popover");
 		if (!popover) return;
+		gringo("popover");
 		popover.togglePopover({ source: button });
 		let container = popover.querySelector(".popoverContainer");
 		container.classList.add("tagList");

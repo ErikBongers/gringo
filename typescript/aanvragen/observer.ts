@@ -452,25 +452,60 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
     if(!divStatusContainer)
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
-    let tagsWrapper = emmet.appendChild(divStatusContainer, `
-        div.tagsWrapper.flexRow>(
-            (button.naked.tagButton
-                >li.far.fa-circle-down)+
-            div.tagsContainer
+    let metaWrapper = emmet.appendChild(divStatusContainer, `
+        div.metaWrapper> (
+            div.tagsWrapper.flexRow>(
+                (button.naked.tagButton
+                    >li.far.fa-circle-down)+
+                div.tagsContainer
+            )
         )
     `).first as HTMLDivElement;
 
-    let button = tagsWrapper.querySelector("button.tagButton") as HTMLButtonElement;
+    let button = metaWrapper.querySelector("button.tagButton") as HTMLButtonElement;
 
-    addButtonClickNoPropagation(button, (ev) => {
+    button.onclick = (ev) => {
         onTagButtonClick(request, meta, button);
-    });
+    };
+
+    let projectWrapper = emmet.appendChild(metaWrapper, `
+        div.projectWrapper.flexRow>(
+            select
+        )    
+    `).first as HTMLDivElement;
+    let select = divStatusContainer.querySelector("select")!;
+    let options = [
+        "Brood en spelen",
+        "Pauze",
+        "Vakantie"
+    ];
+    for (let option of options) {
+        let optionEl = document.createElement("option");
+        optionEl.textContent = option;
+        optionEl.value = option;
+        select.appendChild(optionEl);
+    }
+
+    metaWrapper.onmousedown = (ev) => {
+        ev.stopPropagation();
+        // ev.preventDefault();
+    };
+    metaWrapper.onmouseup = (ev) => {
+        ev.stopPropagation();
+        // ev.preventDefault();
+    };
+    metaWrapper.onclick = (ev) => {
+        ev.stopPropagation();
+        // ev.preventDefault();
+    };
+
 }
 
 function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button: HTMLButtonElement) {
     let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
     if(!popover)
         return;
+    gringo("popover");
     // @ts-ignore
     popover.togglePopover({source:button});
     let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
