@@ -1,3 +1,8 @@
+* Switching tabs or using the ariba filters removes the decorations.
+
+* add button to copy line to excel.
+  > perhaps add prId to excel?
+
 * Add setup for meta
   - local setup:
     - local tags with colors
