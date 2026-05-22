@@ -329,35 +329,25 @@
 			blockId
 		});
 	}
-	let globalSettings = { globalHide: false };
+	let globalSettings = { projects: [] };
 	function getGlobalSettings() {
 		return globalSettings;
+	}
+	function setGlobalSetting(settings) {
+		globalSettings = settings;
 	}
 	async function saveGlobalSettings(globalSettings) {
 		return cloud.json.upload(GLOBAL_SETTINGS_FILENAME, globalSettings);
 	}
-	async function fetchGlobalSettings(defaultSettings) {
+	async function fetchGlobalSettings() {
 		return await cloud.json.fetch(GLOBAL_SETTINGS_FILENAME).catch((err) => {
 			console.log(err);
-			return defaultSettings;
+			return globalSettings;
 		});
 	}
 	//#endregion
 	//#region typescript/plugin_options/options_page.ts
 	defineHtmlOptions();
-	document.body.addEventListener("keydown", onKeyDown);
-	function onKeyDown(ev) {
-		if (ev.key === "h" && ev.altKey && !ev.shiftKey && !ev.ctrlKey) {
-			ev.preventDefault();
-			saveHide(prompt("Verberg plugin bij iedereen?") === "hide").then(() => saveOptionsFromGui());
-		}
-	}
-	async function saveHide(hide) {
-		let globalSettings = await fetchGlobalSettings(getGlobalSettings());
-		globalSettings.globalHide = hide;
-		await saveGlobalSettings(globalSettings);
-		console.log("Global settings saved.");
-	}
 	const saveOptionsFromGui = () => {
 		let newOptions = { touched: Date.now() };
 		for (let option of htmlOptionDefs.values()) newOptions[option.id] = document.getElementById(option.id)[option.property];
@@ -369,9 +359,10 @@
 			}, 750);
 		});
 	};
-	function saveGlobalsFromGui() {
+	async function saveGlobalsFromGui() {
 		if (prompt("Zijdezeker? Tik dan GRINGO en klik Ok.") != "GRINGO") return;
 		console.log("SAVING GLOBALS");
+		await saveGlobalSettings({ projects: document.getElementById("txtProjects").value.split("\n").map((l) => l.trim()).filter((l) => l != "") });
 	}
 	async function restoreOptionsToGui() {
 		let items = await chrome.storage.sync.get(null);
@@ -382,6 +373,11 @@
 			document.getElementById(optionDef.id)[optionDef.property] = value;
 		}
 	}
+	async function fillGlobalOptionsInGui() {
+		let txtProjects = document.getElementById("txtProjects");
+		setGlobalSetting(await fetchGlobalSettings());
+		txtProjects.value = getGlobalSettings().projects.join("\n");
+	}
 	async function fillOptionsInGui() {
 		for (let optiondDef of htmlOptionDefs.values()) {
 			if (!optiondDef.blockId) continue;
@@ -389,6 +385,7 @@
 			emmet.appendChild(block, `label>input#${optiondDef.id}[type="checkbox"]+{${optiondDef.label}}`);
 		}
 		await restoreOptionsToGui();
+		await fillGlobalOptionsInGui();
 	}
 	document.addEventListener("DOMContentLoaded", fillOptionsInGui);
 	document.getElementById("save").addEventListener("click", saveOptionsFromGui);

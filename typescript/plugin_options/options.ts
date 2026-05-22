@@ -28,11 +28,11 @@ export function defineHtmlOption(id: string, property: string, label: string, bl
 }
 
 export interface GlobalSettings {
-    globalHide: boolean
+    projects: string[];
 }
 
-export let globalSettings: GlobalSettings = {
-    globalHide: false
+let globalSettings: GlobalSettings = {
+    projects: []
 }
 
 export function getGlobalSettings() {
@@ -47,11 +47,11 @@ export async function saveGlobalSettings(globalSettings: GlobalSettings) {
     return cloud.json.upload(GLOBAL_SETTINGS_FILENAME, globalSettings);
 }
 
-export async function fetchGlobalSettings(defaultSettings: GlobalSettings) {
+export async function fetchGlobalSettings() {
     return await cloud.json.fetch(GLOBAL_SETTINGS_FILENAME)
         .catch(err => {
             console.log(err);
-            return defaultSettings;
+            return globalSettings;
         }) as GlobalSettings;
 }
 

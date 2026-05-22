@@ -1,24 +1,7 @@
 import {emmet} from "../../libs/Emmeter/html";
-import {defineHtmlOptions, fetchGlobalSettings, getGlobalSettings, htmlOptionDefs, options, saveGlobalSettings} from "./options";
+import {defineHtmlOptions, fetchGlobalSettings, getGlobalSettings, GlobalSettings, htmlOptionDefs, options, saveGlobalSettings, setGlobalSetting} from "./options";
 
 defineHtmlOptions();
-document.body.addEventListener("keydown", onKeyDown);
-
-function onKeyDown(ev: KeyboardEvent) {
-    if (ev.key === "h" && ev.altKey && !ev.shiftKey && !ev.ctrlKey) {
-        ev.preventDefault();
-        let answer = prompt("Verberg plugin bij iedereen?");
-        saveHide(answer === "hide")
-            .then(() => saveOptionsFromGui());
-    }
-}
-
-async function saveHide(hide: boolean) {
-    let globalSettings = await fetchGlobalSettings(getGlobalSettings());
-    globalSettings.globalHide = hide;
-    await saveGlobalSettings(globalSettings);
-    console.log("Global settings saved.");
-}
 
 const saveOptionsFromGui = () => {
     let newOptions = {
@@ -43,11 +26,21 @@ const saveOptionsFromGui = () => {
 
 };
 
-function saveGlobalsFromGui() {
+async function saveGlobalsFromGui() {
     let answer = prompt("Zijdezeker? Tik dan GRINGO en klik Ok.");
     if(answer != "GRINGO")
         return;
     console.log("SAVING GLOBALS");
+    let txtProjects =  document.getElementById("txtProjects") as HTMLTextAreaElement;
+    let projects = txtProjects.value
+        .split("\n")
+        .map(l => l.trim())
+        .filter(l => l != "");
+    let globalSettings: GlobalSettings = {
+        projects
+    }
+
+    await saveGlobalSettings(globalSettings);
 }
 
 async function restoreOptionsToGui(){
@@ -62,6 +55,13 @@ async function restoreOptionsToGui(){
     }
 }
 
+async function fillGlobalOptionsInGui() {
+    let txtProjects =  document.getElementById("txtProjects") as HTMLTextAreaElement;
+    setGlobalSetting(await fetchGlobalSettings());
+    let globalSettings = getGlobalSettings();
+    txtProjects.value = globalSettings.projects.join("\n");
+}
+
 async function fillOptionsInGui() {
     for(let optiondDef of htmlOptionDefs.values()){
         if(!optiondDef.blockId)
@@ -70,7 +70,9 @@ async function fillOptionsInGui() {
         emmet.appendChild(block, `label>input#${optiondDef.id}[type="checkbox"]+{${optiondDef.label}}`);
     }
     await restoreOptionsToGui();
+    await fillGlobalOptionsInGui();
 }
+
 
 document.addEventListener('DOMContentLoaded', fillOptionsInGui);
 document.getElementById('save')!.addEventListener('click', saveOptionsFromGui);

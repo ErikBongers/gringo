@@ -50,7 +50,7 @@ export function distinct<Type>(array: Type[]): Type[] {
 
 export function equals(g1: GlobalSettings, g2: GlobalSettings){
     return (
-        g1.globalHide === g2.globalHide
+        g1.projects == g2.projects
     );
 }
 
@@ -115,7 +115,7 @@ export async function getOptions() {
     let items = await chrome.storage.sync.get(null); //get all
     // xxx @ts-ignore
     Object.assign(options, items);
-    setGlobalSetting(await fetchGlobalSettings(getGlobalSettings()));
+    setGlobalSetting(await fetchGlobalSettings());
 }
 
 export function arrayIsEqual(a: string[], b: string[]) {

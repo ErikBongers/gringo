@@ -47,7 +47,7 @@ function checkGlobalSettings() {
     if(Date.now() > (lastCheckTime+10*1000)) {
         lastCheckTime = Date.now();
         console.log("Re-fetching global settings.");
-        fetchGlobalSettings(getGlobalSettings()).then(r => {
+        fetchGlobalSettings().then(r => {
             if(!equals(getGlobalSettings(), r)) {
                 setGlobalSetting(r);
                 onSettingsChanged();
@@ -64,9 +64,6 @@ function onSettingsChanged() {
 }
 
 function onPageChanged() {
-    if(getGlobalSettings().globalHide) {
-        return;
-    }
     for(let observer of observers) {
         observer.onPageChanged();
     }
@@ -74,9 +71,6 @@ function onPageChanged() {
 
 //only fires on a page refresh, NOT on an initial page load, NOR on menu navigation.
 function onPageRefreshed() {
-    if(getGlobalSettings().globalHide) {
-        return;
-    }
     for(let observer of observers) {
         observer.onPageRefreshed();
     }

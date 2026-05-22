@@ -57,7 +57,18 @@ input[type="checkbox" i]  {
     margin: 1ch;
 }
 
-button.red {
+#globalWrapper {
+    & > label {
+        display: block;
+        font-weight: bold;
+    }
+    & textarea {
+        width: 100%;
+        aspect-ratio: 16/9;
+    }
+}
+
+    button.red {
     background-color: var(--globalDark);
     margin-inline-start: var(--globalMargin);
 }
