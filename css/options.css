@@ -34,3 +34,35 @@ button
 input[type="checkbox" i]  {
     margin-left: 0;
 }
+
+.globalWarning {
+    border-radius: 2ch;
+    background-color: rgb(255 0 0 / 0.3);
+    padding: 3ch;
+    margin: var(--globalMargin);
+}
+
+:root {
+    --globalDark: #ae1515;
+    --globalMargin: 1ch;
+}
+
+#globalWrapper {
+    border-radius: 2ch;
+    background-color: rgb(255 0 0 / 0.05);
+    border-width: 3px;
+    border-style: solid;
+    border-color: var(--globalDark);
+    padding: 3ch;
+    margin: 1ch;
+}
+
+button.red {
+    background-color: var(--globalDark);
+    margin-inline-start: var(--globalMargin);
+}
+
+details.global summary {
+    font-weight: bold;
+    color: var(--globalDark);
+}

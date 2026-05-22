@@ -292,11 +292,13 @@
 	//#endregion
 	//#region typescript/def.ts
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
+	const JSON_SINCE_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json-since";
 	const GLOBAL_SETTINGS_FILENAME = "gringo_global_settings.json";
 	//#endregion
 	//#region typescript/cloud.ts
 	let cloud = { json: {
 		fetch: fetchJson,
+		fetchSince: fetchJsonSince,
 		upload: uploadJson
 	} };
 	async function fetchJson(fileName) {
@@ -308,6 +310,9 @@
 			body: JSON.stringify(data),
 			keepalive: true
 		})).text();
+	}
+	async function fetchJsonSince(folderName, zTimeStamp) {
+		return (await fetch(JSON_SINCE_URL + "?folderName=" + folderName + "&changedSince=" + zTimeStamp, { method: "GET" })).json();
 	}
 	//#endregion
 	//#region typescript/plugin_options/options.ts
@@ -364,6 +369,10 @@
 			}, 750);
 		});
 	};
+	function saveGlobalsFromGui() {
+		if (prompt("Zijdezeker? Tik dan GRINGO en klik Ok.") != "GRINGO") return;
+		console.log("SAVING GLOBALS");
+	}
 	async function restoreOptionsToGui() {
 		let items = await chrome.storage.sync.get(null);
 		Object.assign(options, items);
@@ -383,6 +392,7 @@
 	}
 	document.addEventListener("DOMContentLoaded", fillOptionsInGui);
 	document.getElementById("save").addEventListener("click", saveOptionsFromGui);
+	document.getElementById("btnSaveGlobal").addEventListener("click", saveGlobalsFromGui);
 	//#endregion
 })();
 

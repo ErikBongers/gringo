@@ -43,6 +43,13 @@ const saveOptionsFromGui = () => {
 
 };
 
+function saveGlobalsFromGui() {
+    let answer = prompt("Zijdezeker? Tik dan GRINGO en klik Ok.");
+    if(answer != "GRINGO")
+        return;
+    console.log("SAVING GLOBALS");
+}
+
 async function restoreOptionsToGui(){
     let items = await chrome.storage.sync.get(null); //get all
     Object.assign(options, items);
@@ -67,3 +74,4 @@ async function fillOptionsInGui() {
 
 document.addEventListener('DOMContentLoaded', fillOptionsInGui);
 document.getElementById('save')!.addEventListener('click', saveOptionsFromGui);
+document.getElementById('btnSaveGlobal')!.addEventListener('click', saveGlobalsFromGui);
