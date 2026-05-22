@@ -39,7 +39,7 @@ function checkAndSetListPageDecorated(el: HTMLElement) {
 }
 
 function checkDecorations() {
-    checkAndSetDecoration("filters", document.querySelector(`div.gringoSearchPanel`), decorateSearchPanel);
+    checkAndSetDecoration("filters", document.querySelector(".request-search-panel"), decorateSearchPanel);
     checkAndSetDecoration("listPage", getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
 }
 
