@@ -1,3 +1,15 @@
+Decoration
+============
+Overal page may be decorated, but some part of it may not.
+So if page flag is true, we still need to check the underlying parts.
+> how?
+  have a list of decorated items to check.
+  > note that onMutation should only CHECK the minimun!
+  > onMutation should also return true if it's sure all is good.
+  > What if there's no hierarchy? Items on page just are checked for decoration. If some (sub) item no longer exists,
+
+
+
 * Switching tabs or using the ariba filters removes the decorations.
 
 * add button to copy line to excel.

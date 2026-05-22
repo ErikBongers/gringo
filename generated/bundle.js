@@ -878,36 +878,52 @@
 	var observer_default$1 = new AanvragenObserver();
 	function onPageRefreshed$2() {
 		gringo("page Aanvragen refreshed xxx.");
-		decoratePage$1();
+		checkDecorations();
 	}
 	function isPageProbablyLoaded$1() {
 		return !!getPagination();
 	}
+	function onMutation$1(mutation) {
+		checkDecorations();
+		return false;
+	}
+	function checkAndSetListPageDecorated(el) {
+		let input = el;
+		let isDecorated = el.dataset.gringoCurrentPage == input.value;
+		el.dataset.gringoCurrentPage = input.value;
+		return isDecorated;
+	}
+	function checkDecorations() {
+		checkAndSetDecoration("filters", document.querySelector(`div.gringoSearchPanel`), decorateSearchPanel);
+		checkAndSetDecoration("listPage", getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
+	}
 	function getPagination() {
 		let paginationElement = document.querySelector("fd-pagination");
 		if (!paginationElement) return null;
-		let currentPage = parseInt(paginationElement.querySelector("input").value);
+		let currentPageElement = paginationElement.querySelector("input");
+		let currentPage = parseInt(currentPageElement.value);
 		let nextButton = paginationElement.querySelector("button[glyph='navigation-right-arrow']");
 		if (!nextButton) return null;
 		return {
 			currentPage,
+			currentPageElement,
 			hasNext: nextButton.classList.contains("is-disabled")
 		};
 	}
-	let currentPage = -1;
-	function onMutation$1(mutation) {
-		let pagination = getPagination();
-		if (pagination) {
-			let newPage = pagination.currentPage;
-			if (currentPage != newPage) {
-				document.body.dataset.gringoPageScraped = "";
-				globalPrs = [];
-				currentPage = newPage;
-				decoratePage$1();
-				return true;
-			}
+	function getListTabDecoratedElement() {
+		if (!document.querySelector("request-info-requisitions")) return null;
+		return getPagination()?.currentPageElement ?? null;
+	}
+	function checkAndSetDecoration(key, el, decorator, customCheckAndSet) {
+		if (!el) return;
+		if (customCheckAndSet) {
+			if (!customCheckAndSet(el)) decorator();
+			return;
 		}
-		return false;
+		if (el.dataset.gringoDecorated != "true") {
+			el.dataset.gringoDecorated = "true";
+			decorator();
+		}
 	}
 	let globalPrs = [];
 	async function applyFilters(requests) {
@@ -916,13 +932,15 @@
 		let selectedTags = filters.filter((t) => t.filterType == "==");
 		let excludedTags = filters.filter((t) => t.filterType == "!=");
 		for (let request of requests) {
+			let reqDiv = document.getElementById("request-" + request.id);
+			if (!reqDiv) continue;
 			let meta = await fetchMetaCached(request.id);
 			let hasAllSelectedTags = selectedTags.every((t) => meta.tags.includes(t.name));
 			let hasNoExcludedTags = excludedTags.every((t) => !meta.tags.includes(t.name));
-			request.div.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
+			reqDiv.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
 		}
 	}
-	function decoratePage$1() {
+	function decorateRequestList() {
 		let main = document.querySelector("main");
 		if (!main) return;
 		main.classList.toggle("hideOnBehalfOf", true);
@@ -946,7 +964,6 @@
 			if (!popover) return;
 			popover.togglePopover({ source: button });
 		});
-		fillSearchPanel(main);
 	}
 	function updateTagsFilters(filters) {
 		let table = document.getElementById("tagsFilterTable");
@@ -965,10 +982,8 @@
 			btnFilter.classList.toggle("notEqual", filter.filterType == "!=");
 		}
 	}
-	function fillSearchPanel(main) {
-		if (document.body.dataset.gringoPanel == "true") return;
-		document.body.dataset.gringoPanel = "true";
-		let requestSearchPanel = main.querySelector(".request-search-panel");
+	function decorateSearchPanel() {
+		let requestSearchPanel = document.querySelector(".request-search-panel");
 		let divSearchPanel = document.querySelector(`div.gringoSearchPanel`);
 		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first;
 		divSearchPanel.innerHTML = "";
@@ -1024,12 +1039,11 @@
 		};
 	}
 	function scrapePRs() {
-		if (document.body.dataset.gringoPageScraped == "true") return globalPrs;
 		gringo("Scraping...");
 		let infos = [...document.querySelectorAll("request-info-item")].map(scrapeInfoItem);
 		gringo(`Found ${infos.length} items.`);
 		if (infos.length > 0) document.body.dataset.gringoPageScraped = "true";
-		globalPrs.push(...infos);
+		globalPrs = infos;
 		return globalPrs;
 	}
 	function scrapeInfoItem(requestDiv) {
@@ -1039,7 +1053,6 @@
 		if (divOrders) orderAnchors = [...divOrders.querySelectorAll(".request-po-list-container ul > li a")];
 		return {
 			id,
-			div: requestDiv,
 			orderAnchors
 		};
 	}
@@ -1069,12 +1082,12 @@
 			ev.preventDefault();
 		};
 	}
-	function stripSections(request) {
-		if (request.div.querySelector("div.item-obo")) {}
-	}
+	function stripSections(request) {}
 	async function decoratePr(request) {
-		if (request.div.dataset.gringo == "decorated") return;
-		request.div.dataset.gringo = "decorated";
+		let reqDiv = document.getElementById("request-" + request.id);
+		if (!reqDiv) return;
+		if (reqDiv.dataset.gringo == "decorated") return;
+		reqDiv.dataset.gringo = "decorated";
 		addOrderCopyButton(request);
 		stripSections(request);
 		let meta = await fetchMetaCached(request.id);
@@ -1163,7 +1176,9 @@
 		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
 	}
 	function updatePrLine(request, meta) {
-		let tagsContainer = request.div.querySelector(".tagsContainer");
+		let reqDiv = document.getElementById("request-" + request.id);
+		if (!reqDiv) return;
+		let tagsContainer = reqDiv.querySelector(".tagsContainer");
 		if (!tagsContainer) return;
 		tagsContainer.innerHTML = "";
 		meta.tags.map((tag) => {
@@ -1176,7 +1191,7 @@
 		});
 		let orphans = meta.tags.filter((tag) => !defaultTags.find((tagDef) => tagDef.name == tag));
 		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
-		let select = request.div.querySelector("div.projectWrapper select");
+		let select = reqDiv.querySelector("div.projectWrapper select");
 		if (meta.project) select.value = meta.project;
 	}
 	function paintTag(tagElement, tagDef, selected) {
@@ -1239,7 +1254,9 @@
 		return pr;
 	}
 	function addMeta(request, meta) {
-		let divStatusContainer = request.div.querySelector("div.item-status-container");
+		let reqDiv = document.getElementById("request-" + request.id);
+		if (!reqDiv) return;
+		let divStatusContainer = reqDiv.querySelector("div.item-status-container");
 		if (!divStatusContainer) return;
 		divStatusContainer = divStatusContainer.parentElement;
 		let metaWrapper = emmet.appendChild(divStatusContainer, `

@@ -19,47 +19,76 @@ export default new AanvragenObserver();
 
 function onPageRefreshed() {
     gringo("page Aanvragen refreshed xxx.");
-    decoratePage();
+    checkDecorations();
 }
 
 function isPageProbablyLoaded(): boolean {
     return !! getPagination();
 }
 
+function onMutation(mutation: MutationRecord) {
+    checkDecorations();
+    return false;
+}
+
+function checkAndSetListPageDecorated(el: HTMLElement) {
+    let input = el as HTMLInputElement;
+    let isDecorated = el.dataset.gringoCurrentPage == input.value;
+    el.dataset.gringoCurrentPage = input.value;
+    return isDecorated;
+}
+
+function checkDecorations() {
+    checkAndSetDecoration("filters", document.querySelector(`div.gringoSearchPanel`), decorateSearchPanel);
+    checkAndSetDecoration("listPage", getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
+}
+
 function getPagination(): Pagination | null {
     let paginationElement = document.querySelector("fd-pagination") as HTMLElement | null;
     if (!paginationElement)
         return null;
-    let currentPage = parseInt(paginationElement.querySelector('input')!.value);
+    let currentPageElement = paginationElement.querySelector('input')!;
+    let currentPage = parseInt(currentPageElement.value);
     let nextButton = paginationElement.querySelector("button[glyph='navigation-right-arrow']") as HTMLButtonElement | null;
     if(!nextButton)
         return null;
     let hasNext = nextButton.classList.contains("is-disabled");
     return {
         currentPage: currentPage,
+        currentPageElement,
         hasNext: hasNext,
     }
 }
 
 interface Pagination {
     currentPage: number;
+    currentPageElement: HTMLElement;
     hasNext: boolean;
 }
 
-let currentPage = -1;
-function onMutation(mutation: MutationRecord) {
-    let pagination = getPagination();
-    if(pagination) {
-        let newPage = pagination.currentPage;
-        if(currentPage != newPage) {
-            document.body.dataset.gringoPageScraped = "";
-            globalPrs = [];
-            currentPage = newPage;
-            decoratePage();
-            return true;
+type DecorationKeys = "filters" | "listPage";
+
+function getListTabDecoratedElement() {
+    let tabContainer = document.querySelector("request-info-requisitions") as HTMLElement | null;
+    if(!tabContainer)
+        return null;
+    return getPagination()?.currentPageElement??null;
+}
+
+function checkAndSetDecoration(key: DecorationKeys, el: HTMLElement | null, decorator: () => void, customCheckAndSet?: (el: HTMLElement) => boolean) {
+    if(!el)
+        return;
+    if(customCheckAndSet) {
+        if(!customCheckAndSet(el)) {
+            decorator();
         }
+        return;
     }
-    return false;
+
+    if(el.dataset.gringoDecorated != "true") {
+        el.dataset.gringoDecorated = "true";
+        decorator();
+    }
 }
 
 let globalPrs: RequestBasicInfo[] = [];
@@ -85,14 +114,17 @@ async function applyFilters(requests: RequestBasicInfo[]) {
     let selectedTags = filters.filter(t => t.filterType == "==");
     let excludedTags = filters.filter(t => t.filterType == "!=");
     for(let request of requests) {
+        let reqDiv = document.getElementById("request-" + request.id);
+        if(!reqDiv)
+            continue;
         let meta = await fetchMetaCached(request.id);
         let hasAllSelectedTags = selectedTags.every(t => meta.tags.includes(t.name));
         let hasNoExcludedTags = excludedTags.every(t => !meta.tags.includes(t.name));
-        request.div.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
+        reqDiv.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
     }
 }
 
-function decoratePage() {
+function decorateRequestList() {
     let main = document.querySelector("main");
     if(!main)
         return;
@@ -124,9 +156,6 @@ function decoratePage() {
         popover.togglePopover({source:button});
     });
 
-    fillSearchPanel(main);
-
-
     // let requestInfoListPanel = document.querySelector(".request-info-list-panel") as HTMLElement | null;
     // if(requestInfoListPanel) {
     //     if (!requestInfoListPanel.dataset.hasOverlay) {
@@ -156,11 +185,8 @@ function updateTagsFilters(filters: TagsFilter[]) {
     }
 }
 
-function fillSearchPanel(main: HTMLElement) {
-    if(document.body.dataset.gringoPanel == "true")
-        return;
-    document.body.dataset.gringoPanel = "true";
-    let requestSearchPanel = main.querySelector(".request-search-panel") as HTMLDivElement;
+function decorateSearchPanel() {
+    let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
     let divSearchPanel = document.querySelector(`div.gringoSearchPanel`) as HTMLDivElement | null;
     if(!divSearchPanel)
         divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first as HTMLDivElement;
@@ -226,21 +252,18 @@ function fillSearchPanel(main: HTMLElement) {
 }
 
 function scrapePRs() {
-    if(document.body.dataset.gringoPageScraped == "true")
-        return globalPrs;
     gringo("Scraping...");
     let requestsDivs = document.querySelectorAll("request-info-item");
     let infos = [...requestsDivs].map(scrapeInfoItem);
     gringo(`Found ${infos.length} items.`);
     if(infos.length > 0)
         document.body.dataset.gringoPageScraped = "true";
-    globalPrs.push(...infos);
+    globalPrs = infos;
     return globalPrs;
 }
 
 export type RequestBasicInfo = {
     id: string,
-    div: HTMLDivElement,
     orderAnchors: HTMLAnchorElement[],
 
 }
@@ -252,7 +275,7 @@ function scrapeInfoItem(requestDiv: HTMLDivElement): RequestBasicInfo {
     if(divOrders) {
          orderAnchors = [...divOrders.querySelectorAll(".request-po-list-container ul > li a") as NodeListOf<HTMLAnchorElement>];
     }
-    return {id, div: requestDiv, orderAnchors};
+    return {id, orderAnchors};
 }
 
 export interface PrMeta {
@@ -297,17 +320,15 @@ function addButtonClickNoPropagation(button: HTMLButtonElement, onClick: (ev: an
 }
 
 function stripSections(request: RequestBasicInfo) {
-    let divWho = request.div.querySelector("div.item-obo");
-    if(divWho) {
-        // strip "aangemaakt namens Team X"
-
-    }
 }
 
 async function decoratePr(request: RequestBasicInfo) {
-    if(request.div.dataset.gringo == "decorated")
+    let reqDiv = document.getElementById("request-" + request.id);
+    if(!reqDiv)
         return;
-    request.div.dataset.gringo = "decorated";
+    if(reqDiv.dataset.gringo == "decorated")
+        return;
+    reqDiv.dataset.gringo = "decorated";
     addOrderCopyButton(request);
     stripSections(request);
     let meta = await fetchMetaCached(request.id);
@@ -348,7 +369,10 @@ function saveTagsFilters(tagsFilters: TagsFilter[]) {
 }
 
 function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
-    let tagsContainer = request.div.querySelector(".tagsContainer") as HTMLButtonElement | null;
+    let reqDiv = document.getElementById("request-" + request.id);
+    if(!reqDiv)
+        return;
+    let tagsContainer = reqDiv.querySelector(".tagsContainer") as HTMLButtonElement | null;
     if(!tagsContainer)
         return;
     tagsContainer.innerHTML = "";
@@ -368,7 +392,7 @@ function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     if(orphans.length > 0) {
         emmet.appendChild(tagsContainer, orphans.map(tag => `span.gringoTag{${tag}}`).join("+"));
     }
-    let select = request.div.querySelector("div.projectWrapper select")! as HTMLSelectElement;
+    let select = reqDiv.querySelector("div.projectWrapper select")! as HTMLSelectElement;
     if(meta.project)
         select.value = meta.project;
 }
@@ -452,7 +476,10 @@ async function fetchFullRequest(prId: string) {
 }
 
 function addMeta(request: RequestBasicInfo, meta: PrMeta) {
-    let divStatusContainer = request.div.querySelector("div.item-status-container") as HTMLDivElement | null;
+    let reqDiv = document.getElementById("request-" + request.id);
+    if(!reqDiv)
+        return;
+    let divStatusContainer = reqDiv.querySelector("div.item-status-container") as HTMLDivElement | null;
     if(!divStatusContainer)
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
