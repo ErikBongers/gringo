@@ -1,5 +1,5 @@
 import {emmet} from "../../libs/Emmeter/html";
-import {defineHtmlOptions, fetchGlobalSettings, getGlobalSettings, GlobalSettings, htmlOptionDefs, options, saveGlobalSettings, setGlobalSetting} from "./options";
+import {defineHtmlOptions, fetchGlobalSettings, getGlobalSettingsCached, GlobalSettings, htmlOptionDefs, options, saveGlobalSettings, setGlobalSetting} from "./options";
 
 defineHtmlOptions();
 
@@ -58,7 +58,7 @@ async function restoreOptionsToGui(){
 async function fillGlobalOptionsInGui() {
     let txtProjects =  document.getElementById("txtProjects") as HTMLTextAreaElement;
     setGlobalSetting(await fetchGlobalSettings());
-    let globalSettings = getGlobalSettings();
+    let globalSettings = await getGlobalSettingsCached();
     txtProjects.value = globalSettings.projects.join("\n");
 }
 

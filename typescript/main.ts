@@ -1,5 +1,5 @@
 import {equals, getOptions, observers, registerObserver, settingsObservers} from "./globals";
-import {fetchGlobalSettings, getGlobalSettings, setGlobalSetting} from "./plugin_options/options";
+import {fetchGlobalSettings, setGlobalSetting} from "./plugin_options/options";
 import aanvragenObserver from "./aanvragen/observer";
 import aanvraagObserver from "./aanvraag/observer";
 
@@ -20,7 +20,6 @@ function init() {
 
         // @ts-ignore
         window.navigation.addEventListener("navigatesuccess", () => {
-            checkGlobalSettings();
             onPageChanged();
         });
 
@@ -43,19 +42,6 @@ function init() {
 }
 
 let lastCheckTime = Date.now();
-function checkGlobalSettings() {
-    if(Date.now() > (lastCheckTime+10*1000)) {
-        lastCheckTime = Date.now();
-        console.log("Re-fetching global settings.");
-        fetchGlobalSettings().then(r => {
-            if(!equals(getGlobalSettings(), r)) {
-                setGlobalSetting(r);
-                onSettingsChanged();
-            }
-        });
-    }
-}
-
 function onSettingsChanged() {
     console.log("on settings changed.");
     for(let observer of settingsObservers) {

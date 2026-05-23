@@ -329,9 +329,11 @@
 			blockId
 		});
 	}
-	let globalSettings = { projects: [] };
-	function getGlobalSettings() {
-		return globalSettings;
+	let defaultGlobalSettings = { projects: [] };
+	let globalSettings = null;
+	async function getGlobalSettingsCached() {
+		if (globalSettings) return globalSettings;
+		return await fetchGlobalSettings();
 	}
 	function setGlobalSetting(settings) {
 		globalSettings = settings;
@@ -342,7 +344,7 @@
 	async function fetchGlobalSettings() {
 		return await cloud.json.fetch(GLOBAL_SETTINGS_FILENAME).catch((err) => {
 			console.log(err);
-			return globalSettings;
+			return defaultGlobalSettings;
 		});
 	}
 	//#endregion
@@ -376,7 +378,7 @@
 	async function fillGlobalOptionsInGui() {
 		let txtProjects = document.getElementById("txtProjects");
 		setGlobalSetting(await fetchGlobalSettings());
-		txtProjects.value = getGlobalSettings().projects.join("\n");
+		txtProjects.value = (await getGlobalSettingsCached()).projects.join("\n");
 	}
 	async function fillOptionsInGui() {
 		for (let optiondDef of htmlOptionDefs.values()) {

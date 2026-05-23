@@ -1,6 +1,6 @@
 import {Observer} from "./pageObserver";
 import {emmet} from "../libs/Emmeter/html";
-import {fetchGlobalSettings, getGlobalSettings, GlobalSettings, options, setGlobalSetting} from "./plugin_options/options";
+import {fetchGlobalSettings, GlobalSettings, options, setGlobalSetting} from "./plugin_options/options";
 import {Actions, sendRequest, TabType} from "./messaging";
 
 export let observers: Observer[] = [];

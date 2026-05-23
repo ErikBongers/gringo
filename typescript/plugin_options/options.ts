@@ -31,12 +31,15 @@ export interface GlobalSettings {
     projects: string[];
 }
 
-let globalSettings: GlobalSettings = {
+let defaultGlobalSettings: GlobalSettings = {
     projects: []
 }
 
-export function getGlobalSettings() {
-    return globalSettings;
+let globalSettings: GlobalSettings | null = null;
+export async function getGlobalSettingsCached() {
+    if(globalSettings)
+        return globalSettings;
+    return await fetchGlobalSettings();
 }
 
 export function setGlobalSetting(settings: GlobalSettings) {
@@ -51,7 +54,7 @@ export async function fetchGlobalSettings() {
     return await cloud.json.fetch(GLOBAL_SETTINGS_FILENAME)
         .catch(err => {
             console.log(err);
-            return globalSettings;
+            return defaultGlobalSettings;
         }) as GlobalSettings;
 }
 
