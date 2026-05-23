@@ -186,6 +186,42 @@ function updateTagsFilters(filters: TagsFilter[]) {
     }
 }
 
+function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef) {
+    let tr = emmet.appendChild(tbody, `tr`).first as HTMLTableRowElement;
+    tr.dataset.tagName = tagDef.name;
+    emmet.appendChild(tr, `
+                (td>span.naked.gringoTag{${tagDef.name}})+
+                (td>button.naked.filter>(
+                    span.equal{✔}+
+                    span.notEqual{❌}+
+                    span.empty{▢}
+                    )
+                )
+            `);
+    let tagSpan = tr.querySelector("span")!;
+    paintTag(tagSpan, tagDef, true);
+    let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
+    filterButton.onclick = async (ev) => {
+        let filters = getTagsFilters();
+        let filter = filters.find(t => t.name == tagDef.name);
+        if (!filter) {
+            let filter: TagsFilter = {
+                name: tagDef.name,
+                filterType: "=="
+            }
+            filters.push(filter);
+        } else {
+            if (filter.filterType == "==")
+                filter.filterType = "!=";
+            else
+                filters = filters.filter(f => f.name != tagDef.name);
+        }
+        saveTagsFilters(filters);
+        updateTagsFilters(filters);
+        await applyFilters(globalPrs);
+    };
+}
+
 function decorateSearchPanel() {
     let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
     let divSearchPanel = document.querySelector(`div.gringoSearchPanel`) as HTMLDivElement | null;
@@ -202,39 +238,7 @@ function decorateSearchPanel() {
     defaultTags
         .sort((a, b) => a.order - b.order)
         .forEach(tagDef => {
-            let tr = emmet.appendChild(tbody, `tr`).first as HTMLTableRowElement;
-            tr.dataset.tagName = tagDef.name;
-            emmet.appendChild(tr, `
-                (td>span.naked.gringoTag{${tagDef.name}})+
-                (td>button.naked.filter>(
-                    span.equal{✔}+
-                    span.notEqual{❌}+
-                    span.empty{▢}
-                    )
-                )
-            `);
-            let tagSpan = tr.querySelector("span")!;
-            paintTag(tagSpan, tagDef, true);
-            let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
-            filterButton.onclick = async (ev) => {
-                let filters = getTagsFilters();
-                let filter = filters.find(t => t.name == tagDef.name);
-                if(!filter) {
-                    let filter: TagsFilter = {
-                        name: tagDef.name,
-                        filterType: "=="
-                    }
-                    filters.push(filter);
-                } else {
-                    if (filter.filterType == "==")
-                        filter.filterType = "!=";
-                    else
-                        filters = filters.filter(f => f.name != tagDef.name);
-                }
-                saveTagsFilters(filters);
-                updateTagsFilters(filters);
-                await applyFilters(globalPrs);
-            };
+            createTagFilterRow(tbody, tagDef);
         });
     updateTagsFilters(getTagsFilters());
     let btnTestFetch = emmet.appendChild(tagsCollapse,`div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
