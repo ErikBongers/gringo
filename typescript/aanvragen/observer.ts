@@ -254,6 +254,17 @@ function decorateSearchPanel() {
     btnTestRequestListAndDetails.onclick = async (ev) => {
         await fetchRequestListAndDetails();
     };
+
+    function onAribaFilterButton() {
+        let inputCurrentPage = getListTabDecoratedElement();
+        if(!inputCurrentPage)
+            return;
+        inputCurrentPage.dataset.gringoCurrentPage = "";
+    }
+    [...requestSearchPanel.querySelectorAll(".search-button-container button")]
+        .forEach((button: HTMLButtonElement) => {
+            button.addEventListener("click", onAribaFilterButton);
+        });
 }
 
 function scrapePRs() {
