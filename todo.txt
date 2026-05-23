@@ -1,5 +1,3 @@
-* Applying ariba filters removes decorations.
-
 * add button to copy line to excel.
   > perhaps add prId to excel?
 
