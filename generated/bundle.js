@@ -319,17 +319,19 @@
 	//#endregion
 	//#region typescript/plugin_options/options.ts
 	const options = { showDebug: false };
-	let globalSettings = { globalHide: false };
-	function getGlobalSettings() {
-		return globalSettings;
+	let defaultGlobalSettings = { projects: [] };
+	let globalSettings = null;
+	async function getGlobalSettingsCached() {
+		if (globalSettings) return globalSettings;
+		return await fetchGlobalSettings();
 	}
 	function setGlobalSetting(settings) {
 		globalSettings = settings;
 	}
-	async function fetchGlobalSettings(defaultSettings) {
+	async function fetchGlobalSettings() {
 		return await cloud.json.fetch(GLOBAL_SETTINGS_FILENAME).catch((err) => {
 			console.log(err);
-			return defaultSettings;
+			return defaultGlobalSettings;
 		});
 	}
 	//#endregion
@@ -340,13 +342,10 @@
 		observers.push(observer);
 		if (observers.length > 20) console.error("Too many observers!");
 	}
-	function equals(g1, g2) {
-		return g1.globalHide === g2.globalHide;
-	}
 	async function getOptions() {
 		let items = await chrome.storage.sync.get(null);
 		Object.assign(options, items);
-		setGlobalSetting(await fetchGlobalSettings(getGlobalSettings()));
+		setGlobalSetting(await fetchGlobalSettings());
 	}
 	function escapeRegexChars(text) {
 		return text.replaceAll("\\", "\\\\").replaceAll("^", "\\^").replaceAll("$", "\\$").replaceAll(".", "\\.").replaceAll("|", "\\|").replaceAll("?", "\\?").replaceAll("*", "\\*").replaceAll("+", "\\+").replaceAll("(", "\\(").replaceAll(")", "\\)").replaceAll("[", "\\[").replaceAll("]", "\\]").replaceAll("{", "\\{").replaceAll("}", "\\}");
@@ -1253,7 +1252,7 @@
 		}
 		return pr;
 	}
-	function addMeta(request, meta) {
+	async function addMeta(request, meta) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
 		let divStatusContainer = reqDiv.querySelector("div.item-status-container");
@@ -1278,36 +1277,8 @@
         )    
     `).first;
 		let select = divStatusContainer.querySelector("select");
-		for (let option of [
-			"--selecteer--",
-			"BK - Animatie",
-			"BK - Glaskunst",
-			"BK - 3e graad volwassenen",
-			"BK - Algemeen",
-			"BK - Beeldhouwen",
-			"BK - Boekkunst",
-			"BK - Jongeren digitaal",
-			"BK - 3e graad volwassenen digitaal",
-			"BK - Grafiek",
-			"BK - Grafische vormgeving",
-			"BK - Illustratieve vormgeving",
-			"BK - Jongeren",
-			"BK - Juweel",
-			"BK - Keramiek",
-			"BK - Kinderen",
-			"BK - Kunst en cultuur",
-			"BK - Levend model 2D",
-			"BK - Levend model 3D",
-			"BK - Meubel en interieur",
-			"BK - Projectatelier",
-			"BK - Schilderen",
-			"BK - Secretariaat",
-			"BK - Tekenen",
-			"MWD - Algemeen",
-			"MWD - Dans",
-			"MWD - Muziek",
-			"MWD - Woord"
-		]) {
+		let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
+		for (let option of options) {
 			let optionEl = document.createElement("option");
 			optionEl.textContent = option;
 			optionEl.value = option;
@@ -1424,7 +1395,6 @@
 				});
 			});
 			window.navigation.addEventListener("navigatesuccess", () => {
-				checkGlobalSettings();
 				onPageChanged();
 			});
 			registerObserver(observer_default$1);
@@ -1439,29 +1409,14 @@
 			});
 		});
 	}
-	let lastCheckTime = Date.now();
-	function checkGlobalSettings() {
-		if (Date.now() > lastCheckTime + 10 * 1e3) {
-			lastCheckTime = Date.now();
-			console.log("Re-fetching global settings.");
-			fetchGlobalSettings(getGlobalSettings()).then((r) => {
-				if (!equals(getGlobalSettings(), r)) {
-					setGlobalSetting(r);
-					onSettingsChanged();
-				}
-			});
-		}
-	}
 	function onSettingsChanged() {
 		console.log("on settings changed.");
 		for (let observer of settingsObservers) observer();
 	}
 	function onPageChanged() {
-		if (getGlobalSettings().globalHide) return;
 		for (let observer of observers) observer.onPageChanged();
 	}
 	function onPageRefreshed() {
-		if (getGlobalSettings().globalHide) return;
 		for (let observer of observers) observer.onPageRefreshed();
 	}
 	//#endregion

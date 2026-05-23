@@ -5,6 +5,7 @@ import {KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {gringo} from "../globals";
 import {FetchChain} from "../fetchChain";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal, saveMetasLocal} from "../db/gringoDb";
+import {getGlobalSettingsCached} from "../plugin_options/options";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -475,7 +476,7 @@ async function fetchFullRequest(prId: string) {
     return pr;
 }
 
-function addMeta(request: RequestBasicInfo, meta: PrMeta) {
+async function addMeta(request: RequestBasicInfo, meta: PrMeta) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
         return;
@@ -505,36 +506,7 @@ function addMeta(request: RequestBasicInfo, meta: PrMeta) {
         )    
     `).first as HTMLDivElement;
     let select = divStatusContainer.querySelector("select")!;
-    let options = [
-        "--selecteer--",
-        "BK - Animatie",
-        "BK - Glaskunst",
-        "BK - 3e graad volwassenen",
-        "BK - Algemeen",
-        "BK - Beeldhouwen",
-        "BK - Boekkunst",
-        "BK - Jongeren digitaal",
-        "BK - 3e graad volwassenen digitaal",
-        "BK - Grafiek",
-        "BK - Grafische vormgeving",
-        "BK - Illustratieve vormgeving",
-        "BK - Jongeren",
-        "BK - Juweel",
-        "BK - Keramiek",
-        "BK - Kinderen",
-        "BK - Kunst en cultuur",
-        "BK - Levend model 2D",
-        "BK - Levend model 3D",
-        "BK - Meubel en interieur",
-        "BK - Projectatelier",
-        "BK - Schilderen",
-        "BK - Secretariaat",
-        "BK - Tekenen",
-        "MWD - Algemeen",
-        "MWD - Dans",
-        "MWD - Muziek",
-        "MWD - Woord",
-    ];
+    let options = [ "--selecteer--", ...(await getGlobalSettingsCached()).projects];
     for (let option of options) {
         let optionEl = document.createElement("option");
         optionEl.textContent = option;
