@@ -1443,9 +1443,9 @@
                 )
             )+
             (
-                div.gringo.bruto.col-xs-4.pull-end>(
-                    label{Brutobedrag}+
-                    div{€1.234,56 EUR}
+                div.gringo.col-xs-4.pull-end>(
+                    label{Bruto bedrag}+
+                    div.bruto{€1.234,56 EUR}
                 )
             )
         )

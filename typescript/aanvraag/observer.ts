@@ -83,9 +83,9 @@ function decoratePrItem(lineEl: HTMLElement) {
                 )
             )+
             (
-                div.gringo.bruto.col-xs-4.pull-end>(
+                div.gringo.col-xs-4.pull-end>(
                     label{Bruto bedrag}+
-                    div{€1.234,56 EUR}
+                    div.bruto{€1.234,56 EUR}
                 )
             )
         )

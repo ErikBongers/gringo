@@ -239,3 +239,8 @@ request-info-item.hidden {
 .w100 {
     width: 100%;
 }
+
+.gringo .bruto {
+    font-size: 1.3em;
+    font-weight: bold;
+}
