@@ -1420,7 +1420,36 @@
 			let commodityCode = commodityCodeField.uniqueName;
 			gringo(commodityCode);
 		}
-		gringo(`Items to decorate: ${[...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)].length}`);
+		let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
+		nonDecoratedItems.forEach(decoratePrItem);
+		gringo(`Items to decorate: ${nonDecoratedItems.length}`);
+	}
+	function decoratePrItem(lineEl) {
+		let priceSection = lineEl.querySelector("div.price-section");
+		if (!priceSection) return;
+		let rows = priceSection.querySelectorAll("div.row");
+		rows[0];
+		let brutoRow = rows[1];
+		let meetEenheid = brutoRow.children[0];
+		let brutoDiv = brutoRow.children[1];
+		meetEenheid.style.display = "none";
+		brutoDiv.style.display = "none";
+		emmet.appendChild(brutoRow, `
+        div.flexRow.w100>(
+            (
+                div.gringo.tarif.col-xs-4>(
+                    label{BTW}+
+                    div.btw{21%}
+                )
+            )+
+            (
+                div.gringo.bruto.col-xs-4.pull-end>(
+                    label{Brutobedrag}+
+                    div{€1.234,56 EUR}
+                )
+            )
+        )
+    `);
 	}
 	//#endregion
 	//#region typescript/main.ts

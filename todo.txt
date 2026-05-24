@@ -1,6 +1,5 @@
-BTW database
-============
-In cloud. Will rarely change. Mainly in the beginning.
+* Replace bruto field if items with own bruto field and tarif.
+
 
 
 * Decorate PR page

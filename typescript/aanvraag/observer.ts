@@ -4,6 +4,7 @@ import {PurchaseRequisition} from "../sap/SapPrInfo";
 import {fetchPr} from "../sap/api";
 import {cloud} from "../cloud";
 import {BTW_TARIFS_FILENAME} from "../def";
+import {emmet} from "../../libs/Emmeter/html";
 
 class AanvraagObserver extends PartialUrlObserver {
     constructor() {
@@ -56,7 +57,39 @@ async function decoratePage() {
     }
 
     let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
+    nonDecoratedItems.forEach(decoratePrItem);
     gringo(`Items to decorate: ${nonDecoratedItems.length}`);
+}
+
+function decoratePrItem(lineEl: HTMLElement) {
+    let priceSection = lineEl.querySelector("div.price-section") as HTMLElement | null;
+    if(!priceSection)
+        return;
+    let rows = priceSection.querySelectorAll("div.row");
+    let nettoRow = rows[0];
+    let brutoRow = rows[1] as HTMLElement;
+
+    let meetEenheid = brutoRow.children[0] as HTMLElement;
+    let brutoDiv = brutoRow.children[1] as HTMLElement;
+    meetEenheid.style.display = "none";
+    brutoDiv.style.display = "none";
+
+    emmet.appendChild(brutoRow, `
+        div.flexRow.w100>(
+            (
+                div.gringo.tarif.col-xs-4>(
+                    label{BTW}+
+                    div.btw{21%}
+                )
+            )+
+            (
+                div.gringo.bruto.col-xs-4.pull-end>(
+                    label{Bruto bedrag}+
+                    div{€1.234,56 EUR}
+                )
+            )
+        )
+    `);
 }
 
 

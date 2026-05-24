@@ -235,3 +235,7 @@ main.hideTeam {
 request-info-item.hidden {
     display: none;
 }
+
+.w100 {
+    width: 100%;
+}
