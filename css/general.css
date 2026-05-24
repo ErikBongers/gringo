@@ -244,3 +244,13 @@ request-info-item.hidden {
     font-size: 1.3em;
     font-weight: bold;
 }
+
+.m1 {
+    margin: 1ch;
+}
+
+.newBruto {
+    background-color: rgb(29 103 128 / 0.1);
+    border-radius: 1ch;
+    padding: 1ch;
+}

@@ -1,6 +1,6 @@
 import {PartialUrlObserver} from "../pageObserver";
-import {getAndSetDecorated, gringo, StartsWithUppercase} from "../globals";
-import {PurchaseRequisition} from "../sap/SapPrInfo";
+import {getAndSetDecorated, gringo} from "../globals";
+import {PurchaseRequisition, SapField} from "../sap/SapPrInfo";
 import {fetchPr} from "../sap/api";
 import {cloud} from "../cloud";
 import {BTW_TARIFS_FILENAME} from "../def";
@@ -45,23 +45,21 @@ async function decoratePage() {
     let prId = location.pathname.replace("/gb/viewRequisition/", "");
     gringo(prId);
     pr = await fetchPr(prId);
+    if(!pr)
+        return;
     gringo(pr);
 
-    for(let item of pr.lineItems) {
-        let commodityCodeField = item.advanced.fields?.find(f => f.id.endsWith("pAtHCommonCommodityCode"));
-        gringo(commodityCodeField);
-        if(!commodityCodeField)
-            continue;
-        let commodityCode = commodityCodeField.uniqueName;
-        gringo(commodityCode);
+    let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)] as HTMLElement[];
+    for (let index = 0; index < nonDecoratedItems.length; index++) {
+        let item = nonDecoratedItems[index];
+        await decoratePrItem(pr, item, index);
     }
-
-    let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
-    nonDecoratedItems.forEach(decoratePrItem);
     gringo(`Items to decorate: ${nonDecoratedItems.length}`);
 }
 
-function decoratePrItem(lineEl: HTMLElement) {
+let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, minimumFractionDigits: 2});
+
+async function decoratePrItem(pr: PurchaseRequisition, lineEl: HTMLElement, index: number) {
     let priceSection = lineEl.querySelector("div.price-section") as HTMLElement | null;
     if(!priceSection)
         return;
@@ -74,10 +72,12 @@ function decoratePrItem(lineEl: HTMLElement) {
     meetEenheid.style.display = "none";
     brutoDiv.style.display = "none";
 
+    let newBruto = brutoRow.querySelector("div.newBruto") as HTMLDivElement | null;
+    newBruto?.remove();
     emmet.appendChild(brutoRow, `
-        div.flexRow.w100>(
+        div.newBruto.flexRow.w100>(
             (
-                div.gringo.tarif.col-xs-4>(
+                div.gringo.tarif.col-xs-8>(
                     label{BTW}+
                     div.btw{21%}
                 )
@@ -85,11 +85,63 @@ function decoratePrItem(lineEl: HTMLElement) {
             (
                 div.gringo.col-xs-4.pull-end>(
                     label{Bruto bedrag}+
-                    div.bruto{€1.234,56 EUR}
+                    div.bruto{€---,-- EUR}
                 )
             )
         )
     `);
+
+    let btwDif = brutoRow.querySelector("div.btw") as HTMLDivElement;
+    let tarifs = await getBtwTarifsCachedInSession();
+    let commodityCodeField = pr.lineItems[index].advanced.fields?.find(f => f.id.endsWith("pAtHCommonCommodityCode")) as SapField<string>;
+    gringo(commodityCodeField);
+    if(!commodityCodeField)
+        return;
+    let commodityCode = commodityCodeField.uniqueName;
+    if (!commodityCode)
+        return;
+    let commodityDscr = commodityCodeField.value;
+
+    let tarif = tarifs.get(commodityCode);
+    if(tarif) {
+        btwDif.textContent = tarif.tarif + "%";
+        let divBruto = brutoRow.querySelector("div.bruto") as HTMLDivElement;
+        let price = pr.lineItems[index].price.value;
+        let quantity =  pr.lineItems[index].quantity.value;
+        let theNumber = price.amount*quantity*(100+tarif.tarif);
+        theNumber = Math.round(theNumber)/100;
+        let theNumberStr = priceFormatter.format(theNumber);
+        divBruto.textContent = `${price.currencySymbol}${theNumberStr}  ${price.currency}`;
+    } else {
+        btwDif.textContent = "";
+        let txtSelecteer = "--selecteer--";
+        emmet.appendChild(btwDif, `
+            (
+                select>(
+                    option[value="${txtSelecteer}"]{${txtSelecteer}}+
+                    option[value="0"]{0%}+
+                    option[value="6"]{6%}+
+                    option[value="12"]{12%}+
+                    option[value="21"]{21%}
+                )
+            )+
+            button.btwSave.m1{Bewaar voor dit artikel}
+        `);
+        let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
+        let select = btwDif.querySelector('select') as HTMLSelectElement;
+        button.onclick = async (ev) => {
+            let selected = select.value;
+            if(selected == txtSelecteer)
+                return;
+            tarifs.set(commodityCode, {
+                commodityCode,
+                tarif: parseInt(selected),
+                description: commodityDscr
+            });
+            await uploadBtwTarifs(tarifs);
+            await decoratePrItem(pr, lineEl, index);
+        };
+    }
 }
 
 
@@ -110,11 +162,18 @@ async function getBtwTarifsCachedInSession(): Promise<Map<string, Btw>> {
         return globalBtwTarifs;
 
     globalBtwTarifs = new Map<string, Btw>();
-    let tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as BtwTarifs;
+    let tarifs: BtwTarifs;
+    try {
+        tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as BtwTarifs;
+    } catch {
+        tarifs = {tarifs: []};
+    }
     tarifs.tarifs.forEach(t => globalBtwTarifs!.set(t.commodityCode, t));
     return globalBtwTarifs;
 }
 
-async function uploadBtwTarifs(tarifs: BtwTarifs) {
+async function uploadBtwTarifs(tarifsMap: Map<string, Btw>) {
+    let tarifs: BtwTarifs = {tarifs: [...tarifsMap.values()]};
     await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
+    globalBtwTarifs = tarifsMap;
 }
