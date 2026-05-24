@@ -8,7 +8,7 @@ import {clearMetasLocal, getMetaLocal, saveMetaLocal, saveMetasLocal} from "../d
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {UserInfo} from "../sap/SapUserInfo";
 import { RequestListResponse } from "../sap/RequestListResponse";
-import {fetchFullRequest} from "../sap/api";
+import {fetchPr} from "../sap/api";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -247,7 +247,7 @@ function decorateSearchPanel() {
     let btnTestFetch = emmet.appendChild(tagsCollapse,`div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
     btnTestFetch.onclick = async (ev) => {
         if(globalLastRequestTagsClicked)
-            await fetchFullRequestx(globalLastRequestTagsClicked.id);
+            await fetchFullRequest(globalLastRequestTagsClicked.id);
     };
     let btnTestRequestList = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestList{TEST Fetch all}`).last as HTMLButtonElement;
     btnTestRequestList.onclick = async (ev) => {
@@ -455,7 +455,7 @@ async function fetchRequestListAndDetails() {
     let promises = requestList.requestList.map(r => {
         let requestId = r.id!;
         debugger;
-        return fetchFullRequestx(requestId)
+        return fetchFullRequest(requestId)
     })
 
     let detailsList = await Promise.all(promises);
@@ -465,8 +465,8 @@ async function fetchRequestListAndDetails() {
 
 let globalLastRequestTagsClicked: RequestBasicInfo | null;
 
-export async function fetchFullRequestx(prId: string) {
-    let pr = await fetchFullRequest(prId);
+export async function fetchFullRequest(prId: string) {
+    let pr = await fetchPr(prId);
     let prTitle = pr.title.value;
     let prStatus = pr.status;
     gringo(pr);

@@ -2,7 +2,7 @@ import {FetchChain} from "../fetchChain";
 import {PurchaseRequisition} from "./SapPrInfo";
 import {UserInfo} from "./SapUserInfo";
 
-export async function fetchFullRequest(prId: string) {
+export async function fetchPr(prId: string) {
     let chain = new FetchChain();
     await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: load once.
     let userInfo = chain.getJson() as UserInfo | null;
