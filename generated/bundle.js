@@ -1406,26 +1406,90 @@
 	}
 	let pr = null;
 	async function decoratePage() {
-		gringo("Decorating aanvraag page...");
 		let sectionMain = document.querySelector(`section[role="main"]`);
 		if (!sectionMain) return;
 		if (getAndSetDecorated(sectionMain)) return;
-		let prId = location.pathname.replace("/gb/viewRequisition/", "");
-		gringo(prId);
-		pr = await fetchPr(prId);
+		gringo("Decorating aanvraag page...");
+		pr = await fetchPr(location.pathname.replace("/gb/viewRequisition/", ""));
 		if (!pr) return;
-		gringo(pr);
+		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
+		totalPriceDiv.style.display = "none";
+		emmet.insertAfter(totalPriceDiv, `
+        div.newTotal.gringo>(
+            div.newTotal.block-heading.total-price{Totale kosten}+
+            div.blueBlock.flexRow.w100.mbe-1ch>(
+                label{Bruto bedrag}+
+                div.newTotalBruto.pull-end{€---,--- EUR}
+            )
+        )
+    `);
+		await updatePr(await createExpandedPr(pr));
+	}
+	async function updatePr(pr) {
+		let newTotal = document.querySelector("div.newTotalBruto");
+		let total = 0;
+		let currencySymbel = "€";
+		let currency = "EUR";
+		for (let item of pr.items) {
+			if (!item.tarif) {
+				total = 0;
+				break;
+			}
+			if (item.item.price.value.currency != currency) {
+				currency = item.item.price.value.currency + "?";
+				currencySymbel = "?";
+				total = 0;
+				break;
+			}
+			total += item.bruto;
+		}
+		newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}  ${currency}`;
 		let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
 		for (let index = 0; index < nonDecoratedItems.length; index++) {
-			let item = nonDecoratedItems[index];
-			await decoratePrItem(pr, item, index);
+			let itemEl = nonDecoratedItems[index];
+			await decoratePrItem(pr, itemEl, index);
 		}
-		gringo(`Items to decorate: ${nonDecoratedItems.length}`);
 	}
 	let priceFormatter = new Intl.NumberFormat("nl-BE", {
 		maximumFractionDigits: 2,
 		minimumFractionDigits: 2
 	});
+	function getPrItemCommodity(prItem) {
+		let commodityCodeField = prItem.advanced.fields?.find((f) => f.id.endsWith("pAtHCommonCommodityCode"));
+		if (!commodityCodeField) throw new Error("Gringo: Cannot find commodity code in PR.");
+		let code = commodityCodeField.uniqueName;
+		let dscr = commodityCodeField.value;
+		if (!code) throw new Error("Gringo: Cannot find commodity code in PR.");
+		return {
+			code,
+			dscr
+		};
+	}
+	async function createExpandedPr(pr) {
+		let items = [];
+		for (let item of pr.lineItems) {
+			let bruto = null;
+			let tarif = null;
+			let tarifs = await getBtwTarifsCachedInSession();
+			let commodity = getPrItemCommodity(item);
+			tarif = tarifs.get(commodity.code) ?? null;
+			if (tarif) {
+				let price = item.price.value;
+				let quantity = item.quantity.value;
+				bruto = price.amount * quantity * (100 + tarif.tarif);
+				bruto = Math.round(bruto) / 100;
+			}
+			items.push({
+				item,
+				tarif,
+				bruto
+			});
+		}
+		return {
+			pr,
+			items
+		};
+	}
 	async function decoratePrItem(pr, lineEl, index) {
 		let priceSection = lineEl.querySelector("div.price-section");
 		if (!priceSection) return;
@@ -1438,7 +1502,7 @@
 		brutoDiv.style.display = "none";
 		brutoRow.querySelector("div.newBruto")?.remove();
 		emmet.appendChild(brutoRow, `
-        div.newBruto.flexRow.w100>(
+        div.gringo.newBruto.flexRow.w100.blueBlock>(
             (
                 div.gringo.tarif.col-xs-8>(
                     label{BTW}+
@@ -1453,24 +1517,16 @@
             )
         )
     `);
-		let btwDif = brutoRow.querySelector("div.btw");
-		let tarifs = await getBtwTarifsCachedInSession();
-		let commodityCodeField = pr.lineItems[index].advanced.fields?.find((f) => f.id.endsWith("pAtHCommonCommodityCode"));
-		gringo(commodityCodeField);
-		if (!commodityCodeField) return;
-		let commodityCode = commodityCodeField.uniqueName;
-		if (!commodityCode) return;
-		let commodityDscr = commodityCodeField.value;
-		let tarif = tarifs.get(commodityCode);
-		if (tarif) {
-			btwDif.textContent = tarif.tarif + "%";
-			let divBruto = brutoRow.querySelector("div.bruto");
-			let price = pr.lineItems[index].price.value;
-			let quantity = pr.lineItems[index].quantity.value;
-			let theNumber = price.amount * quantity * (100 + tarif.tarif);
-			theNumber = Math.round(theNumber) / 100;
-			let theNumberStr = priceFormatter.format(theNumber);
-			divBruto.textContent = `${price.currencySymbol}${theNumberStr}  ${price.currency}`;
+		updatePrItem(pr, lineEl, index);
+	}
+	function updatePrItem(pr, lineEl, index) {
+		let btwDif = lineEl.querySelector("div.newBruto div.btw");
+		if (pr.items[index].tarif) {
+			btwDif.textContent = pr.items[index].tarif.tarif + "%";
+			let divBruto = lineEl.querySelector("div.newBruto div.bruto");
+			let brutoStr = priceFormatter.format(pr.items[index].bruto);
+			let price = pr.items[index].item.price.value;
+			divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
 		} else {
 			btwDif.textContent = "";
 			let txtSelecteer = "--selecteer--";
@@ -1489,17 +1545,23 @@
 			let button = btwDif.querySelector("button.btwSave");
 			let select = btwDif.querySelector("select");
 			button.onclick = async (ev) => {
-				let selected = select.value;
-				if (selected == txtSelecteer) return;
-				tarifs.set(commodityCode, {
-					commodityCode,
-					tarif: parseInt(selected),
-					description: commodityDscr
-				});
-				await uploadBtwTarifs(tarifs);
-				await decoratePrItem(pr, lineEl, index);
+				await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl);
 			};
 		}
+	}
+	async function btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl) {
+		let selected = select.value;
+		if (selected == txtSelecteer) return;
+		let commodity = getPrItemCommodity(pr.items[index].item);
+		let tarifs = await getBtwTarifsCachedInSession();
+		tarifs.set(commodity.code, {
+			commodityCode: commodity.code,
+			description: commodity.dscr,
+			tarif: parseInt(selected)
+		});
+		await uploadBtwTarifs(tarifs);
+		pr = await createExpandedPr(pr.pr);
+		updatePrItem(pr, lineEl, index);
 	}
 	let globalBtwTarifs = null;
 	async function getBtwTarifsCachedInSession() {

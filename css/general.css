@@ -249,8 +249,25 @@ request-info-item.hidden {
     margin: 1ch;
 }
 
-.newBruto {
+.gringo.blueBlock, .gringo .blueBlock {
     background-color: rgb(29 103 128 / 0.1);
     border-radius: 1ch;
     padding: 1ch;
+}
+.flexRow .pull-end {
+    margin-inline-start: auto;
+}
+
+.newTotal {
+    font-weight: bold;
+    font-size: 1.3em;
+}
+
+.mbe-1ch {
+    margin-block-end: 1ch;
+}
+
+.gringo label {
+    margin: 0;
+    padding: 0;
 }
