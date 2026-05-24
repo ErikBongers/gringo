@@ -56,3 +56,14 @@ async function decoratePage() {
     let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
     gringo(`Items to decorate: ${nonDecoratedItems.length}`);
 }
+
+
+interface Btw {
+    commodityCode: string;
+    description: string;
+    tarif: number;
+}
+
+interface BtwTarifs {
+    tarifs: Btw[];
+}

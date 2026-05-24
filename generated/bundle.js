@@ -359,7 +359,7 @@
 	}
 	function getAndSetFlag(el, flag) {
 		let value = el.dataset["gringo" + flag] == "true";
-		el.dataset[flag] = "true";
+		el.dataset["gringo" + flag] = "true";
 		return value;
 	}
 	function getAndSetDecorated(el) {

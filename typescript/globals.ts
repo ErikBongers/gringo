@@ -170,7 +170,7 @@ export type StartsWithUppercase<T extends string> =
 
 export function getAndSetFlag<T extends string>(el: HTMLElement, flag: StartsWithUppercase<T>) {
     let value = el.dataset["gringo"+ flag] == "true";
-    el.dataset[flag] = "true";
+    el.dataset["gringo"+ flag] = "true";
     return value;
 }
 
