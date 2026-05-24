@@ -865,6 +865,16 @@
 		return setAll(prMetas);
 	}
 	//#endregion
+	//#region typescript/sap/api.ts
+	async function fetchFullRequest(prId) {
+		let chain = new FetchChain();
+		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
+		let userInfo = chain.getJson();
+		if (!userInfo) console.error("gringo: could not get userInfo.");
+		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
+		return chain.getJson();
+	}
+	//#endregion
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -1029,7 +1039,7 @@
 		updateTagsFilters(getTagsFilters());
 		let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last;
 		btnTestFetch.onclick = async (ev) => {
-			if (globalLastRequestTagsClicked) await fetchFullRequest(globalLastRequestTagsClicked.id);
+			if (globalLastRequestTagsClicked) await fetchFullRequestx(globalLastRequestTagsClicked.id);
 		};
 		let btnTestRequestList = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch all}`).last;
 		btnTestRequestList.onclick = async (ev) => {
@@ -1234,20 +1244,15 @@
 		let promises = (await fetchRequestList()).requestList.map((r) => {
 			let requestId = r.id;
 			debugger;
-			return fetchFullRequest(requestId);
+			return fetchFullRequestx(requestId);
 		});
 		let detailsList = await Promise.all(promises);
 		debugger;
 		return detailsList;
 	}
 	let globalLastRequestTagsClicked;
-	async function fetchFullRequest(prId) {
-		let chain = new FetchChain();
-		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
-		let userInfo = chain.getJson();
-		if (!userInfo) console.error("gringo: could not get userInfo.");
-		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
-		let pr = chain.getJson();
+	async function fetchFullRequestx(prId) {
+		let pr = await fetchFullRequest(prId);
 		let prTitle = pr.title.value;
 		let prStatus = pr.status;
 		gringo(pr);

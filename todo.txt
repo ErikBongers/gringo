@@ -1,3 +1,17 @@
+* Decorate PR page
+  - In entry form, ask for BTW tarif when not yet specified for given commidityCode.
+  - Show bruto total
+
+* Decorate article form (before PR)
+ - Add BTW calculator.
+
+* Unique name for article: Description.CommonCommodityCode
+  > add this code to the excel...
+  > ...or a more flexible way?
+    > excel is NOT up-to-date.
+    > We don't need ALL the codes
+
+
 * add button to copy line to excel.
   > perhaps add prId to excel?
 

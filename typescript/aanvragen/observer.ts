@@ -6,6 +6,9 @@ import {gringo} from "../globals";
 import {FetchChain} from "../fetchChain";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal, saveMetasLocal} from "../db/gringoDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
+import {UserInfo} from "../sap/SapUserInfo";
+import { RequestListResponse } from "../sap/RequestListResponse";
+import {fetchFullRequest} from "../sap/api";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -244,7 +247,7 @@ function decorateSearchPanel() {
     let btnTestFetch = emmet.appendChild(tagsCollapse,`div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
     btnTestFetch.onclick = async (ev) => {
         if(globalLastRequestTagsClicked)
-            await fetchFullRequest(globalLastRequestTagsClicked.id);
+            await fetchFullRequestx(globalLastRequestTagsClicked.id);
     };
     let btnTestRequestList = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestList{TEST Fetch all}`).last as HTMLButtonElement;
     btnTestRequestList.onclick = async (ev) => {
@@ -425,7 +428,7 @@ function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
 async function fetchRequestList() {
     let chain = new FetchChain();
     await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: load once.
-    let userInfo  = chain.getJson() as Sap.UserInfo | null;
+    let userInfo  = chain.getJson() as UserInfo | null;
     if(!userInfo) {
         console.error("gringo: could not get userInfo.");
     }
@@ -442,7 +445,7 @@ async function fetchRequestList() {
             "ascendingOrder": false
         }
         );
-    let requestList: Sap.RequestListResponse = await chain.getJson();
+    let requestList: RequestListResponse = await chain.getJson();
     gringo(requestList);
     return requestList
 }
@@ -452,7 +455,7 @@ async function fetchRequestListAndDetails() {
     let promises = requestList.requestList.map(r => {
         let requestId = r.id!;
         debugger;
-        return fetchFullRequest(requestId)
+        return fetchFullRequestx(requestId)
     })
 
     let detailsList = await Promise.all(promises);
@@ -462,16 +465,8 @@ async function fetchRequestListAndDetails() {
 
 let globalLastRequestTagsClicked: RequestBasicInfo | null;
 
-async function fetchFullRequest(prId: string) {
-    let chain = new FetchChain();
-    await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: load once.
-    let userInfo  = chain.getJson() as Sap.UserInfo | null;
-    if(!userInfo) {
-        console.error("gringo: could not get userInfo.");
-    }
-
-    await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
-    let pr: Sap.PurchaseRequisition = chain.getJson();
+export async function fetchFullRequestx(prId: string) {
+    let pr = await fetchFullRequest(prId);
     let prTitle = pr.title.value;
     let prStatus = pr.status;
     gringo(pr);
