@@ -1403,7 +1403,7 @@
 	}
 	function onMutation(mutation) {
 		decoratePage().then(() => {});
-		return true;
+		return false;
 	}
 	let pr = null;
 	async function decoratePage() {
@@ -1419,7 +1419,8 @@
 			let commodityCodeField = item.advanced.fields?.find((f) => f.id.endsWith("pAtHCommonCommodityCode"));
 			gringo(commodityCodeField);
 			if (!commodityCodeField) continue;
-			commodityCodeField.uniqueName;
+			let commodityCode = commodityCodeField.uniqueName;
+			gringo(commodityCode);
 		}
 		gringo(`Items to decorate: ${[...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)].length}`);
 	}

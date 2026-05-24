@@ -25,16 +25,10 @@ function isPageProbablyLoaded(): boolean {
 
 function onMutation(mutation: MutationRecord) {
     decoratePage().then(() => {});
-    return true;
+    return false;
 }
 
 let pr: PurchaseRequisition | null = null;
-
-function takesCapitalized<T extends string>(
-    value: StartsWithUppercase<T>
-) {
-    return value;
-}
 
 async function decoratePage() {
     gringo("Decorating aanvraag page...");
@@ -56,6 +50,7 @@ async function decoratePage() {
         if(!commodityCodeField)
             continue;
         let commodityCode = commodityCodeField.uniqueName;
+        gringo(commodityCode);
     }
 
     let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
