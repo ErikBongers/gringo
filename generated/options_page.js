@@ -293,7 +293,7 @@
 	//#region typescript/def.ts
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
 	const JSON_SINCE_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json-since";
-	const GLOBAL_SETTINGS_FILENAME = "gringo_global_settings.json";
+	const GLOBAL_SETTINGS_FILENAME = "gringo/gringo_global_settings.json";
 	//#endregion
 	//#region typescript/cloud.ts
 	let cloud = { json: {

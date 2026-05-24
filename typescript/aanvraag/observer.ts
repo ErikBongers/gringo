@@ -2,6 +2,8 @@ import {PartialUrlObserver} from "../pageObserver";
 import {getAndSetDecorated, gringo, StartsWithUppercase} from "../globals";
 import {PurchaseRequisition} from "../sap/SapPrInfo";
 import {fetchPr} from "../sap/api";
+import {cloud} from "../cloud";
+import {BTW_TARIFS_FILENAME} from "../def";
 
 class AanvraagObserver extends PartialUrlObserver {
     constructor() {
@@ -66,4 +68,20 @@ interface Btw {
 
 interface BtwTarifs {
     tarifs: Btw[];
+}
+
+let globalBtwTarifs: Map<string, Btw> | null = null;
+
+async function getBtwTarifsCachedInSession(): Promise<Map<string, Btw>> {
+    if(globalBtwTarifs)
+        return globalBtwTarifs;
+
+    globalBtwTarifs = new Map<string, Btw>();
+    let tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as BtwTarifs;
+    tarifs.tarifs.forEach(t => globalBtwTarifs!.set(t.commodityCode, t));
+    return globalBtwTarifs;
+}
+
+async function uploadBtwTarifs(tarifs: BtwTarifs) {
+    await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
 }

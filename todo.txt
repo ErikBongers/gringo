@@ -1,8 +1,3 @@
-Cloud file failure
-====================
-If file lost...keep using local copy but give warning.
-
-
 BTW database
 ============
 In cloud. Will rarely change. Mainly in the beginning.
