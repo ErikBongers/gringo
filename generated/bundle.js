@@ -1110,16 +1110,14 @@
 			ev.preventDefault();
 		};
 	}
-	function stripSections(request) {}
 	async function decoratePr(request) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
 		if (reqDiv.dataset.gringo == "decorated") return;
 		reqDiv.dataset.gringo = "decorated";
 		addOrderCopyButton(request);
-		stripSections(request);
 		let meta = await fetchMetaCached(request.id);
-		addMeta(request, meta);
+		await decoratePrWithMeta(request, meta);
 		updatePrLine(request, meta);
 	}
 	const defaultTags = [
@@ -1276,7 +1274,7 @@
 		}
 		return pr;
 	}
-	async function addMeta(request, meta) {
+	async function decoratePrWithMeta(request, meta) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
 		let divStatusContainer = reqDiv.querySelector("div.item-status-container");

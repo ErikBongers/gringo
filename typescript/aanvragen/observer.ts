@@ -338,9 +338,6 @@ function addButtonClickNoPropagation(button: HTMLButtonElement, onClick: (ev: an
     };
 }
 
-function stripSections(request: RequestBasicInfo) {
-}
-
 async function decoratePr(request: RequestBasicInfo) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
@@ -349,9 +346,8 @@ async function decoratePr(request: RequestBasicInfo) {
         return;
     reqDiv.dataset.gringo = "decorated";
     addOrderCopyButton(request);
-    stripSections(request);
     let meta = await fetchMetaCached(request.id);
-    addMeta(request, meta);
+    await decoratePrWithMeta(request, meta);
     updatePrLine(request, meta);
 }
 
@@ -486,7 +482,7 @@ export async function fetchFullRequest(prId: string) {
     return pr;
 }
 
-async function addMeta(request: RequestBasicInfo, meta: PrMeta) {
+async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
         return;
