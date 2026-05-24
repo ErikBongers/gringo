@@ -357,6 +357,14 @@
 	function gringo(...args) {
 		console.log("gringo", ...args);
 	}
+	function getAndSetFlag(el, flag) {
+		let value = el.dataset["gringo" + flag] == "true";
+		el.dataset[flag] = "true";
+		return value;
+	}
+	function getAndSetDecorated(el) {
+		return getAndSetFlag(el, "Decorated");
+	}
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
@@ -866,7 +874,7 @@
 	}
 	//#endregion
 	//#region typescript/sap/api.ts
-	async function fetchFullRequest(prId) {
+	async function fetchPr(prId) {
 		let chain = new FetchChain();
 		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
 		let userInfo = chain.getJson();
@@ -1039,7 +1047,7 @@
 		updateTagsFilters(getTagsFilters());
 		let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last;
 		btnTestFetch.onclick = async (ev) => {
-			if (globalLastRequestTagsClicked) await fetchFullRequestx(globalLastRequestTagsClicked.id);
+			if (globalLastRequestTagsClicked) await fetchFullRequest(globalLastRequestTagsClicked.id);
 		};
 		let btnTestRequestList = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch all}`).last;
 		btnTestRequestList.onclick = async (ev) => {
@@ -1244,15 +1252,15 @@
 		let promises = (await fetchRequestList()).requestList.map((r) => {
 			let requestId = r.id;
 			debugger;
-			return fetchFullRequestx(requestId);
+			return fetchFullRequest(requestId);
 		});
 		let detailsList = await Promise.all(promises);
 		debugger;
 		return detailsList;
 	}
 	let globalLastRequestTagsClicked;
-	async function fetchFullRequestx(prId) {
-		let pr = await fetchFullRequest(prId);
+	async function fetchFullRequest(prId) {
+		let pr = await fetchPr(prId);
 		let prTitle = pr.title.value;
 		let prStatus = pr.status;
 		gringo(pr);
@@ -1394,11 +1402,26 @@
 		return true;
 	}
 	function onMutation(mutation) {
-		decoratePage();
+		decoratePage().then(() => {});
 		return true;
 	}
-	function decoratePage() {
+	let pr = null;
+	async function decoratePage() {
 		gringo("Decorating aanvraag page...");
+		let sectionMain = document.querySelector(`section[role="main"]`);
+		if (!sectionMain) return;
+		if (getAndSetDecorated(sectionMain)) return;
+		let prId = location.pathname.replace("/gb/viewRequisition/", "");
+		gringo(prId);
+		pr = await fetchPr(prId);
+		gringo(pr);
+		for (let item of pr.lineItems) {
+			let commodityCodeField = item.advanced.fields?.find((f) => f.id.endsWith("pAtHCommonCommodityCode"));
+			gringo(commodityCodeField);
+			if (!commodityCodeField) continue;
+			commodityCodeField.uniqueName;
+		}
+		gringo(`Items to decorate: ${[...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)].length}`);
 	}
 	//#endregion
 	//#region typescript/main.ts

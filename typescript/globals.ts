@@ -164,3 +164,16 @@ export function tryUntilThen(func: () => boolean, then: () => void) {
 export function gringo(...args: any[]) {
     console.log("gringo", ...args);
 }
+
+export type StartsWithUppercase<T extends string> =
+    T extends `${Uppercase<string>}${string}` ? T : never;
+
+export function getAndSetFlag<T extends string>(el: HTMLElement, flag: StartsWithUppercase<T>) {
+    let value = el.dataset["gringo"+ flag] == "true";
+    el.dataset[flag] = "true";
+    return value;
+}
+
+export function getAndSetDecorated(el: HTMLElement) {
+    return getAndSetFlag(el, "Decorated");
+}
