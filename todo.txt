@@ -1,3 +1,32 @@
+* Prepare for Excel by linking PR items to parent PR.
+
+To Excel...
+=============
+> How to copy lines to excel?
+> How to compare with excel?
+Excel MUST have a prId.
+Excel online allows power query!!!
+
+  1. Export data as html table. (see dko3 plugin: table to excel)
+    > export the PR Lines.
+  2. Paste it in an excel tab.
+  3. Have power queries fill the other tabs.
+     > User data?
+       > Have a section below each generated table for user data? and have a sum below it?
+
+Difficult to merge user added lines with copied lines.
+Start from a simple data dump.
+Aggregate
+
+
+Aggregates UX
+==============
+You need to be signed in, so not a options page.
+A button on the Requestlist page...
+An extra tab?
+
+
+
 * Create a page to show the sum per project.
 * Create a page to sow the sum per budgetPos ( != grootboekrekening!)
   > create a list of grootbookrek, budgetPos

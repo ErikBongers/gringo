@@ -1091,6 +1091,7 @@
 			let ledger = getPrItemLedger(item);
 			tarif = tarifs.get(commodity.code) ?? null;
 			items.push({
+				pr,
 				item,
 				tarif,
 				ledger

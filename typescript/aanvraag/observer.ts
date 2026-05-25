@@ -99,6 +99,7 @@ async function updatePr(pr: ExpandedPr) {
 let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, minimumFractionDigits: 2});
 
 export interface ExpandedPrItem {
+    pr: PurchaseRequisition;
     item: SapLineItem;
     tarif: Btw | null;
     ledger: AccountingField;
@@ -120,7 +121,7 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
         let commodity = getPrItemCommodity(item);
         let ledger = getPrItemLedger(item);
         tarif = tarifs.get(commodity.code)??null;
-        items.push({item, tarif, ledger} satisfies ExpandedPrItem);
+        items.push({pr, item, tarif, ledger} satisfies ExpandedPrItem);
     }
     return {pr, items} satisfies ExpandedPr;
 }
