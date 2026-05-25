@@ -1,5 +1,6 @@
 import {DBSchema, openDB} from 'idb';
-import {PrMeta} from "../aanvragen/observer";
+
+import {PrMeta} from "../aanvragen/requests";
 
 //todo: use typed db: https://github.com/jakearchibald/idb#examples
 
