@@ -177,3 +177,25 @@ export function getAndSetFlag<T extends string>(el: HTMLElement, flag: StartsWit
 export function getAndSetDecorated(el: HTMLElement) {
     return getAndSetFlag(el, "Decorated");
 }
+export function createInfoBlock(el: HTMLElement) {
+    emmet.appendChild(el, `
+        div.infoBlock>(
+            h2.title+
+            div.errors+
+            div.info+
+            div.extra
+        )
+    `);
+    let title = el.querySelector("h2.title") as HTMLElement;
+    let errors = el.querySelector("div.errors") as HTMLElement;
+    let info = el.querySelector("div.info") as HTMLElement;
+    let extra = el.querySelector("div.extra") as HTMLElement;
+    return {title, errors, info, extra} satisfies InfoBlock as InfoBlock;
+}
+
+export interface InfoBlock {
+    title: HTMLElement;
+    errors: HTMLElement;
+    info: HTMLElement;
+    extra: HTMLElement;
+}

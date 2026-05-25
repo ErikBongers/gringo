@@ -1,3 +1,5 @@
+* Totals and exports: exclude non active statusses (rejected, 'In aanmaak', ...)
+
 To Excel...
 =============
 > How to copy lines to excel?

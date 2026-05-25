@@ -107,7 +107,7 @@ let ledgerToBudgetCodes: LedgerToBudgetCode[] = [
     { ledger: "4891000100", budget: "0"},
 ];
 
-async function getExtendedRequests() {
+export async function getExtendedRequests() {
     let reqs = (await fetchRequestListAndDetails())
         .filter(pr => pr != null)
         .filter(pr => pr.status != "sdfsdf");
