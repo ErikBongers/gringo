@@ -343,6 +343,17 @@
 		observers.push(observer);
 		if (observers.length > 20) console.error("Too many observers!");
 	}
+	function createHtmlTable(headers, cols) {
+		let tmpDiv = document.createElement("div");
+		let { first: tmpTable, last: tmpThead } = emmet.appendChild(tmpDiv, "table>thead");
+		for (let th of headers) emmet.appendChild(tmpThead, `th{${th}}`);
+		let tmpTbody = tmpTable.appendChild(document.createElement("tbody"));
+		for (let tr of cols) {
+			let tmpTr = tmpTbody.appendChild(document.createElement("tr"));
+			for (let cell of tr) emmet.appendChild(tmpTr, `td{${cell}}`);
+		}
+		return tmpTable;
+	}
 	async function getOptions() {
 		let items = await chrome.storage.sync.get(null);
 		Object.assign(options, items);
@@ -904,25 +915,14 @@
 	}
 	async function fetchFullRequest(prId) {
 		let pr = await fetchPr(prId);
-		let prTitle = pr.title.value;
-		let prStatus = pr.status;
-		gringo(pr);
-		for (let lineItem of pr.lineItems) {
-			let accounting = lineItem.accounting;
-			let rekening = "";
-			if (accounting.fields) {
-				for (let field of accounting.fields) if (field.name == "GeneralLedger") rekening = field.value;
-			}
-			let price = lineItem.quantity.value;
-			let orderId = lineItem.orderID ?? "-";
-			gringo(`${pr.reqId}/${orderId} : ${prTitle} : ${prStatus} : [${rekening}] : ${price}`);
-		}
+		if (pr.title == null) return null;
 		return pr;
 	}
 	async function fetchRequestListAndDetails() {
-		let promises = (await fetchRequestList()).requestList.map((r) => {
-			let requestId = r.id;
-			debugger;
+		let requestList = await fetchRequestList();
+		gringo(requestList);
+		let promises = requestList.requestList.map((r) => {
+			let requestId = r.reqUniqueName;
 			return fetchFullRequest(requestId);
 		});
 		return await Promise.all(promises);
@@ -978,21 +978,35 @@
 	}
 	let globalBtwTarifs = null;
 	function getAccountingField(prItem, idIncludes) {
-		let field = prItem.advanced.fields?.find((f) => f.id.endsWith(idIncludes));
-		if (!field) throw new Error("Gringo: Cannot find field in PR for searchString: " + idIncludes);
+		let field = prItem.accounting.fields?.find((f) => f.id.endsWith(idIncludes));
+		if (!field) return null;
 		let code = field.uniqueName;
 		let dscr = field.value;
-		if (!code) throw new Error("Gringo: Cannot find field in PR for searchString: " + idIncludes);
+		if (!code) return null;
+		return {
+			code,
+			dscr
+		};
+	}
+	function getAdvancedField(prItem, idIncludes) {
+		let field = prItem.advanced.fields?.find((f) => f.id.endsWith(idIncludes));
+		if (!field) return null;
+		let code = field.uniqueName;
+		let dscr = field.value;
+		if (!code) return null;
 		return {
 			code,
 			dscr
 		};
 	}
 	function getPrItemCommodity(prItem) {
-		return getAccountingField(prItem, "pAtHCommonCommodityCode");
+		return getAdvancedField(prItem, "pAtHCommonCommodityCode");
 	}
 	function getPrItemLedger(prItem) {
 		return getAccountingField(prItem, "pAtHGeneralLedger");
+	}
+	function getPrItemAsset(prItem) {
+		return getAccountingField(prItem, "pAtHAsset");
 	}
 	//#endregion
 	//#region typescript/aanvraag/observer.ts
@@ -1084,12 +1098,13 @@
 	}
 	async function createExpandedPr(pr) {
 		let items = [];
-		for (let item of pr.lineItems) {
+		if (pr.lineItems != null) for (let item of pr.lineItems) {
 			let tarif = null;
 			let tarifs = await getBtwTarifsCachedInSession();
 			let commodity = getPrItemCommodity(item);
 			let ledger = getPrItemLedger(item);
-			tarif = tarifs.get(commodity.code) ?? null;
+			if (!ledger) ledger = getPrItemAsset(item);
+			tarif = tarifs.get(commodity?.code ?? "") ?? null;
 			items.push({
 				pr,
 				item,
@@ -1179,6 +1194,10 @@
 		let selected = select.value;
 		if (selected == txtSelecteer) return;
 		let commodity = getPrItemCommodity(pr.items[index].item);
+		if (!commodity) {
+			alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
+			return;
+		}
 		let tarifs = await getBtwTarifsCachedInSession();
 		tarifs.set(commodity.code, {
 			commodityCode: commodity.code,
@@ -1188,6 +1207,43 @@
 		await uploadBtwTarifs(tarifs);
 		pr = await createExpandedPr(pr.pr);
 		updatePrItem(pr, lineEl, index);
+	}
+	//#endregion
+	//#region typescript/aanvragen/aggregate.ts
+	async function getExtendedRequests() {
+		let reqs = (await fetchRequestListAndDetails()).filter((pr) => pr != null).filter((pr) => pr.status != "sdfsdf");
+		let extendedReqs = [];
+		for (const pr of reqs) extendedReqs.push(await createExpandedPr(pr));
+		return extendedReqs;
+	}
+	async function exportPrItemsToExcel() {
+		let prs = await getExtendedRequests();
+		let headers = [
+			"prId",
+			"itemNo",
+			"bruto",
+			"tarif",
+			"project",
+			"tags"
+		];
+		let rows = [];
+		for (let pr of prs) for (const item of pr.items) {
+			const index = pr.items.indexOf(item);
+			let row = [];
+			row.push(pr.pr.reqId);
+			row.push(index.toString());
+			if (item.tarif) row.push(calcBrutoLinePrice(item.item, item.tarif.tarif).toString());
+			else row.push(calcBrutoLinePrice(item.item, 0).toString());
+			row.push(item.tarif?.tarif ? item.tarif?.tarif.toString() : "?");
+			let meta = await fetchMetaCached(pr.pr.reqId);
+			row.push(meta.project ?? "");
+			row.push(meta.tags.join(","));
+			rows.push(row);
+		}
+		let table = createHtmlTable(headers, rows);
+		sessionStorage.setItem("PrItemTable", table.outerHTML);
+		await navigator.clipboard.writeText(table.outerHTML);
+		console.log("CIOPIED.");
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts
@@ -1363,6 +1419,10 @@
 		let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last;
 		btnTestRequestListAndDetails.onclick = async (ev) => {
 			await fetchRequestListAndDetails();
+		};
+		let btnTestExportToExcel = emmet.appendChild(tagsCollapse, `div>button#btnTestExportToExcel{TEST Export to Excel}`).last;
+		btnTestExportToExcel.onclick = async (ev) => {
+			await exportPrItemsToExcel();
 		};
 		function onAribaFilterButton() {
 			let inputCurrentPage = getListTabDecoratedElement();

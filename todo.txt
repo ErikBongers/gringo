@@ -1,5 +1,3 @@
-* Prepare for Excel by linking PR items to parent PR.
-
 To Excel...
 =============
 > How to copy lines to excel?
@@ -9,6 +7,7 @@ Excel online allows power query!!!
 
   1. Export data as html table. (see dko3 plugin: table to excel)
     > export the PR Lines.
+    :     navigator.clipboard.writeText(createHtmlTable(headers, cols).outerHTML).then(_r => {});
   2. Paste it in an excel tab.
   3. Have power queries fill the other tabs.
      > User data?

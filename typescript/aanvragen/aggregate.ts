@@ -1,6 +1,7 @@
-import {createExpandedPr, ExpandedPrItem} from "../aanvraag/observer";
+import {calcBrutoLinePrice, createExpandedPr, ExpandedPrItem} from "../aanvraag/observer";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {ExpandedPr, fetchMetaCached, fetchRequestListAndDetails, PrMeta} from "./requests";
+import {createHtmlTable} from "../globals";
 
 export interface LedgerToBudgetCode {
     ledger: string,
@@ -95,7 +96,9 @@ let ledgerToBudgetCodes: LedgerToBudgetCode[] = [
 ];
 
 async function getExtendedRequests() {
-    let reqs = await fetchRequestListAndDetails();
+    let reqs = (await fetchRequestListAndDetails())
+        .filter(pr => pr != null)
+        .filter(pr => pr.status != "sdfsdf");
 
     let extendedReqs: ExpandedPr[] = [];
     for (const pr of reqs) {
@@ -137,6 +140,9 @@ export async function getRequestsPerBudget() {
     }
     for (const extendedPr of extendedReqs) {
         for(let item of extendedPr.items) {
+            if(!item.ledger) {
+                continue; //todo: report this somehow.
+            }
             if (!legerPrMap.has(item.ledger.code)) {
                 legerPrMap.set(item.ledger.code, []);
             }
@@ -144,4 +150,31 @@ export async function getRequestsPerBudget() {
         }
     }
     return legerPrMap;
+}
+
+export async function exportPrItemsToExcel(){
+    let prs = await getExtendedRequests();
+    let headers = ["prId", "itemNo", "bruto", "tarif", "project", "tags"];
+    let rows: string[][] = [];
+    for(let pr of prs) {
+        for (const item of pr.items) {
+            const index = pr.items.indexOf(item);
+            let row: string[] = [];
+            row.push(pr.pr.reqId);
+            row.push(index.toString());
+            if(item.tarif)
+                row.push(calcBrutoLinePrice(item.item, item.tarif.tarif).toString());
+            else
+                row.push(calcBrutoLinePrice(item.item, 0).toString()); //use netto price
+            row.push(item.tarif?.tarif ? item.tarif?.tarif.toString() : "?");
+            let meta = await fetchMetaCached(pr.pr.reqId);
+            row.push(meta.project??"")
+            row.push(meta.tags.join(","));
+            rows.push(row);
+        }
+    }
+    let table = createHtmlTable(headers, rows);
+    sessionStorage.setItem("PrItemTable", table.outerHTML);
+    await navigator.clipboard.writeText(table.outerHTML);
+    console.log("CIOPIED.");
 }

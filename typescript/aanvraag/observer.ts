@@ -3,7 +3,7 @@ import {getAndSetDecorated, gringo} from "../globals";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
-import {AccountingField, Btw, ExpandedPr, getBtwTarifsCachedInSession, getPrItemCommodity, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
+import {AccountingField, Btw, ExpandedPr, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
 
 class AanvraagObserver extends PartialUrlObserver {
     constructor() {
@@ -102,10 +102,10 @@ export interface ExpandedPrItem {
     pr: PurchaseRequisition;
     item: SapLineItem;
     tarif: Btw | null;
-    ledger: AccountingField;
+    ledger: AccountingField | null;
 }
 
-function calcBrutoLinePrice(item: SapLineItem, tarif: number) {
+export function calcBrutoLinePrice(item: SapLineItem, tarif: number) {
     let bruto: number | null = null;
     let price = item.price.value;
     let quantity = item.quantity.value;
@@ -115,13 +115,17 @@ function calcBrutoLinePrice(item: SapLineItem, tarif: number) {
 }
 export async function createExpandedPr(pr: PurchaseRequisition) {
     let items: ExpandedPrItem[] = [];
-    for (let item of pr.lineItems) {
-        let tarif: Btw | null = null;
-        let tarifs = await getBtwTarifsCachedInSession();
-        let commodity = getPrItemCommodity(item);
-        let ledger = getPrItemLedger(item);
-        tarif = tarifs.get(commodity.code)??null;
-        items.push({pr, item, tarif, ledger} satisfies ExpandedPrItem);
+    if(pr.lineItems != null) {
+        for (let item of pr.lineItems) {
+            let tarif: Btw | null = null;
+            let tarifs = await getBtwTarifsCachedInSession();
+            let commodity = getPrItemCommodity(item);
+            let ledger = getPrItemLedger(item);
+            if (!ledger)
+                ledger = getPrItemAsset(item);
+            tarif = tarifs.get(commodity?.code ?? '') ?? null;
+            items.push({pr, item, tarif, ledger} satisfies ExpandedPrItem);
+        }
     }
     return {pr, items} satisfies ExpandedPr;
 }
@@ -209,6 +213,10 @@ async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: stri
     if (selected == txtSelecteer)
         return;
     let commodity = getPrItemCommodity(pr.items[index].item);
+    if(!commodity) {
+        alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
+        return;
+    }
     let tarifs = await getBtwTarifsCachedInSession();
     tarifs.set(commodity.code, {
         commodityCode: commodity.code,

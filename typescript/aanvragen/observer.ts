@@ -6,6 +6,7 @@ import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchPr} from "../sap/api";
 import {calcPrTotal, createExpandedPr} from "../aanvraag/observer";
 import {fetchChangedMetas, fetchFullRequest, fetchMetaCached, fetchRequestList, fetchRequestListAndDetails, PrMeta, saveMeta} from "./requests";
+import {exportPrItemsToExcel} from "./aggregate";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -253,6 +254,10 @@ function decorateSearchPanel() {
     let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last as HTMLButtonElement;
     btnTestRequestListAndDetails.onclick = async (ev) => {
         await fetchRequestListAndDetails();
+    };
+    let btnTestExportToExcel = emmet.appendChild(tagsCollapse,`div>button#btnTestExportToExcel{TEST Export to Excel}`).last as HTMLButtonElement;
+    btnTestExportToExcel.onclick = async (ev) => {
+        await exportPrItemsToExcel();
     };
 
     function onAribaFilterButton() {

@@ -37,30 +37,16 @@ export async function fetchRequestList() {
 
 export async function fetchFullRequest(prId: string) {
     let pr = await fetchPr(prId);
-    let prTitle = pr.title.value;
-    let prStatus = pr.status;
-    gringo(pr);
-    for (let lineItem of pr.lineItems) {
-        let accounting = lineItem.accounting;
-        let rekening = "";
-        if (accounting.fields) {
-            for (let field of accounting.fields) {
-                if (field.name == "GeneralLedger")
-                    rekening = field.value as string;
-            }
-        }
-        let price = lineItem.quantity.value;//note that we are using the quantity field to store the price!
-        let orderId = lineItem.orderID ?? "-";
-        gringo(`${pr.reqId}/${orderId} : ${prTitle} : ${prStatus} : [${rekening}] : ${price}`);
-    }
+    if(pr.title == null)
+        return null; //todo : report this error somehow.
     return pr;
 }
 
 export async function fetchRequestListAndDetails() {
     let requestList = await fetchRequestList();
+    gringo(requestList);
     let promises = requestList.requestList.map(r => {
-        let requestId = r.id!;
-        debugger;
+        let requestId = r.reqUniqueName;
         return fetchFullRequest(requestId)
     })
 
@@ -161,21 +147,36 @@ export interface AccountingField {
 }
 
 function getAccountingField(prItem: SapLineItem, idIncludes: string) {
-    let field = prItem.advanced.fields?.find(f => f.id.endsWith(idIncludes)) as SapField<string>;
+    let field = prItem.accounting.fields?.find(f => f.id.endsWith(idIncludes)) as SapField<string>;
     if (!field)
-        throw new Error("Gringo: Cannot find field in PR for searchString: " + idIncludes);
+        return null;
     let code = field.uniqueName;
     let dscr = field.value;
     if (!code)
-        throw new Error("Gringo: Cannot find field in PR for searchString: " + idIncludes);
+        return null;
+    return {code, dscr} satisfies AccountingField as AccountingField;
+}
+
+function getAdvancedField(prItem: SapLineItem, idIncludes: string) {
+    let field = prItem.advanced.fields?.find(f => f.id.endsWith(idIncludes)) as SapField<string>;
+    if (!field)
+        return null;
+    let code = field.uniqueName;
+    let dscr = field.value;
+    if (!code)
+        return null;
     return {code, dscr} satisfies AccountingField as AccountingField;
 }
 
 export function getPrItemCommodity(prItem: SapLineItem) {
-    return getAccountingField(prItem, "pAtHCommonCommodityCode");
+    return getAdvancedField(prItem, "pAtHCommonCommodityCode");
 }
 
 export function getPrItemLedger(prItem: SapLineItem) {
     return getAccountingField(prItem, "pAtHGeneralLedger");
+}
+
+export function getPrItemAsset(prItem: SapLineItem) {
+    return getAccountingField(prItem, "pAtHAsset");
 }
 
