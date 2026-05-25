@@ -884,24 +884,231 @@
 		return chain.getJson();
 	}
 	//#endregion
-	//#region typescript/aanvragen/observer.ts
-	var AanvragenObserver = class extends PartialUrlObserver {
+	//#region typescript/aanvraag/observer.ts
+	var AanvraagObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("request-info-list/requisition", onMutation$1, false, onPageRefreshed$2);
+			super("viewRequisition", onMutation$1, false, onPageRefreshed$2);
 		}
 		isPageReallyLoaded() {
 			return isPageProbablyLoaded$1();
 		}
 	};
-	var observer_default$1 = new AanvragenObserver();
+	var observer_default$1 = new AanvraagObserver();
 	function onPageRefreshed$2() {
+		gringo("page Aanvraag refreshed.");
+		decoratePage();
+	}
+	function isPageProbablyLoaded$1() {
+		return true;
+	}
+	function onMutation$1(mutation) {
+		decoratePage().then(() => {});
+		return false;
+	}
+	let pr = null;
+	async function decoratePage() {
+		let sectionMain = document.querySelector(`section[role="main"]`);
+		if (!sectionMain) return;
+		if (getAndSetDecorated(sectionMain)) return;
+		gringo("Decorating aanvraag page...");
+		pr = await fetchPr(location.pathname.replace("/gb/viewRequisition/", ""));
+		if (!pr) return;
+		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
+		totalPriceDiv.style.display = "none";
+		emmet.insertAfter(totalPriceDiv, `
+        div.newTotal.gringo>(
+            div.newTotal.block-heading.total-price{Totale kosten}+
+            div.blueBlock.flexRow.w100.mbe-1ch>(
+                label{Bruto bedrag}+
+                div.newTotalBruto.pull-end{€---,--- EUR}
+            )
+        )
+    `);
+		await updatePr(await createExpandedPr(pr));
+	}
+	function calcPrTotal(pr) {
+		let total = 0;
+		let currencySymbel = "€";
+		let currency = "EUR";
+		for (let item of pr.items) {
+			if (!item.tarif) {
+				total = 0;
+				break;
+			}
+			if (item.item.price.value.currency != currency) {
+				currency = item.item.price.value.currency + "?";
+				currencySymbel = "?";
+				total = 0;
+				break;
+			}
+			total += item.bruto;
+		}
+		return {
+			total,
+			currencySymbel,
+			currency
+		};
+	}
+	async function updatePr(pr) {
+		let newTotal = document.querySelector("div.newTotalBruto");
+		let { total, currencySymbel, currency } = calcPrTotal(pr);
+		newTotal.textContent = `${currencySymbel}${priceFormatter$1.format(total)}  ${currency}`;
+		let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
+		for (let index = 0; index < nonDecoratedItems.length; index++) {
+			let itemEl = nonDecoratedItems[index];
+			await decoratePrItem(pr, itemEl, index);
+		}
+	}
+	let priceFormatter$1 = new Intl.NumberFormat("nl-BE", {
+		maximumFractionDigits: 2,
+		minimumFractionDigits: 2
+	});
+	function getPrItemCommodity(prItem) {
+		let commodityCodeField = prItem.advanced.fields?.find((f) => f.id.endsWith("pAtHCommonCommodityCode"));
+		if (!commodityCodeField) throw new Error("Gringo: Cannot find commodity code in PR.");
+		let code = commodityCodeField.uniqueName;
+		let dscr = commodityCodeField.value;
+		if (!code) throw new Error("Gringo: Cannot find commodity code in PR.");
+		return {
+			code,
+			dscr
+		};
+	}
+	async function createExpandedPr(pr) {
+		let items = [];
+		for (let item of pr.lineItems) {
+			let bruto = null;
+			let tarif = null;
+			let tarifs = await getBtwTarifsCachedInSession();
+			let commodity = getPrItemCommodity(item);
+			tarif = tarifs.get(commodity.code) ?? null;
+			if (tarif) {
+				let price = item.price.value;
+				let quantity = item.quantity.value;
+				bruto = price.amount * quantity * (100 + tarif.tarif);
+				bruto = Math.round(bruto) / 100;
+			}
+			items.push({
+				item,
+				tarif,
+				bruto
+			});
+		}
+		return {
+			pr,
+			items
+		};
+	}
+	async function decoratePrItem(pr, lineEl, index) {
+		let priceSection = lineEl.querySelector("div.price-section");
+		if (!priceSection) return;
+		let rows = priceSection.querySelectorAll("div.row");
+		rows[0];
+		let brutoRow = rows[1];
+		let brutoRowChildren = [...brutoRow.children];
+		brutoRowChildren.forEach((c) => c.style.display = "none");
+		let brutoDiv = brutoRowChildren.pop();
+		brutoDiv.style.display = "none";
+		brutoRow.querySelector("div.newBruto")?.remove();
+		emmet.appendChild(brutoRow, `
+        div.gringo.newBruto.flexRow.w100.blueBlock>(
+            (
+                div.gringo.tarif.col-xs-8>(
+                    label{BTW}+
+                    div.btw{21%}
+                )
+            )+
+            (
+                div.gringo.col-xs-4.pull-end>(
+                    label{Bruto bedrag}+
+                    div.bruto{€---,-- EUR}
+                )
+            )
+        )
+    `);
+		updatePrItem(pr, lineEl, index);
+	}
+	function updatePrItem(pr, lineEl, index) {
+		let btwDif = lineEl.querySelector("div.newBruto div.btw");
+		if (pr.items[index].tarif) {
+			btwDif.textContent = pr.items[index].tarif.tarif + "%";
+			let divBruto = lineEl.querySelector("div.newBruto div.bruto");
+			let brutoStr = priceFormatter$1.format(pr.items[index].bruto);
+			let price = pr.items[index].item.price.value;
+			divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
+		} else {
+			btwDif.textContent = "";
+			let txtSelecteer = "--selecteer--";
+			emmet.appendChild(btwDif, `
+            (
+                select>(
+                    option[value="${txtSelecteer}"]{${txtSelecteer}}+
+                    option[value="0"]{0%}+
+                    option[value="6"]{6%}+
+                    option[value="12"]{12%}+
+                    option[value="21"]{21%}
+                )
+            )+
+            button.btwSave.m1{Bewaar voor dit artikel}
+        `);
+			let button = btwDif.querySelector("button.btwSave");
+			let select = btwDif.querySelector("select");
+			button.onclick = async (ev) => {
+				await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl);
+			};
+		}
+	}
+	async function btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl) {
+		let selected = select.value;
+		if (selected == txtSelecteer) return;
+		let commodity = getPrItemCommodity(pr.items[index].item);
+		let tarifs = await getBtwTarifsCachedInSession();
+		tarifs.set(commodity.code, {
+			commodityCode: commodity.code,
+			description: commodity.dscr,
+			tarif: parseInt(selected)
+		});
+		await uploadBtwTarifs(tarifs);
+		pr = await createExpandedPr(pr.pr);
+		updatePrItem(pr, lineEl, index);
+	}
+	let globalBtwTarifs = null;
+	async function getBtwTarifsCachedInSession() {
+		if (globalBtwTarifs) return globalBtwTarifs;
+		globalBtwTarifs = /* @__PURE__ */ new Map();
+		let tarifs;
+		try {
+			tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME);
+		} catch {
+			tarifs = { tarifs: [] };
+		}
+		tarifs.tarifs.forEach((t) => globalBtwTarifs.set(t.commodityCode, t));
+		return globalBtwTarifs;
+	}
+	async function uploadBtwTarifs(tarifsMap) {
+		let tarifs = { tarifs: [...tarifsMap.values()] };
+		await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
+		globalBtwTarifs = tarifsMap;
+	}
+	//#endregion
+	//#region typescript/aanvragen/observer.ts
+	var AanvragenObserver = class extends PartialUrlObserver {
+		constructor() {
+			super("request-info-list/requisition", onMutation, false, onPageRefreshed$1);
+		}
+		isPageReallyLoaded() {
+			return isPageProbablyLoaded();
+		}
+	};
+	var observer_default = new AanvragenObserver();
+	function onPageRefreshed$1() {
 		gringo("page Aanvragen refreshed xxx.");
 		checkDecorations();
 	}
-	function isPageProbablyLoaded$1() {
+	function isPageProbablyLoaded() {
 		return !!getPagination();
 	}
-	function onMutation$1(mutation) {
+	function onMutation(mutation) {
 		checkDecorations();
 		return false;
 	}
@@ -1119,7 +1326,7 @@
 		addOrderCopyButton(request);
 		let meta = await fetchMetaCached(request.id);
 		await decoratePrWithMeta(request, meta);
-		updatePrLine(request, meta);
+		await updatePrLine(request, meta);
 	}
 	const defaultTags = [
 		{
@@ -1202,7 +1409,7 @@
 	function saveTagsFilters(tagsFilters) {
 		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
 	}
-	function updatePrLine(request, meta) {
+	async function updatePrLine(request, meta) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
 		let tagsContainer = reqDiv.querySelector(".tagsContainer");
@@ -1220,7 +1427,17 @@
 		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
 		let select = reqDiv.querySelector("div.projectWrapper select");
 		if (meta.project) select.value = meta.project;
+		let newTotal = reqDiv.querySelector("div.gringo.listRowTotal");
+		let { total, currencySymbel } = calcPrTotal(await createExpandedPr(await fetchPr(request.id)));
+		if (total != 0) {
+			newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}`;
+			newTotal.style.display = "block";
+		} else newTotal.style.display = "none";
 	}
+	let priceFormatter = new Intl.NumberFormat("nl-BE", {
+		maximumFractionDigits: 2,
+		minimumFractionDigits: 2
+	});
 	function paintTag(tagElement, tagDef, selected) {
 		tagElement.innerText = tagDef.name;
 		tagElement.classList.add("gringoTag");
@@ -1282,23 +1499,25 @@
 		if (!divStatusContainer) return;
 		divStatusContainer = divStatusContainer.parentElement;
 		let metaWrapper = emmet.appendChild(divStatusContainer, `
-        div.metaWrapper> (
-            div.tagsWrapper.flexRow>(
-                (button.naked.tagButton
-                    >li.far.fa-circle-down)+
-                div.tagsContainer
-            )
+        div.metaWrapper>(
+            (
+                div.tagsWrapper.flexRow>(
+                    (button.naked.tagButton
+                        >li.far.fa-circle-down)+
+                    div.tagsContainer
+                )
+            )+
+            (
+                div.projectWrapper.flexRow>(
+                    select
+                )
+            )    
         )
     `).first;
 		let button = metaWrapper.querySelector("button.tagButton");
 		button.onclick = (ev) => {
 			onTagButtonClick(request, meta, button);
 		};
-		emmet.appendChild(metaWrapper, `
-        div.projectWrapper.flexRow>(
-            select
-        )    
-    `).first;
 		let select = divStatusContainer.querySelector("select");
 		let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
 		for (let option of options) {
@@ -1310,15 +1529,17 @@
 		select.onchange = async (ev) => {
 			await onSelectProjectClick(request, meta, select);
 		};
-		metaWrapper.onmousedown = (ev) => {
+		metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
 			ev.stopPropagation();
 		};
-		metaWrapper.onmouseup = (ev) => {
-			ev.stopPropagation();
-		};
-		metaWrapper.onclick = (ev) => {
-			ev.stopPropagation();
-		};
+		let reqItem = document.getElementById("requisition-item-" + request.id);
+		if (!reqItem) return;
+		let lastField = reqItem.querySelector(":scope > div.last-field");
+		lastField.style.fontSize = ".6rem";
+		let moneyAmount = lastField.querySelector("span.money-amount");
+		emmet.insertAfter(moneyAmount, `
+        div.gringo.blueBlock.listRowTotal{€1.234,56}    
+    `);
 	}
 	async function onSelectProjectClick(request, meta, select) {
 		meta.project = select.value;
@@ -1346,7 +1567,7 @@
 				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
 				meta.prId = request.id;
 				await saveMeta(request.id, meta, "localStorage and cloud");
-				updatePrLine(request, meta);
+				await updatePrLine(request, meta);
 			};
 		});
 	}
@@ -1383,205 +1604,6 @@
 		return changedMetas;
 	}
 	//#endregion
-	//#region typescript/aanvraag/observer.ts
-	var AanvraagObserver = class extends PartialUrlObserver {
-		constructor() {
-			super("viewRequisition", onMutation, false, onPageRefreshed$1);
-		}
-		isPageReallyLoaded() {
-			return isPageProbablyLoaded();
-		}
-	};
-	var observer_default = new AanvraagObserver();
-	function onPageRefreshed$1() {
-		gringo("page Aanvraag refreshed.");
-		decoratePage();
-	}
-	function isPageProbablyLoaded() {
-		return true;
-	}
-	function onMutation(mutation) {
-		decoratePage().then(() => {});
-		return false;
-	}
-	let pr = null;
-	async function decoratePage() {
-		let sectionMain = document.querySelector(`section[role="main"]`);
-		if (!sectionMain) return;
-		if (getAndSetDecorated(sectionMain)) return;
-		gringo("Decorating aanvraag page...");
-		pr = await fetchPr(location.pathname.replace("/gb/viewRequisition/", ""));
-		if (!pr) return;
-		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
-		totalPriceDiv.style.display = "none";
-		emmet.insertAfter(totalPriceDiv, `
-        div.newTotal.gringo>(
-            div.newTotal.block-heading.total-price{Totale kosten}+
-            div.blueBlock.flexRow.w100.mbe-1ch>(
-                label{Bruto bedrag}+
-                div.newTotalBruto.pull-end{€---,--- EUR}
-            )
-        )
-    `);
-		await updatePr(await createExpandedPr(pr));
-	}
-	async function updatePr(pr) {
-		let newTotal = document.querySelector("div.newTotalBruto");
-		let total = 0;
-		let currencySymbel = "€";
-		let currency = "EUR";
-		for (let item of pr.items) {
-			if (!item.tarif) {
-				total = 0;
-				break;
-			}
-			if (item.item.price.value.currency != currency) {
-				currency = item.item.price.value.currency + "?";
-				currencySymbel = "?";
-				total = 0;
-				break;
-			}
-			total += item.bruto;
-		}
-		newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}  ${currency}`;
-		let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
-		for (let index = 0; index < nonDecoratedItems.length; index++) {
-			let itemEl = nonDecoratedItems[index];
-			await decoratePrItem(pr, itemEl, index);
-		}
-	}
-	let priceFormatter = new Intl.NumberFormat("nl-BE", {
-		maximumFractionDigits: 2,
-		minimumFractionDigits: 2
-	});
-	function getPrItemCommodity(prItem) {
-		let commodityCodeField = prItem.advanced.fields?.find((f) => f.id.endsWith("pAtHCommonCommodityCode"));
-		if (!commodityCodeField) throw new Error("Gringo: Cannot find commodity code in PR.");
-		let code = commodityCodeField.uniqueName;
-		let dscr = commodityCodeField.value;
-		if (!code) throw new Error("Gringo: Cannot find commodity code in PR.");
-		return {
-			code,
-			dscr
-		};
-	}
-	async function createExpandedPr(pr) {
-		let items = [];
-		for (let item of pr.lineItems) {
-			let bruto = null;
-			let tarif = null;
-			let tarifs = await getBtwTarifsCachedInSession();
-			let commodity = getPrItemCommodity(item);
-			tarif = tarifs.get(commodity.code) ?? null;
-			if (tarif) {
-				let price = item.price.value;
-				let quantity = item.quantity.value;
-				bruto = price.amount * quantity * (100 + tarif.tarif);
-				bruto = Math.round(bruto) / 100;
-			}
-			items.push({
-				item,
-				tarif,
-				bruto
-			});
-		}
-		return {
-			pr,
-			items
-		};
-	}
-	async function decoratePrItem(pr, lineEl, index) {
-		let priceSection = lineEl.querySelector("div.price-section");
-		if (!priceSection) return;
-		let rows = priceSection.querySelectorAll("div.row");
-		rows[0];
-		let brutoRow = rows[1];
-		let meetEenheid = brutoRow.children[0];
-		let brutoDiv = brutoRow.children[1];
-		meetEenheid.style.display = "none";
-		brutoDiv.style.display = "none";
-		brutoRow.querySelector("div.newBruto")?.remove();
-		emmet.appendChild(brutoRow, `
-        div.gringo.newBruto.flexRow.w100.blueBlock>(
-            (
-                div.gringo.tarif.col-xs-8>(
-                    label{BTW}+
-                    div.btw{21%}
-                )
-            )+
-            (
-                div.gringo.col-xs-4.pull-end>(
-                    label{Bruto bedrag}+
-                    div.bruto{€---,-- EUR}
-                )
-            )
-        )
-    `);
-		updatePrItem(pr, lineEl, index);
-	}
-	function updatePrItem(pr, lineEl, index) {
-		let btwDif = lineEl.querySelector("div.newBruto div.btw");
-		if (pr.items[index].tarif) {
-			btwDif.textContent = pr.items[index].tarif.tarif + "%";
-			let divBruto = lineEl.querySelector("div.newBruto div.bruto");
-			let brutoStr = priceFormatter.format(pr.items[index].bruto);
-			let price = pr.items[index].item.price.value;
-			divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
-		} else {
-			btwDif.textContent = "";
-			let txtSelecteer = "--selecteer--";
-			emmet.appendChild(btwDif, `
-            (
-                select>(
-                    option[value="${txtSelecteer}"]{${txtSelecteer}}+
-                    option[value="0"]{0%}+
-                    option[value="6"]{6%}+
-                    option[value="12"]{12%}+
-                    option[value="21"]{21%}
-                )
-            )+
-            button.btwSave.m1{Bewaar voor dit artikel}
-        `);
-			let button = btwDif.querySelector("button.btwSave");
-			let select = btwDif.querySelector("select");
-			button.onclick = async (ev) => {
-				await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl);
-			};
-		}
-	}
-	async function btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl) {
-		let selected = select.value;
-		if (selected == txtSelecteer) return;
-		let commodity = getPrItemCommodity(pr.items[index].item);
-		let tarifs = await getBtwTarifsCachedInSession();
-		tarifs.set(commodity.code, {
-			commodityCode: commodity.code,
-			description: commodity.dscr,
-			tarif: parseInt(selected)
-		});
-		await uploadBtwTarifs(tarifs);
-		pr = await createExpandedPr(pr.pr);
-		updatePrItem(pr, lineEl, index);
-	}
-	let globalBtwTarifs = null;
-	async function getBtwTarifsCachedInSession() {
-		if (globalBtwTarifs) return globalBtwTarifs;
-		globalBtwTarifs = /* @__PURE__ */ new Map();
-		let tarifs;
-		try {
-			tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME);
-		} catch {
-			tarifs = { tarifs: [] };
-		}
-		tarifs.tarifs.forEach((t) => globalBtwTarifs.set(t.commodityCode, t));
-		return globalBtwTarifs;
-	}
-	async function uploadBtwTarifs(tarifsMap) {
-		let tarifs = { tarifs: [...tarifsMap.values()] };
-		await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
-		globalBtwTarifs = tarifsMap;
-	}
-	//#endregion
 	//#region typescript/main.ts
 	init();
 	function init() {
@@ -1594,8 +1616,8 @@
 			window.navigation.addEventListener("navigatesuccess", () => {
 				onPageChanged();
 			});
-			registerObserver(observer_default$1);
 			registerObserver(observer_default);
+			registerObserver(observer_default$1);
 			onPageChanged();
 			if (document.readyState == "complete") {
 				console.log("document ready. firing onPageRefreshed.");

@@ -1,5 +1,8 @@
-* Replace bruto field if items with own bruto field and tarif.
-
+* Pr list: add bruto price.
+  - org price: .6rem
+  - new price: <div class="gringo blueBlock">€1.234,56</div>
+  > what for prs without tarif?
+    > don't show as an error, but as question mark with a hint: "Sommige artikels hebben nog geen BTW tarief."
 
 
 * Decorate PR page

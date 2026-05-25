@@ -9,6 +9,7 @@ import {getGlobalSettingsCached} from "../plugin_options/options";
 import {UserInfo} from "../sap/SapUserInfo";
 import { RequestListResponse } from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
+import {calcPrTotal, createExpandedPr} from "../aanvraag/observer";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -348,7 +349,7 @@ async function decoratePr(request: RequestBasicInfo) {
     addOrderCopyButton(request);
     let meta = await fetchMetaCached(request.id);
     await decoratePrWithMeta(request, meta);
-    updatePrLine(request, meta);
+    await updatePrLine(request, meta);
 }
 
 interface TagDef  {
@@ -383,7 +384,7 @@ function saveTagsFilters(tagsFilters: TagsFilter[]) {
     localStorage.setItem('gringo.tagsFilters', JSON.stringify(tagsFilters));
 }
 
-function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
+async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
         return;
@@ -410,7 +411,20 @@ function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     let select = reqDiv.querySelector("div.projectWrapper select")! as HTMLSelectElement;
     if(meta.project)
         select.value = meta.project;
+    let newTotal = reqDiv.querySelector("div.gringo.listRowTotal") as HTMLDivElement;
+    let pr = await fetchPr(request.id);
+    let expPr = await createExpandedPr(pr);
+    let {total, currencySymbel} = calcPrTotal(expPr);
+
+    if(total != 0) {
+        newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}`;
+        newTotal.style.display = "block";
+    }
+    else
+        newTotal.style.display = "none";
 }
+
+let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, minimumFractionDigits: 2});
 
 function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
     tagElement.innerText = tagDef.name;
@@ -491,12 +505,19 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
     let metaWrapper = emmet.appendChild(divStatusContainer, `
-        div.metaWrapper> (
-            div.tagsWrapper.flexRow>(
-                (button.naked.tagButton
-                    >li.far.fa-circle-down)+
-                div.tagsContainer
-            )
+        div.metaWrapper>(
+            (
+                div.tagsWrapper.flexRow>(
+                    (button.naked.tagButton
+                        >li.far.fa-circle-down)+
+                    div.tagsContainer
+                )
+            )+
+            (
+                div.projectWrapper.flexRow>(
+                    select
+                )
+            )    
         )
     `).first as HTMLDivElement;
 
@@ -506,11 +527,6 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
         onTagButtonClick(request, meta, button);
     };
 
-    let projectWrapper = emmet.appendChild(metaWrapper, `
-        div.projectWrapper.flexRow>(
-            select
-        )    
-    `).first as HTMLDivElement;
     let select = divStatusContainer.querySelector("select")!;
     let options = [ "--selecteer--", ...(await getGlobalSettingsCached()).projects];
     for (let option of options) {
@@ -524,19 +540,19 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
         await onSelectProjectClick(request, meta, select);
     }
 
-    metaWrapper.onmousedown = (ev) => {
+    metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
         ev.stopPropagation();
-        // ev.preventDefault();
-    };
-    metaWrapper.onmouseup = (ev) => {
-        ev.stopPropagation();
-        // ev.preventDefault();
-    };
-    metaWrapper.onclick = (ev) => {
-        ev.stopPropagation();
-        // ev.preventDefault();
     };
 
+    let reqItem =document.getElementById("requisition-item-"+request.id);
+    if(!reqItem)
+        return;
+    let lastField = reqItem.querySelector(":scope > div.last-field") as HTMLDivElement;
+    lastField.style.fontSize = ".6rem";
+    let moneyAmount = lastField.querySelector("span.money-amount") as HTMLSpanElement;
+    emmet.insertAfter(moneyAmount, `
+        div.gringo.blueBlock.listRowTotal{€1.234,56}    
+    `);
 }
 
 async function onSelectProjectClick(request: RequestBasicInfo, meta: PrMeta, select: HTMLSelectElement) {
@@ -572,7 +588,7 @@ function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button: HTMLB
                     meta.tags = meta.tags.filter(t => t != tagDef.name);
                 meta.prId = request.id; //temp!
                 await saveMeta(request.id, meta, "localStorage and cloud");
-                updatePrLine(request, meta);
+                await updatePrLine(request, meta);
             };
         });
 

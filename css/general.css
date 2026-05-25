@@ -271,3 +271,10 @@ request-info-item.hidden {
     margin: 0;
     padding: 0;
 }
+
+.gringo.listRowTotal {
+    font-size: 1rem;
+    padding: .5ch;
+    text-align: right;
+    display: none;
+}
