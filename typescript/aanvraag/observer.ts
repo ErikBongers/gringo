@@ -64,24 +64,29 @@ async function decoratePage() {
     await updatePr(expandedPr);
 }
 
-async function updatePr(pr: ExpandedPr) {
-    let newTotal = document.querySelector("div.newTotalBruto")!; //! should be present
+export function calcPrTotal(pr: ExpandedPr) {
     let total: number = 0;
     let currencySymbel = "€";
     let currency = "EUR";
-    for(let item of pr.items) {
+    for (let item of pr.items) {
         if (!item.tarif) {
             total = 0;
             break;
         }
-        if(item.item.price.value.currency != currency) {
-            currency = item.item.price.value.currency+"?";
+        if (item.item.price.value.currency != currency) {
+            currency = item.item.price.value.currency + "?";
             currencySymbel = "?";
             total = 0;
             break;
         }
         total += item.bruto!;
     }
+    return {total, currencySymbel, currency};
+}
+
+async function updatePr(pr: ExpandedPr) {
+    let newTotal = document.querySelector("div.newTotalBruto")!; //! should be present
+    let {total, currencySymbel, currency} = calcPrTotal(pr);
 
     newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}  ${currency}`;
 
@@ -116,7 +121,7 @@ function getPrItemCommodity(prItem: SapLineItem) {
     return {code, dscr};
 }
 
-async function createExpandedPr(pr: PurchaseRequisition) {
+export async function createExpandedPr(pr: PurchaseRequisition) {
     let items: ExpandedPrItem[] = [];
     for (let item of pr.lineItems) {
         let bruto: number | null = null;
@@ -142,9 +147,9 @@ async function decoratePrItem(pr: ExpandedPr, lineEl: HTMLElement, index: number
     let rows = priceSection.querySelectorAll("div.row");
     let nettoRow = rows[0];
     let brutoRow = rows[1] as HTMLElement;
-    let meetEenheid = brutoRow.children[0] as HTMLElement;
-    let brutoDiv = brutoRow.children[1] as HTMLElement;
-    meetEenheid.style.display = "none";
+    let brutoRowChildren = [...brutoRow.children] as HTMLElement[];
+    brutoRowChildren.forEach(c => c.style.display = "none");
+    let brutoDiv = brutoRowChildren.pop() as HTMLDivElement;
     brutoDiv.style.display = "none";
 
     let newBrutoContainer = brutoRow.querySelector("div.newBruto") as HTMLDivElement | null;
