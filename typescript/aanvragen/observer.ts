@@ -41,8 +41,10 @@ function checkAndSetListPageDecorated(el: HTMLElement) {
 }
 
 function checkDecorations() {
-    checkAndSetDecoration("filters", document.querySelector(".request-search-panel"), decorateSearchPanel);
-    checkAndSetDecoration("listPage", getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
+    checkAndSetDecoration(document.querySelector("main"), decorateMain);
+    checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
+    checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
+    checkAndSetDecoration(getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
 }
 
 function getPagination(): Pagination | null {
@@ -68,8 +70,6 @@ interface Pagination {
     hasNext: boolean;
 }
 
-type DecorationKeys = "filters" | "listPage";
-
 function getListTabDecoratedElement() {
     let tabContainer = document.querySelector("request-info-requisitions") as HTMLElement | null;
     if(!tabContainer)
@@ -77,19 +77,19 @@ function getListTabDecoratedElement() {
     return getPagination()?.currentPageElement??null;
 }
 
-function checkAndSetDecoration(key: DecorationKeys, el: HTMLElement | null, decorator: () => void, customCheckAndSet?: (el: HTMLElement) => boolean) {
+function checkAndSetDecoration(el: HTMLElement | null, decorator: (el: HTMLElement) => void, customCheckAndSet?: (el: HTMLElement) => boolean) {
     if(!el)
         return;
     if(customCheckAndSet) {
         if(!customCheckAndSet(el)) {
-            decorator();
+            decorator(el);
         }
         return;
     }
 
     if(el.dataset.gringoDecorated != "true") {
         el.dataset.gringoDecorated = "true";
-        decorator();
+        decorator(el);
     }
 }
 
@@ -221,6 +221,53 @@ function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef) {
         updateTagsFilters(filters);
         await applyFilters(globalPrs);
     };
+}
+
+function decorateTabs(el: HTMLElement) {
+    let tabs = [...el.querySelectorAll("div:not(.gringo).fd-tabs__item") as NodeListOf<HTMLDivElement>];
+    tabs.forEach(tab => {
+        tab.addEventListener("click", (ev) => {
+            let main = document.querySelector("main")!;
+            main.classList.remove("hide");
+            let totalsContainer = document.querySelector("div.gringo.totalsTab")!;
+            totalsContainer.classList.add("hide");
+            let tabs2 = [...document.querySelectorAll("div.fd-tabs__item") as NodeListOf<HTMLDivElement>];
+            tabs2.forEach(tab2 => {
+                tab2.children[0].setAttribute("aria-selected", "false");
+                tab2.children[0].classList.remove("is-selected");
+            });
+            (ev.currentTarget as HTMLElement).children[0].setAttribute("aria-selected", "true");
+            (ev.currentTarget as HTMLElement).children[0].classList.add("is-selected");
+
+        });
+    });
+    emmet.appendChild(el, `
+        div.fd-tabs__item.totalsTab>
+            button.noBkg.fd-tabs__link>
+                span.fd-tabs__tag{Totalen}
+    `);
+    let button = el.querySelector("button") as HTMLButtonElement;
+    button.onclick = () => { onTabButtonClick(el as HTMLDivElement); };
+}
+
+function decorateMain(el: HTMLElement) {
+    emmet.insertAfter(el, `
+        div.gringo.totalsTab.hide{Tadaaaa!}    
+    `);
+}
+
+function onTabButtonClick(tabContainer: HTMLDivElement) {
+    let tabs = [...tabContainer.querySelectorAll("div.fd-tabs__item") as NodeListOf<HTMLDivElement>];
+    tabs.forEach(tab => {
+        tab.children[0].setAttribute("aria-selected", "false");
+        tab.children[0].classList.remove("is-selected");
+    });
+    let last = tabs.pop()!;
+    last.children[0].setAttribute("aria-selected", "true");
+    let totalsContainer = document.querySelector("div.gringo.totalsTab") as HTMLDivElement;
+    totalsContainer.classList.remove("hide");
+    let main = document.querySelector("main")!;
+    main.classList.add("hide");
 }
 
 function decorateSearchPanel() {

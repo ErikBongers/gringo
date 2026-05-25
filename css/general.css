@@ -278,3 +278,11 @@ request-info-item.hidden {
     text-align: right;
     display: none;
 }
+
+.noBkg {
+    background: none;
+}
+
+.hide {
+    display: none;
+}

@@ -1629,8 +1629,10 @@
 		return isDecorated;
 	}
 	function checkDecorations() {
-		checkAndSetDecoration("filters", document.querySelector(".request-search-panel"), decorateSearchPanel);
-		checkAndSetDecoration("listPage", getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
+		checkAndSetDecoration(document.querySelector("main"), decorateMain);
+		checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
+		checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
+		checkAndSetDecoration(getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
 	}
 	function getPagination() {
 		let paginationElement = document.querySelector("fd-pagination");
@@ -1649,15 +1651,15 @@
 		if (!document.querySelector("request-info-requisitions")) return null;
 		return getPagination()?.currentPageElement ?? null;
 	}
-	function checkAndSetDecoration(key, el, decorator, customCheckAndSet) {
+	function checkAndSetDecoration(el, decorator, customCheckAndSet) {
 		if (!el) return;
 		if (customCheckAndSet) {
-			if (!customCheckAndSet(el)) decorator();
+			if (!customCheckAndSet(el)) decorator(el);
 			return;
 		}
 		if (el.dataset.gringoDecorated != "true") {
 			el.dataset.gringoDecorated = "true";
-			decorator();
+			decorator(el);
 		}
 	}
 	let globalPrs = [];
@@ -1746,6 +1748,44 @@
 			updateTagsFilters(filters);
 			await applyFilters(globalPrs);
 		};
+	}
+	function decorateTabs(el) {
+		[...el.querySelectorAll("div:not(.gringo).fd-tabs__item")].forEach((tab) => {
+			tab.addEventListener("click", (ev) => {
+				document.querySelector("main").classList.remove("hide");
+				document.querySelector("div.gringo.totalsTab").classList.add("hide");
+				[...document.querySelectorAll("div.fd-tabs__item")].forEach((tab2) => {
+					tab2.children[0].setAttribute("aria-selected", "false");
+					tab2.children[0].classList.remove("is-selected");
+				});
+				ev.currentTarget.children[0].setAttribute("aria-selected", "true");
+				ev.currentTarget.children[0].classList.add("is-selected");
+			});
+		});
+		emmet.appendChild(el, `
+        div.fd-tabs__item.totalsTab>
+            button.noBkg.fd-tabs__link>
+                span.fd-tabs__tag{Totalen}
+    `);
+		let button = el.querySelector("button");
+		button.onclick = () => {
+			onTabButtonClick(el);
+		};
+	}
+	function decorateMain(el) {
+		emmet.insertAfter(el, `
+        div.gringo.totalsTab.hide{Tadaaaa!}    
+    `);
+	}
+	function onTabButtonClick(tabContainer) {
+		let tabs = [...tabContainer.querySelectorAll("div.fd-tabs__item")];
+		tabs.forEach((tab) => {
+			tab.children[0].setAttribute("aria-selected", "false");
+			tab.children[0].classList.remove("is-selected");
+		});
+		tabs.pop().children[0].setAttribute("aria-selected", "true");
+		document.querySelector("div.gringo.totalsTab").classList.remove("hide");
+		document.querySelector("main").classList.add("hide");
 	}
 	function decorateSearchPanel() {
 		let requestSearchPanel = document.querySelector(".request-search-panel");
