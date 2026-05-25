@@ -444,11 +444,13 @@ async function fetchRequestList() {
     }
 
     //todo: is browserrequestid needed? or can I use a custom one?
+    let now  = new Date();
+    let nowStr = now.toISOString().replaceAll("T", " ").split(".")[0] + " GMT";
     await chain.post(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435`,
         {
             "searchFilters": {
                 "LastUpdatedFromDate": "2026-02-17 23:00:00 GMT",
-                "LastUpdatedToDate": "2026-05-18 21:59:59 GMT"
+                "LastUpdatedToDate": nowStr,
             },
             "requestTypeFilter": "all",
             "orderByField": "daterequested",
@@ -456,7 +458,6 @@ async function fetchRequestList() {
         }
         );
     let requestList: RequestListResponse = await chain.getJson();
-    gringo(requestList);
     return requestList
 }
 

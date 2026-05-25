@@ -1,13 +1,18 @@
-* Pr list: add bruto price.
-  - org price: .6rem
-  - new price: <div class="gringo blueBlock">€1.234,56</div>
-  > what for prs without tarif?
-    > don't show as an error, but as question mark with a hint: "Sommige artikels hebben nog geen BTW tarief."
+* Aggregate bruto prices per project
+  > requires ALL prs fetched from server.
+  >
 
+* To list tarifs(via commodity-codes)
+  >>> https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/.../resource/container/7bebfe6a-297c-486c-8dea-e6fc90d0a240?browserRequestId=Tile1779715254146&pu=PU_AG+Stedelijk+Onderwijs&puHierarchyPath=PU_AG+Stedelijk+Onderwijs,All
+    > where previous tile/page = 7bebfe6a-297c-486c-8dea-e6fc90d0a240
+  - the pre-form data is fetched with:
+  https://s1-eu.ariba.com/gb/tenant/744379882-C1/user//resource/container/48a90905-23a9-4c34-bce1-c968edfeee95?browserRequestId=Tile1779715762838&pu=PU_AG+Stedelijk+Onderwijs&puHierarchyPath=PU_AG+Stedelijk+Onderwijs,All
+    > where tileId from previous fetch = 48a90905-23a9-4c34-bce1-c968edfeee95
 
-* Decorate PR page
-  - In entry form, ask for BTW tarif when not yet specified for given commidityCode.
-  - Show bruto total
+* Add BTW buttons next to price field to subtract BTW.
+  > already do this in pre-screen?
+    > do we have the commodityCode?
+      if yes, display it.
 
 * Decorate article form (before PR)
  - Add BTW calculator.
