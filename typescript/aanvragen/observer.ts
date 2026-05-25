@@ -7,6 +7,7 @@ import {fetchPr} from "../sap/api";
 import {calcPrTotal, createExpandedPr} from "../aanvraag/observer";
 import {fetchChangedMetas, fetchFullRequest, fetchMetaCached, fetchRequestList, fetchRequestListAndDetails, PrMeta, saveMeta} from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
+import {fillTotalsTab} from "./totalsTab";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -268,6 +269,7 @@ function onTabButtonClick(tabContainer: HTMLDivElement) {
     totalsContainer.classList.remove("hide");
     let main = document.querySelector("main")!;
     main.classList.add("hide");
+    fillTotalsTab();
 }
 
 function decorateSearchPanel() {

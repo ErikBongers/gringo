@@ -1601,6 +1601,33 @@
 		updatePrItem(pr, lineEl, index);
 	}
 	//#endregion
+	//#region typescript/aanvragen/totalsTab.ts
+	function fillTotalsTab() {
+		let container = document.querySelector("div.gringo.totalsTab");
+		container.innerHTML = "";
+		let infoBlock = createInfoBlock(container);
+		infoBlock.title.textContent = "Totals";
+		infoBlock.errors.textContent = "No errors.";
+		infoBlock.info.textContent = "Filling totals....";
+		infoBlock.extra.textContent = "Extra info...";
+	}
+	function createInfoBlock(el) {
+		emmet.appendChild(el, `
+        div.infoBlock>(
+            h2.title{Title line}+
+            div.errors{errors...}+
+            div.info{info...}+
+            div.extra{extra...}
+        )
+    `);
+		return {
+			title: el.querySelector("h2.title"),
+			errors: el.querySelector("div.errors"),
+			info: el.querySelector("div.info"),
+			extra: el.querySelector("div.extra")
+		};
+	}
+	//#endregion
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -1786,6 +1813,7 @@
 		tabs.pop().children[0].setAttribute("aria-selected", "true");
 		document.querySelector("div.gringo.totalsTab").classList.remove("hide");
 		document.querySelector("main").classList.add("hide");
+		fillTotalsTab();
 	}
 	function decorateSearchPanel() {
 		let requestSearchPanel = document.querySelector(".request-search-panel");
