@@ -524,4 +524,3 @@ function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button: HTMLB
         });
 
 }
-

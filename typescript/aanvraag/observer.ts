@@ -2,9 +2,8 @@ import {PartialUrlObserver} from "../pageObserver";
 import {getAndSetDecorated, gringo} from "../globals";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr} from "../sap/api";
-import {cloud} from "../cloud";
-import {BTW_TARIFS_FILENAME} from "../def";
 import {emmet} from "../../libs/Emmeter/html";
+import {Btw, ExpandedPr, getBtwTarifsCachedInSession, uploadBtwTarifs} from "../aanvragen/requests";
 
 class AanvraagObserver extends PartialUrlObserver {
     constructor() {
@@ -99,14 +98,9 @@ async function updatePr(pr: ExpandedPr) {
 
 let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, minimumFractionDigits: 2});
 
-interface ExpandedPrItem {
+export interface ExpandedPrItem {
     item: SapLineItem;
     tarif: Btw | null;
-}
-
-interface ExpandedPr {
-    pr: PurchaseRequisition,
-    items: ExpandedPrItem[];
 }
 
 function getPrItemCommodity(prItem: SapLineItem) {
@@ -235,35 +229,3 @@ async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: stri
     updatePrItem(pr, lineEl, index);
 }
 
-interface Btw {
-    commodityCode: string;
-    description: string;
-    tarif: number;
-}
-
-interface BtwTarifs {
-    tarifs: Btw[];
-}
-
-let globalBtwTarifs: Map<string, Btw> | null = null;
-
-async function getBtwTarifsCachedInSession(): Promise<Map<string, Btw>> {
-    if(globalBtwTarifs)
-        return globalBtwTarifs;
-
-    globalBtwTarifs = new Map<string, Btw>();
-    let tarifs: BtwTarifs;
-    try {
-        tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as BtwTarifs;
-    } catch {
-        tarifs = {tarifs: []};
-    }
-    tarifs.tarifs.forEach(t => globalBtwTarifs!.set(t.commodityCode, t));
-    return globalBtwTarifs;
-}
-
-async function uploadBtwTarifs(tarifsMap: Map<string, Btw>) {
-    let tarifs: BtwTarifs = {tarifs: [...tarifsMap.values()]};
-    await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
-    globalBtwTarifs = tarifsMap;
-}

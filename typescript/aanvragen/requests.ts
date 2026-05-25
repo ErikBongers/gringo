@@ -2,10 +2,13 @@ import {FetchChain} from "../fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
-import {gringo} from "../globals";
-import {KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
+import {getOptions, gringo} from "../globals";
+import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
+import {createExpandedPr, ExpandedPrItem} from "../aanvraag/observer";
+import {PurchaseRequisition} from "../sap/SapPrInfo";
+import {getGlobalSettingsCached} from "../plugin_options/options";
 
 export async function fetchRequestList() {
     let chain = new FetchChain();
@@ -63,7 +66,6 @@ export async function fetchRequestListAndDetails() {
     })
 
     let detailsList = await Promise.all(promises);
-    debugger;
     return detailsList;
 }
 
@@ -71,6 +73,11 @@ export interface PrMeta {
     prId: string,
     tags: string[],
     project?: string,
+}
+
+export interface ExpandedPr {
+    pr: PurchaseRequisition,
+    items: ExpandedPrItem[];
 }
 
 export async function fetchChangedMetas() {
@@ -114,4 +121,61 @@ export async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" 
     if (what == "localStorage and cloud")
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     await saveMetaLocal(meta);
+}
+
+export interface Btw {
+    commodityCode: string;
+    description: string;
+    tarif: number;
+}
+
+export async function getBtwTarifsCachedInSession(): Promise<Map<string, Btw>> {
+    if (globalBtwTarifs)
+        return globalBtwTarifs;
+
+    globalBtwTarifs = new Map<string, Btw>();
+    let tarifs: BtwTarifs;
+    try {
+        tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as BtwTarifs;
+    } catch {
+        tarifs = {tarifs: []};
+    }
+    tarifs.tarifs.forEach(t => globalBtwTarifs!.set(t.commodityCode, t));
+    return globalBtwTarifs;
+}
+
+export async function uploadBtwTarifs(tarifsMap: Map<string, Btw>) {
+    let tarifs: BtwTarifs = {tarifs: [...tarifsMap.values()]};
+    await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
+    globalBtwTarifs = tarifsMap;
+}
+
+export interface BtwTarifs {
+    tarifs: Btw[];
+}
+
+let globalBtwTarifs: Map<string, Btw> | null = null;
+
+export async function getRequestsPerProject() {
+    let reqs = await fetchRequestListAndDetails();
+
+    let extendedReqs:  ExpandedPr[] = [];
+    for (const pr of reqs) {
+        extendedReqs.push(await createExpandedPr(pr));
+    }
+    let projects = (await getGlobalSettingsCached()).projects;
+    let projectMap = new Map<string, ExpandedPr[]>();
+    for (const project of projects) {
+        projectMap.set(project, []);
+    }
+    for (const extendedPr of extendedReqs) {
+        let meta: PrMeta = await fetchMetaCached(extendedPr.pr.reqId);
+        if (meta.project) {
+            if(!projectMap.has(meta.project)) {
+                projectMap.set(meta.project, []);
+            }
+            projectMap.get(meta.project)!.push(extendedPr); //! just created project in map if it was missing.
+        }
+    }
+    return projectMap;
 }
