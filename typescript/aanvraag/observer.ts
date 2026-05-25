@@ -4,6 +4,7 @@ import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
 import {AccountingField, Btw, ExpandedPr, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
+import {getBudgetCode, LedgerToBudgetCode} from "../aanvragen/aggregate";
 
 class AanvraagObserver extends PartialUrlObserver {
     constructor() {
@@ -103,6 +104,7 @@ export interface ExpandedPrItem {
     item: SapLineItem;
     tarif: Btw | null;
     ledger: AccountingField | null;
+    budget: LedgerToBudgetCode | null;
 }
 
 export function calcBrutoLinePrice(item: SapLineItem, tarif: number) {
@@ -123,8 +125,11 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
             let ledger = getPrItemLedger(item);
             if (!ledger)
                 ledger = getPrItemAsset(item);
+            let budget: LedgerToBudgetCode | null = null;
+            if(ledger)
+                budget = getBudgetCode(ledger.code);
             tarif = tarifs.get(commodity?.code ?? '') ?? null;
-            items.push({pr, item, tarif, ledger} satisfies ExpandedPrItem);
+            items.push({pr, item, tarif, ledger, budget} satisfies ExpandedPrItem);
         }
     }
     return {pr, items} satisfies ExpandedPr;

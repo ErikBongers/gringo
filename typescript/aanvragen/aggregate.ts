@@ -8,6 +8,18 @@ export interface LedgerToBudgetCode {
     budget: string,
 }
 
+let _budgetMap: Map<string, LedgerToBudgetCode> | null = null;
+export function getBudgetCode(ledger: string) {
+    if(!_budgetMap) {
+        _budgetMap = new Map<string, LedgerToBudgetCode>();
+        ledgerToBudgetCodes.forEach(budget => {
+            _budgetMap!.set(budget.ledger, budget); //! just created map.
+        })
+    }
+
+    return _budgetMap.get(ledger)??null;
+}
+
 let ledgerToBudgetCodes: LedgerToBudgetCode[] = [
     { ledger: "2110000000", budget: "21100000"},
     { ledger: "2231000000", budget: "22310000"},
@@ -154,7 +166,8 @@ export async function getRequestsPerBudget() {
 
 export async function exportPrItemsToExcel(){
     let prs = await getExtendedRequests();
-    let headers = ["prId", "itemNo", "bruto", "tarif", "project", "tags"];
+
+    let headers = ["prId", "itemNo", "bruto", "tarif", "project", "tags", "title", "budget"];
     let rows: string[][] = [];
     for(let pr of prs) {
         for (const item of pr.items) {
@@ -170,6 +183,8 @@ export async function exportPrItemsToExcel(){
             let meta = await fetchMetaCached(pr.pr.reqId);
             row.push(meta.project??"")
             row.push(meta.tags.join(","));
+            row.push(pr.pr.title.value);
+            row.push(item.budget?.budget??"");
             rows.push(row);
         }
     }
