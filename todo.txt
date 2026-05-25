@@ -1,6 +1,6 @@
-* Aggregate bruto prices per project
-  > requires ALL prs fetched from server.
-  >
+* Create a page to show the sum per project.
+* Create a page to sow the sum per budgetPos ( != grootboekrekening!)
+  > create a list of grootbookrek, budgetPos
 
 * To list tarifs(via commodity-codes)
   >>> https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/.../resource/container/7bebfe6a-297c-486c-8dea-e6fc90d0a240?browserRequestId=Tile1779715254146&pu=PU_AG+Stedelijk+Onderwijs&puHierarchyPath=PU_AG+Stedelijk+Onderwijs,All

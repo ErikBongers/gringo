@@ -977,6 +977,23 @@
 		globalBtwTarifs = tarifsMap;
 	}
 	let globalBtwTarifs = null;
+	function getAccountingField(prItem, idIncludes) {
+		let field = prItem.advanced.fields?.find((f) => f.id.endsWith(idIncludes));
+		if (!field) throw new Error("Gringo: Cannot find field in PR for searchString: " + idIncludes);
+		let code = field.uniqueName;
+		let dscr = field.value;
+		if (!code) throw new Error("Gringo: Cannot find field in PR for searchString: " + idIncludes);
+		return {
+			code,
+			dscr
+		};
+	}
+	function getPrItemCommodity(prItem) {
+		return getAccountingField(prItem, "pAtHCommonCommodityCode");
+	}
+	function getPrItemLedger(prItem) {
+		return getAccountingField(prItem, "pAtHGeneralLedger");
+	}
 	//#endregion
 	//#region typescript/aanvraag/observer.ts
 	var AanvraagObserver = class extends PartialUrlObserver {
@@ -1057,17 +1074,6 @@
 		maximumFractionDigits: 2,
 		minimumFractionDigits: 2
 	});
-	function getPrItemCommodity(prItem) {
-		let commodityCodeField = prItem.advanced.fields?.find((f) => f.id.endsWith("pAtHCommonCommodityCode"));
-		if (!commodityCodeField) throw new Error("Gringo: Cannot find commodity code in PR.");
-		let code = commodityCodeField.uniqueName;
-		let dscr = commodityCodeField.value;
-		if (!code) throw new Error("Gringo: Cannot find commodity code in PR.");
-		return {
-			code,
-			dscr
-		};
-	}
 	function calcBrutoLinePrice(item, tarif) {
 		let bruto = null;
 		let price = item.price.value;
@@ -1082,10 +1088,12 @@
 			let tarif = null;
 			let tarifs = await getBtwTarifsCachedInSession();
 			let commodity = getPrItemCommodity(item);
+			let ledger = getPrItemLedger(item);
 			tarif = tarifs.get(commodity.code) ?? null;
 			items.push({
 				item,
-				tarif
+				tarif,
+				ledger
 			});
 		}
 		return {

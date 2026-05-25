@@ -2,13 +2,12 @@ import {FetchChain} from "../fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
-import {getOptions, gringo} from "../globals";
+import {gringo} from "../globals";
 import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
-import {createExpandedPr, ExpandedPrItem} from "../aanvraag/observer";
-import {PurchaseRequisition} from "../sap/SapPrInfo";
-import {getGlobalSettingsCached} from "../plugin_options/options";
+import {ExpandedPrItem} from "../aanvraag/observer";
+import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 
 export async function fetchRequestList() {
     let chain = new FetchChain();
@@ -156,26 +155,27 @@ export interface BtwTarifs {
 
 let globalBtwTarifs: Map<string, Btw> | null = null;
 
-export async function getRequestsPerProject() {
-    let reqs = await fetchRequestListAndDetails();
-
-    let extendedReqs:  ExpandedPr[] = [];
-    for (const pr of reqs) {
-        extendedReqs.push(await createExpandedPr(pr));
-    }
-    let projects = (await getGlobalSettingsCached()).projects;
-    let projectMap = new Map<string, ExpandedPr[]>();
-    for (const project of projects) {
-        projectMap.set(project, []);
-    }
-    for (const extendedPr of extendedReqs) {
-        let meta: PrMeta = await fetchMetaCached(extendedPr.pr.reqId);
-        if (meta.project) {
-            if(!projectMap.has(meta.project)) {
-                projectMap.set(meta.project, []);
-            }
-            projectMap.get(meta.project)!.push(extendedPr); //! just created project in map if it was missing.
-        }
-    }
-    return projectMap;
+export interface AccountingField {
+    code: string;
+    dscr: string;
 }
+
+function getAccountingField(prItem: SapLineItem, idIncludes: string) {
+    let field = prItem.advanced.fields?.find(f => f.id.endsWith(idIncludes)) as SapField<string>;
+    if (!field)
+        throw new Error("Gringo: Cannot find field in PR for searchString: " + idIncludes);
+    let code = field.uniqueName;
+    let dscr = field.value;
+    if (!code)
+        throw new Error("Gringo: Cannot find field in PR for searchString: " + idIncludes);
+    return {code, dscr} satisfies AccountingField as AccountingField;
+}
+
+export function getPrItemCommodity(prItem: SapLineItem) {
+    return getAccountingField(prItem, "pAtHCommonCommodityCode");
+}
+
+export function getPrItemLedger(prItem: SapLineItem) {
+    return getAccountingField(prItem, "pAtHGeneralLedger");
+}
+

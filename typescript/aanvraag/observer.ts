@@ -3,7 +3,7 @@ import {getAndSetDecorated, gringo} from "../globals";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
-import {Btw, ExpandedPr, getBtwTarifsCachedInSession, uploadBtwTarifs} from "../aanvragen/requests";
+import {AccountingField, Btw, ExpandedPr, getBtwTarifsCachedInSession, getPrItemCommodity, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
 
 class AanvraagObserver extends PartialUrlObserver {
     constructor() {
@@ -101,17 +101,7 @@ let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, m
 export interface ExpandedPrItem {
     item: SapLineItem;
     tarif: Btw | null;
-}
-
-function getPrItemCommodity(prItem: SapLineItem) {
-    let commodityCodeField = prItem.advanced.fields?.find(f => f.id.endsWith("pAtHCommonCommodityCode")) as SapField<string>;
-    if (!commodityCodeField)
-        throw new Error("Gringo: Cannot find commodity code in PR.");
-    let code = commodityCodeField.uniqueName;
-    let dscr = commodityCodeField.value;
-    if (!code)
-        throw new Error("Gringo: Cannot find commodity code in PR.");
-    return {code, dscr};
+    ledger: AccountingField;
 }
 
 function calcBrutoLinePrice(item: SapLineItem, tarif: number) {
@@ -125,12 +115,12 @@ function calcBrutoLinePrice(item: SapLineItem, tarif: number) {
 export async function createExpandedPr(pr: PurchaseRequisition) {
     let items: ExpandedPrItem[] = [];
     for (let item of pr.lineItems) {
-        let bruto: number | null = null;
         let tarif: Btw | null = null;
         let tarifs = await getBtwTarifsCachedInSession();
         let commodity = getPrItemCommodity(item);
+        let ledger = getPrItemLedger(item);
         tarif = tarifs.get(commodity.code)??null;
-        items.push({item, tarif} satisfies ExpandedPrItem);
+        items.push({item, tarif, ledger} satisfies ExpandedPrItem);
     }
     return {pr, items} satisfies ExpandedPr;
 }
