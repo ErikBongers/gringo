@@ -941,7 +941,7 @@
 				total = 0;
 				break;
 			}
-			total += item.bruto;
+			total += calcBrutoLinePrice(item.item, item.tarif.tarif);
 		}
 		return {
 			total,
@@ -974,24 +974,24 @@
 			dscr
 		};
 	}
+	function calcBrutoLinePrice(item, tarif) {
+		let bruto = null;
+		let price = item.price.value;
+		let quantity = item.quantity.value;
+		bruto = price.amount * quantity * (100 + tarif);
+		bruto = Math.round(bruto) / 100;
+		return bruto;
+	}
 	async function createExpandedPr(pr) {
 		let items = [];
 		for (let item of pr.lineItems) {
-			let bruto = null;
 			let tarif = null;
 			let tarifs = await getBtwTarifsCachedInSession();
 			let commodity = getPrItemCommodity(item);
 			tarif = tarifs.get(commodity.code) ?? null;
-			if (tarif) {
-				let price = item.price.value;
-				let quantity = item.quantity.value;
-				bruto = price.amount * quantity * (100 + tarif.tarif);
-				bruto = Math.round(bruto) / 100;
-			}
 			items.push({
 				item,
-				tarif,
-				bruto
+				tarif
 			});
 		}
 		return {
@@ -1028,14 +1028,22 @@
     `);
 		updatePrItem(pr, lineEl, index);
 	}
+	function updatePrItemBrutoField(item, tarif, lineEl, index) {
+		let divBruto = lineEl.querySelector("div.newBruto div.bruto");
+		if (isNaN(tarif)) {
+			divBruto.textContent = `€---,-- EUR`;
+			return;
+		}
+		let bruto = calcBrutoLinePrice(item, tarif);
+		let brutoStr = priceFormatter$1.format(bruto);
+		let price = item.price.value;
+		divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
+	}
 	function updatePrItem(pr, lineEl, index) {
 		let btwDif = lineEl.querySelector("div.newBruto div.btw");
 		if (pr.items[index].tarif) {
 			btwDif.textContent = pr.items[index].tarif.tarif + "%";
-			let divBruto = lineEl.querySelector("div.newBruto div.bruto");
-			let brutoStr = priceFormatter$1.format(pr.items[index].bruto);
-			let price = pr.items[index].item.price.value;
-			divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
+			updatePrItemBrutoField(pr.items[index].item, pr.items[index].tarif.tarif, lineEl, index);
 		} else {
 			btwDif.textContent = "";
 			let txtSelecteer = "--selecteer--";
@@ -1051,12 +1059,18 @@
             )+
             button.btwSave.m1{Bewaar voor dit artikel}
         `);
-			let button = btwDif.querySelector("button.btwSave");
 			let select = btwDif.querySelector("select");
+			select.onchange = (ev) => {
+				onBtwSelectChange(pr, index, lineEl, parseInt(select.value));
+			};
+			let button = btwDif.querySelector("button.btwSave");
 			button.onclick = async (ev) => {
 				await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl);
 			};
 		}
+	}
+	function onBtwSelectChange(pr, index, lineEl, tarif) {
+		updatePrItemBrutoField(pr.items[index].item, tarif, lineEl, index);
 	}
 	async function btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl) {
 		let selected = select.value;

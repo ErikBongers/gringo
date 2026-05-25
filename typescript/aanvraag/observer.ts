@@ -79,7 +79,7 @@ export function calcPrTotal(pr: ExpandedPr) {
             total = 0;
             break;
         }
-        total += item.bruto!;
+        total += calcBrutoLinePrice(item.item, item.tarif.tarif);
     }
     return {total, currencySymbel, currency};
 }
@@ -102,7 +102,6 @@ let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, m
 interface ExpandedPrItem {
     item: SapLineItem;
     tarif: Btw | null;
-    bruto: number | null;
 }
 
 interface ExpandedPr {
@@ -121,6 +120,14 @@ function getPrItemCommodity(prItem: SapLineItem) {
     return {code, dscr};
 }
 
+function calcBrutoLinePrice(item: SapLineItem, tarif: number) {
+    let bruto: number | null = null;
+    let price = item.price.value;
+    let quantity = item.quantity.value;
+    bruto = price.amount * quantity * (100 + tarif);
+    bruto = Math.round(bruto) / 100;
+    return bruto;
+}
 export async function createExpandedPr(pr: PurchaseRequisition) {
     let items: ExpandedPrItem[] = [];
     for (let item of pr.lineItems) {
@@ -129,13 +136,7 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
         let tarifs = await getBtwTarifsCachedInSession();
         let commodity = getPrItemCommodity(item);
         tarif = tarifs.get(commodity.code)??null;
-        if(tarif) {
-            let price = item.price.value;
-            let quantity = item.quantity.value;
-            bruto = price.amount * quantity * (100 + tarif.tarif);
-            bruto = Math.round(bruto) / 100;
-        }
-        items.push({item, tarif, bruto});
+        items.push({item, tarif} satisfies ExpandedPrItem);
     }
     return {pr, items} satisfies ExpandedPr;
 }
@@ -173,14 +174,23 @@ async function decoratePrItem(pr: ExpandedPr, lineEl: HTMLElement, index: number
     updatePrItem(pr, lineEl, index);
 }
 
+function updatePrItemBrutoField(item: SapLineItem, tarif: number, lineEl: HTMLElement, index: number) {
+    let divBruto = lineEl.querySelector("div.newBruto div.bruto") as HTMLDivElement;
+    if (isNaN(tarif)) {
+        divBruto.textContent = `€---,-- EUR`;
+        return;
+    }
+    let bruto = calcBrutoLinePrice(item, tarif)
+    let brutoStr = priceFormatter.format(bruto);
+    let price = item.price.value;
+    divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
+}
+
 function updatePrItem(pr: ExpandedPr, lineEl: HTMLElement, index: number) {
     let btwDif = lineEl.querySelector("div.newBruto div.btw") as HTMLDivElement;
     if (pr.items[index].tarif) {
         btwDif.textContent = pr.items[index].tarif.tarif + "%";
-        let divBruto = lineEl.querySelector("div.newBruto div.bruto") as HTMLDivElement;
-        let brutoStr = priceFormatter.format(pr.items[index].bruto!);
-        let price = pr.items[index].item.price.value;
-        divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
+        updatePrItemBrutoField(pr.items[index].item, pr.items[index].tarif.tarif, lineEl, index);
     } else {
         btwDif.textContent = "";
         let txtSelecteer = "--selecteer--";
@@ -196,12 +206,17 @@ function updatePrItem(pr: ExpandedPr, lineEl: HTMLElement, index: number) {
             )+
             button.btwSave.m1{Bewaar voor dit artikel}
         `);
-        let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
         let select = btwDif.querySelector('select') as HTMLSelectElement;
+        select.onchange = (ev) => { onBtwSelectChange(pr, index, lineEl, parseInt(select.value));}
+        let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
         button.onclick = async (ev) => {
             await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl);
         };
     }
+}
+
+function onBtwSelectChange(pr: ExpandedPr, index: number, lineEl: HTMLElement, tarif: number) {
+    updatePrItemBrutoField(pr.items[index].item, tarif, lineEl, index);
 }
 
 async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: string, pr: ExpandedPr, index: number, lineEl: HTMLElement) {
