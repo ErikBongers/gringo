@@ -46,10 +46,12 @@ export async function fillTotalsTab() {
 
 function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {
     emmet.appendChild(container, `
-        div.group.flexRow.w100>(
-            span>(
-                span.lvl{${budgetLvl.key}}+
-                span.descr{${budgetLvl.descr}}
+        div.group.flexRow.w100.indent${budgetLvl.key.length}>(
+            (
+                span>(
+                    span.lvl{${budgetLvl.key}}+
+                    span.descr{${budgetLvl.descr}}
+                )
             )+
             span.price{ todo:total price }
         )
@@ -57,10 +59,12 @@ function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {
     for(let item of budgetLvl.items) {
         emmet.appendChild(container, `
         div.item.flexRow.w100>(
-            span>(
-                span.lvl{${item.budget}}+
-                span.descr{${item.title}}+
-                span.status{${item.tags}}
+            (
+                span>(
+                    span.lvl{${item.budget}}+
+                    span.descr{${item.title}}+
+                    span.status{${item.tags}}
+                )
             )+
             span.price{${item.bruto}}
         )

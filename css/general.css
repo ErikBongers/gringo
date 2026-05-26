@@ -286,3 +286,26 @@ request-info-item.hidden {
 .hide {
     display: none;
 }
+
+.totalsTab {
+    padding-inline: 5ch;
+    & > div {
+        padding-block: .2ch;
+        padding-inline: 1ch;
+    }
+    & .group {
+        &.indent1 {
+            background-color: #2c2555;
+            color: white;
+        }
+        background-color: #6d63a8;
+        color: white;
+    }
+    & .item {
+        background-color: #e6e3fa;
+        color: black;
+    }
+    & span.price {
+        margin-inline-start: auto;
+    }
+}
