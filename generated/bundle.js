@@ -1702,8 +1702,7 @@
 	function insertItem(parent, item, level) {
 		if (!item.budget) return;
 		let key = item.budget.substring(0, level + 1);
-		let remainder = item.budget.substring(level + 1).replaceAll("0", "");
-		if (remainder.length == 0) {
+		if (item.budget.substring(level + 1).replaceAll("0", "").length == 0) {
 			parent.items.push(item);
 			return;
 		}
@@ -1712,7 +1711,7 @@
 		else {
 			newParent = {
 				key,
-				descr: remainder,
+				descr: "todo...",
 				price: 0,
 				children: /* @__PURE__ */ new Map(),
 				items: []

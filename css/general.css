@@ -289,9 +289,11 @@ request-info-item.hidden {
 
 .totalsTab {
     padding-inline: 5ch;
+    & span {
+        padding-inline: 1ch;
+    }
     & > div {
         padding-block: .2ch;
-        padding-inline: 1ch;
     }
     & .group {
         &.indent1 {

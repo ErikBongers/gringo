@@ -94,7 +94,7 @@ function insertItem(parent: BudgetLevel, item: JsonPrItem, level: number) {
     if(parent.children.has(key)) {
         newParent = parent.children.get(key)!;
     } else {
-        newParent = {key, descr: remainder, price: 0, children: new Map<string, BudgetLevel>(), items: []};
+        newParent = {key, descr: "todo...", price: 0, children: new Map<string, BudgetLevel>(), items: []};
         parent.children.set(key, newParent);
     }
     insertItem(newParent, item, level+1);
