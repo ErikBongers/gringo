@@ -393,6 +393,13 @@
 			extra: el.querySelector("div.extra")
 		};
 	}
+	let priceFormatter$1 = new Intl.NumberFormat("nl-BE", {
+		maximumFractionDigits: 2,
+		minimumFractionDigits: 2
+	});
+	function formatPrice(price, currencySymbol = "€", currency = "") {
+		return `${currencySymbol}${priceFormatter$1.format(price)} ${currency}`.trim();
+	}
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
@@ -1380,6 +1387,16 @@
 		for (const pr of reqs) extendedReqs.push(await createExpandedPr(pr));
 		return extendedReqs;
 	}
+	async function getRequestsPerProject(expenses) {
+		let projects = (await getGlobalSettingsCached()).projects;
+		let projectMap = /* @__PURE__ */ new Map();
+		for (const project of projects) projectMap.set(project, []);
+		for (const item of expenses) {
+			if (!projectMap.has(item.project)) projectMap.set(item.project, []);
+			projectMap.get(item.project).push(item);
+		}
+		return projectMap;
+	}
 	async function exportPrItemsToExcel() {
 		let jsonPrData = await createJsonPrData();
 		let headers = [
@@ -1512,14 +1529,14 @@
 	async function updatePr(pr) {
 		let newTotal = document.querySelector("div.newTotalBruto");
 		let { total, currencySymbel, currency } = calcPrTotal(pr);
-		newTotal.textContent = `${currencySymbel}${priceFormatter$1.format(total)}  ${currency}`;
+		newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}  ${currency}`;
 		let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
 		for (let index = 0; index < nonDecoratedItems.length; index++) {
 			let itemEl = nonDecoratedItems[index];
 			await decoratePrItem(pr, itemEl, index);
 		}
 	}
-	let priceFormatter$1 = new Intl.NumberFormat("nl-BE", {
+	let priceFormatter = new Intl.NumberFormat("nl-BE", {
 		maximumFractionDigits: 2,
 		minimumFractionDigits: 2
 	});
@@ -1591,7 +1608,7 @@
 			return;
 		}
 		let bruto = calcBrutoLinePrice(item, tarif);
-		let brutoStr = priceFormatter$1.format(bruto);
+		let brutoStr = priceFormatter.format(bruto);
 		let price = item.price.value;
 		divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
 	}
@@ -1671,7 +1688,38 @@
 			items: []
 		};
 		for (const item of expenses) insertItem(expensesRoot, item, 1);
+		emmet.appendChild(container, `h2{Per project}`);
+		await displayPerProject(container, expenses);
+		emmet.appendChild(container, `h2{Per Budgetpost}`);
 		displayBudgetLevel(container, expensesRoot);
+	}
+	async function displayPerProject(container, expenses) {
+		let perProject = await getRequestsPerProject(expenses);
+		for (let [project, requests] of perProject) {
+			let total = requests.map((i) => parseFloat(i.bruto)).reduce((a, b) => a + b, 0);
+			emmet.appendChild(container, `
+            div.group.flexRow.w100>(
+                (
+                    span>(
+                        span.dscr{${project}}
+                    )
+                )+
+                span.price{${formatPrice(total)}}
+            )
+        `);
+			for (let item of requests) emmet.appendChild(container, `
+                div.item.flexRow.w100>(
+                    (
+                        span>(
+                            span.lvl{${item.budget}}+
+                            span.descr{${item.title}}+
+                            span.status{${item.tags}}
+                        )
+                    )+
+                    span.price{${formatPrice(parseFloat(item.bruto))}}
+                )
+            `);
+		}
 	}
 	function displayBudgetLevel(container, budgetLvl) {
 		emmet.appendChild(container, `
@@ -2105,14 +2153,10 @@
 		let newTotal = reqDiv.querySelector("div.gringo.listRowTotal");
 		let { total, currencySymbel } = calcPrTotal(await createExpandedPr(await fetchPr(request.id)));
 		if (total != 0) {
-			newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}`;
+			newTotal.textContent = `${currencySymbel}${priceFormatter$1.format(total)}`;
 			newTotal.style.display = "block";
 		} else newTotal.style.display = "none";
 	}
-	let priceFormatter = new Intl.NumberFormat("nl-BE", {
-		maximumFractionDigits: 2,
-		minimumFractionDigits: 2
-	});
 	function paintTag(tagElement, tagDef, selected) {
 		tagElement.innerText = tagDef.name;
 		tagElement.classList.add("gringoTag");

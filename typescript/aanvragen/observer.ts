@@ -1,6 +1,6 @@
 import {PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter/html";
-import {gringo} from "../globals";
+import {gringo, priceFormatter} from "../globals";
 import {saveMetasLocal} from "../db/gringoDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchPr} from "../sap/api";
@@ -461,14 +461,12 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     let {total, currencySymbel} = calcPrTotal(expPr);
 
     if(total != 0) {
-        newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}`;
+        newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}`; //todo: use formatprice()
         newTotal.style.display = "block";
     }
     else
         newTotal.style.display = "none";
 }
-
-let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, minimumFractionDigits: 2});
 
 function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
     tagElement.innerText = tagDef.name;

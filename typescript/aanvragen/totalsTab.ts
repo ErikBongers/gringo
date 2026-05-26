@@ -1,7 +1,7 @@
 import {emmet} from "../../libs/Emmeter/html";
-import { createInfoBlock } from "../globals";
+import {createInfoBlock, formatPrice} from "../globals";
 import {ExpandedPrItem} from "../aanvraag/observer";
-import {createJsonPrData, getExtendedRequests, JsonPrData, JsonPrItem} from "./aggregate";
+import {createJsonPrData, getExtendedRequests, getRequestsPerProject, JsonPrData, JsonPrItem} from "./aggregate";
 
 export async function fillTotalsTab() {
     let container = document.querySelector("div.gringo.totalsTab") as HTMLElement;
@@ -41,7 +41,43 @@ export async function fillTotalsTab() {
     for (const item of expenses) {
         insertItem(expensesRoot, item, 1);
     }
+    emmet.appendChild(container, `h2{Per project}`)
+    await displayPerProject(container, expenses);
+    emmet.appendChild(container, `h2{Per Budgetpost}`)
     displayBudgetLevel(container, expensesRoot);
+}
+
+async function displayPerProject(container: HTMLElement, expenses: JsonPrItem[]) {
+    let perProject = await getRequestsPerProject(expenses);
+    for(let [project, requests] of perProject) {
+        let total = requests
+            .map(i => parseFloat(i.bruto))
+            .reduce((a, b) => a+b, 0);
+        emmet.appendChild(container, `
+            div.group.flexRow.w100>(
+                (
+                    span>(
+                        span.dscr{${project}}
+                    )
+                )+
+                span.price{${formatPrice(total)}}
+            )
+        `);
+        for(let item of requests) {
+            emmet.appendChild(container, `
+                div.item.flexRow.w100>(
+                    (
+                        span>(
+                            span.lvl{${item.budget}}+
+                            span.descr{${item.title}}+
+                            span.status{${item.tags}}
+                        )
+                    )+
+                    span.price{${formatPrice(parseFloat(item.bruto))}}
+                )
+            `);
+        }
+    }
 }
 
 function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {

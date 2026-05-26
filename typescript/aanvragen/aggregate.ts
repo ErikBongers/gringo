@@ -119,21 +119,17 @@ export async function getExtendedRequests() {
     return extendedReqs;
 }
 
-export async function getRequestsPerProject() {
-    let extendedReqs = await getExtendedRequests();
+export async function getRequestsPerProject(expenses: JsonPrItem[]) {
     let projects = (await getGlobalSettingsCached()).projects;
-    let projectMap = new Map<string, ExpandedPr[]>();
+    let projectMap = new Map<string, JsonPrItem[]>();
     for (const project of projects) {
         projectMap.set(project, []);
     }
-    for (const extendedPr of extendedReqs) {
-        let meta: PrMeta = await fetchMetaCached(extendedPr.pr.reqId);
-        if (meta.project) {
-            if (!projectMap.has(meta.project)) {
-                projectMap.set(meta.project, []);
-            }
-            projectMap.get(meta.project)!.push(extendedPr); //! just created in map if it was missing.
+    for (const item of expenses) {
+        if (!projectMap.has(item.project)) {
+            projectMap.set(item.project, []);
         }
+        projectMap.get(item.project)!.push(item); //! just created in map if it was missing.
     }
     return projectMap;
 }
