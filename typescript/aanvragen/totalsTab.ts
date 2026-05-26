@@ -1,7 +1,7 @@
 import {emmet} from "../../libs/Emmeter/html";
 import { createInfoBlock } from "../globals";
 import {ExpandedPrItem} from "../aanvraag/observer";
-import { getExtendedRequests } from "./aggregate";
+import {createJsonPrData, getExtendedRequests, JsonPrItem} from "./aggregate";
 
 export async function fillTotalsTab() {
     let container = document.querySelector("div.gringo.totalsTab") as HTMLElement;
@@ -24,10 +24,10 @@ export async function fillTotalsTab() {
     //this is a tree structure.
     //for every item, drill down the tree and insert it at the deepest level.
     let expensesRoot: BudgetLevel = {key: "6", descr: "Uitgaven", price: 0, children: new Map<string, BudgetLevel>(), items: []};
-    let prs = await getExtendedRequests();
-    let expenses = prs
-        .flatMap(p => p.items)
-        .filter(item => item.budget != null && item.budget.budget.startsWith("6"));
+    let jsonPrData = await createJsonPrData();
+    let expenses = jsonPrData.items
+        .filter(item => !["In aanmaak", "Afgewezen"].includes(item.status))
+        .filter(item => item.budget != "" && item.budget.startsWith("6"));
     for (const item of expenses) {
         insertItem(expensesRoot, item, 1);
     }
@@ -38,14 +38,14 @@ interface BudgetLevel {
     descr: string;
     price: number;
     children: Map<string, BudgetLevel>;
-    items: ExpandedPrItem[];
+    items: JsonPrItem[];
 }
 
-function insertItem(parent: BudgetLevel, item: ExpandedPrItem, level: number) {
+function insertItem(parent: BudgetLevel, item: JsonPrItem, level: number) {
     if(!item.budget)
         return; //todo: handle this instead of ignoring.
-    let key = item.budget.budget.substring(0, level+1);
-    let remainder = item.budget.budget.substring(level+1).replaceAll("0", "");
+    let key = item.budget.substring(0, level+1);
+    let remainder = item.budget.substring(level+1).replaceAll("0", "");
     if(remainder.length == 0) {
         parent.items.push(item);
         return;

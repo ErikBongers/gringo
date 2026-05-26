@@ -1381,9 +1381,10 @@
 		return extendedReqs;
 	}
 	async function exportPrItemsToExcel() {
-		let jsonPrData = await preparePrItemsForExport();
+		let jsonPrData = await createJsonPrData();
 		let headers = [
 			"prId",
+			"status",
 			"itemNo",
 			"bruto",
 			"tarif",
@@ -1396,6 +1397,7 @@
 		for (let item of jsonPrData.items) {
 			let row = [];
 			row.push(item.prId);
+			row.push(item.status);
 			row.push(item.itemNo);
 			row.push(item.bruto);
 			row.push(item.tarif);
@@ -1410,12 +1412,13 @@
 		await navigator.clipboard.writeText(table.outerHTML);
 		console.log("CIOPIED.");
 	}
-	async function preparePrItemsForExport() {
+	async function createJsonPrData() {
 		let prs = await getExtendedRequests();
 		let jsonPrData = { items: [] };
 		for (let pr of prs) for (const item of pr.items) {
 			const index = pr.items.indexOf(item);
 			let prId = pr.pr.reqId;
+			let status = pr.pr.status;
 			let itemNo = index.toString();
 			let bruto = "";
 			if (item.tarif) bruto = calcBrutoLinePrice(item.item, item.tarif.tarif).toString();
@@ -1428,6 +1431,7 @@
 			let budget = item.budget?.budget ?? "";
 			jsonPrData.items.push({
 				prId,
+				status,
 				itemNo,
 				bruto,
 				tarif,
@@ -1657,13 +1661,13 @@
 			children: /* @__PURE__ */ new Map(),
 			items: []
 		};
-		let expenses = (await getExtendedRequests()).flatMap((p) => p.items).filter((item) => item.budget != null && item.budget.budget.startsWith("6"));
+		let expenses = (await createJsonPrData()).items.filter((item) => item.status).filter((item) => item.budget != "" && item.budget.startsWith("6"));
 		for (const item of expenses) insertItem(expensesRoot, item, 1);
 	}
 	function insertItem(parent, item, level) {
 		if (!item.budget) return;
-		let key = item.budget.budget.substring(0, level + 1);
-		let remainder = item.budget.budget.substring(level + 1).replaceAll("0", "");
+		let key = item.budget.substring(0, level + 1);
+		let remainder = item.budget.substring(level + 1).replaceAll("0", "");
 		if (remainder.length == 0) {
 			parent.items.push(item);
 			return;
