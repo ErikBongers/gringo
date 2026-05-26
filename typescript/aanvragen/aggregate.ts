@@ -165,31 +165,75 @@ export async function getRequestsPerBudget() {
 }
 
 export async function exportPrItemsToExcel(){
-    let prs = await getExtendedRequests();
+    let jsonPrData = await createJsonPrData();
 
     let headers = ["prId", "itemNo", "bruto", "tarif", "project", "tags", "title", "budget"];
     let rows: string[][] = [];
-    for(let pr of prs) {
-        for (const item of pr.items) {
-            const index = pr.items.indexOf(item);
-            let row: string[] = [];
-            row.push(pr.pr.reqId);
-            row.push(index.toString());
-            if(item.tarif)
-                row.push(calcBrutoLinePrice(item.item, item.tarif.tarif).toString());
-            else
-                row.push(calcBrutoLinePrice(item.item, 0).toString()); //use netto price
-            row.push(item.tarif?.tarif ? item.tarif?.tarif.toString() : "?");
-            let meta = await fetchMetaCached(pr.pr.reqId);
-            row.push(meta.project??"")
-            row.push(meta.tags.join(","));
-            row.push(pr.pr.title.value);
-            row.push(item.budget?.budget??"");
-            rows.push(row);
-        }
+    for (let item of jsonPrData.items) {
+        let row: string[] = [];
+        row.push(item.prId);
+        row.push(item.itemNo);
+        row.push(item.bruto);
+        row.push(item.tarif);
+        row.push(item.project);
+        row.push(item.tags);
+        row.push(item.title);
+        row.push(item.budget);
+        rows.push(row);
     }
     let table = createHtmlTable(headers, rows);
     sessionStorage.setItem("PrItemTable", table.outerHTML);
     await navigator.clipboard.writeText(table.outerHTML);
     console.log("CIOPIED.");
+}
+
+export interface JsonPrItem {
+    prId: string;
+    itemNo: string;
+    bruto: string;
+    tarif: string;
+    project: string;
+    tags: string;
+    title: string;
+    budget: string;
+}
+
+export interface JsonPrData {
+    items: JsonPrItem[];
+}
+
+export async function createJsonPrData() {
+    let prs = await getExtendedRequests();
+    let jsonPrData: JsonPrData = {
+        items: []
+    };
+    for(let pr of prs) {
+        for (const item of pr.items) {
+            const index = pr.items.indexOf(item);
+            let prId = pr.pr.reqId;
+            let itemNo = index.toString();
+            let bruto = "";
+            if(item.tarif)
+                bruto = calcBrutoLinePrice(item.item, item.tarif.tarif).toString();
+            else
+                bruto = calcBrutoLinePrice(item.item, 0).toString(); //use netto pri;
+            let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
+            let meta = await fetchMetaCached(pr.pr.reqId);
+            let project = meta.project??"";
+            let tags = meta.tags.join(",");
+            let title = pr.pr.title.value;
+            let budget = item.budget?.budget??"";
+            jsonPrData.items.push({
+                prId,
+                itemNo,
+                bruto,
+                tarif,
+                project,
+                tags,
+                title,
+                budget
+            });
+        }
+    }
+    return jsonPrData;
 }

@@ -377,6 +377,22 @@
 	function getAndSetDecorated(el) {
 		return getAndSetFlag(el, "Decorated");
 	}
+	function createInfoBlock(el) {
+		emmet.appendChild(el, `
+        div.infoBlock>(
+            h2.title+
+            div.errors+
+            div.info+
+            div.extra
+        )
+    `);
+		return {
+			title: el.querySelector("h2.title"),
+			errors: el.querySelector("div.errors"),
+			info: el.querySelector("div.info"),
+			extra: el.querySelector("div.extra")
+		};
+	}
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
@@ -1365,7 +1381,7 @@
 		return extendedReqs;
 	}
 	async function exportPrItemsToExcel() {
-		let prs = await getExtendedRequests();
+		let jsonPrData = await preparePrItemsForExport();
 		let headers = [
 			"prId",
 			"itemNo",
@@ -1377,25 +1393,51 @@
 			"budget"
 		];
 		let rows = [];
-		for (let pr of prs) for (const item of pr.items) {
-			const index = pr.items.indexOf(item);
+		for (let item of jsonPrData.items) {
 			let row = [];
-			row.push(pr.pr.reqId);
-			row.push(index.toString());
-			if (item.tarif) row.push(calcBrutoLinePrice(item.item, item.tarif.tarif).toString());
-			else row.push(calcBrutoLinePrice(item.item, 0).toString());
-			row.push(item.tarif?.tarif ? item.tarif?.tarif.toString() : "?");
-			let meta = await fetchMetaCached(pr.pr.reqId);
-			row.push(meta.project ?? "");
-			row.push(meta.tags.join(","));
-			row.push(pr.pr.title.value);
-			row.push(item.budget?.budget ?? "");
+			row.push(item.prId);
+			row.push(item.itemNo);
+			row.push(item.bruto);
+			row.push(item.tarif);
+			row.push(item.project);
+			row.push(item.tags);
+			row.push(item.title);
+			row.push(item.budget);
 			rows.push(row);
 		}
 		let table = createHtmlTable(headers, rows);
 		sessionStorage.setItem("PrItemTable", table.outerHTML);
 		await navigator.clipboard.writeText(table.outerHTML);
 		console.log("CIOPIED.");
+	}
+	async function preparePrItemsForExport() {
+		let prs = await getExtendedRequests();
+		let jsonPrData = { items: [] };
+		for (let pr of prs) for (const item of pr.items) {
+			const index = pr.items.indexOf(item);
+			let prId = pr.pr.reqId;
+			let itemNo = index.toString();
+			let bruto = "";
+			if (item.tarif) bruto = calcBrutoLinePrice(item.item, item.tarif.tarif).toString();
+			else bruto = calcBrutoLinePrice(item.item, 0).toString();
+			let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
+			let meta = await fetchMetaCached(pr.pr.reqId);
+			let project = meta.project ?? "";
+			let tags = meta.tags.join(",");
+			let title = pr.pr.title.value;
+			let budget = item.budget?.budget ?? "";
+			jsonPrData.items.push({
+				prId,
+				itemNo,
+				bruto,
+				tarif,
+				project,
+				tags,
+				title,
+				budget
+			});
+		}
+		return jsonPrData;
 	}
 	//#endregion
 	//#region typescript/aanvraag/observer.ts
@@ -1602,30 +1644,43 @@
 	}
 	//#endregion
 	//#region typescript/aanvragen/totalsTab.ts
-	function fillTotalsTab() {
+	async function fillTotalsTab() {
 		let container = document.querySelector("div.gringo.totalsTab");
 		container.innerHTML = "";
 		let infoBlock = createInfoBlock(container);
 		infoBlock.title.textContent = "Totals";
-		infoBlock.errors.textContent = "No errors.";
 		infoBlock.info.textContent = "Filling totals....";
-		infoBlock.extra.textContent = "Extra info...";
-	}
-	function createInfoBlock(el) {
-		emmet.appendChild(el, `
-        div.infoBlock>(
-            h2.title{Title line}+
-            div.errors{errors...}+
-            div.info{info...}+
-            div.extra{extra...}
-        )
-    `);
-		return {
-			title: el.querySelector("h2.title"),
-			errors: el.querySelector("div.errors"),
-			info: el.querySelector("div.info"),
-			extra: el.querySelector("div.extra")
+		let expensesRoot = {
+			key: "6",
+			descr: "Uitgaven",
+			price: 0,
+			children: /* @__PURE__ */ new Map(),
+			items: []
 		};
+		let expenses = (await getExtendedRequests()).flatMap((p) => p.items).filter((item) => item.budget != null && item.budget.budget.startsWith("6"));
+		for (const item of expenses) insertItem(expensesRoot, item, 1);
+	}
+	function insertItem(parent, item, level) {
+		if (!item.budget) return;
+		let key = item.budget.budget.substring(0, level + 1);
+		let remainder = item.budget.budget.substring(level + 1).replaceAll("0", "");
+		if (remainder.length == 0) {
+			parent.items.push(item);
+			return;
+		}
+		let newParent;
+		if (parent.children.has(key)) newParent = parent.children.get(key);
+		else {
+			newParent = {
+				key,
+				descr: remainder,
+				price: 0,
+				children: /* @__PURE__ */ new Map(),
+				items: []
+			};
+			parent.children.set(key, newParent);
+		}
+		insertItem(newParent, item, level + 1);
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts
