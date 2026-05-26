@@ -1654,6 +1654,15 @@
 		let infoBlock = createInfoBlock(container);
 		infoBlock.title.textContent = "Totals";
 		infoBlock.info.textContent = "Filling totals....";
+		let jsonPrData;
+		let jsonPrDataStr = sessionStorage.getItem("jsonPrData");
+		if (jsonPrDataStr) jsonPrData = JSON.parse(jsonPrDataStr);
+		else {
+			jsonPrData = await createJsonPrData();
+			sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
+		}
+		let expenses = jsonPrData.items.filter((item) => !["In aanmaak", "Afgewezen"].includes(item.status)).filter((item) => item.budget != "" && item.budget.startsWith("6"));
+		expenses.sort((a, b) => a.budget.localeCompare(b.budget));
 		let expensesRoot = {
 			key: "6",
 			descr: "Uitgaven",
@@ -1661,8 +1670,30 @@
 			children: /* @__PURE__ */ new Map(),
 			items: []
 		};
-		let expenses = (await createJsonPrData()).items.filter((item) => item.status).filter((item) => item.budget != "" && item.budget.startsWith("6"));
 		for (const item of expenses) insertItem(expensesRoot, item, 1);
+		displayBudgetLevel(container, expensesRoot);
+	}
+	function displayBudgetLevel(container, budgetLvl) {
+		emmet.appendChild(container, `
+        div.group.flexRow.w100>(
+            span>(
+                span.lvl{${budgetLvl.key}}+
+                span.descr{${budgetLvl.descr}}
+            )+
+            span.price{ todo:total price }
+        )
+    `);
+		for (let item of budgetLvl.items) emmet.appendChild(container, `
+        div.item.flexRow.w100>(
+            span>(
+                span.lvl{${item.budget}}+
+                span.descr{${item.title}}+
+                span.status{${item.tags}}
+            )+
+            span.price{${item.bruto}}
+        )
+    `);
+		budgetLvl.children.forEach((b) => displayBudgetLevel(container, b));
 	}
 	function insertItem(parent, item, level) {
 		if (!item.budget) return;

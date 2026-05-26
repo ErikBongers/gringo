@@ -1,7 +1,7 @@
 import {emmet} from "../../libs/Emmeter/html";
 import { createInfoBlock } from "../globals";
 import {ExpandedPrItem} from "../aanvraag/observer";
-import {createJsonPrData, getExtendedRequests, JsonPrItem} from "./aggregate";
+import {createJsonPrData, getExtendedRequests, JsonPrData, JsonPrItem} from "./aggregate";
 
 export async function fillTotalsTab() {
     let container = document.querySelector("div.gringo.totalsTab") as HTMLElement;
@@ -23,14 +23,50 @@ export async function fillTotalsTab() {
     // 611 : descr : price
     //this is a tree structure.
     //for every item, drill down the tree and insert it at the deepest level.
-    let expensesRoot: BudgetLevel = {key: "6", descr: "Uitgaven", price: 0, children: new Map<string, BudgetLevel>(), items: []};
-    let jsonPrData = await createJsonPrData();
+    let jsonPrData: JsonPrData;
+    let jsonPrDataStr = sessionStorage.getItem("jsonPrData");
+    if(jsonPrDataStr) {
+        jsonPrData = JSON.parse(jsonPrDataStr) as JsonPrData;
+    } else {
+        jsonPrData = await createJsonPrData();
+        sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
+    }
     let expenses = jsonPrData.items
         .filter(item => !["In aanmaak", "Afgewezen"].includes(item.status))
         .filter(item => item.budget != "" && item.budget.startsWith("6"));
+    expenses.sort((a, b) => a.budget.localeCompare(b.budget));
+
+    // 666 = expenses:
+    let expensesRoot: BudgetLevel = {key: "6", descr: "Uitgaven", price: 0, children: new Map<string, BudgetLevel>(), items: []};
     for (const item of expenses) {
         insertItem(expensesRoot, item, 1);
     }
+    displayBudgetLevel(container, expensesRoot);
+}
+
+function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {
+    emmet.appendChild(container, `
+        div.group.flexRow.w100>(
+            span>(
+                span.lvl{${budgetLvl.key}}+
+                span.descr{${budgetLvl.descr}}
+            )+
+            span.price{ todo:total price }
+        )
+    `);
+    for(let item of budgetLvl.items) {
+        emmet.appendChild(container, `
+        div.item.flexRow.w100>(
+            span>(
+                span.lvl{${item.budget}}+
+                span.descr{${item.title}}+
+                span.status{${item.tags}}
+            )+
+            span.price{${item.bruto}}
+        )
+    `);
+    }
+    budgetLvl.children.forEach(b => displayBudgetLevel(container, b));
 }
 
 interface BudgetLevel {
