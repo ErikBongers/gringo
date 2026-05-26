@@ -167,11 +167,12 @@ export async function getRequestsPerBudget() {
 export async function exportPrItemsToExcel(){
     let jsonPrData = await createJsonPrData();
 
-    let headers = ["prId", "itemNo", "bruto", "tarif", "project", "tags", "title", "budget"];
+    let headers = ["prId", "status", "itemNo", "bruto", "tarif", "project", "tags", "title", "budget"];
     let rows: string[][] = [];
     for (let item of jsonPrData.items) {
         let row: string[] = [];
         row.push(item.prId);
+        row.push(item.status);
         row.push(item.itemNo);
         row.push(item.bruto);
         row.push(item.tarif);
@@ -189,6 +190,7 @@ export async function exportPrItemsToExcel(){
 
 export interface JsonPrItem {
     prId: string;
+    status: string;
     itemNo: string;
     bruto: string;
     tarif: string;
@@ -211,6 +213,7 @@ export async function createJsonPrData() {
         for (const item of pr.items) {
             const index = pr.items.indexOf(item);
             let prId = pr.pr.reqId;
+            let status = pr.pr.status;
             let itemNo = index.toString();
             let bruto = "";
             if(item.tarif)
@@ -225,6 +228,7 @@ export async function createJsonPrData() {
             let budget = item.budget?.budget??"";
             jsonPrData.items.push({
                 prId,
+                status,
                 itemNo,
                 bruto,
                 tarif,
