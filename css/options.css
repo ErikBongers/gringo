@@ -65,6 +65,9 @@ input[type="checkbox" i]  {
     & textarea {
         width: 100%;
         aspect-ratio: 16/9;
+        &.tags {
+            aspect-ratio: 16/7;
+        }
     }
 }
 

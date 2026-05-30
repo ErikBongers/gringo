@@ -2,12 +2,15 @@ import {FetchChain} from "../fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
-import {gringo} from "../globals";
+import {getOptions, gringo} from "../globals";
 import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
 import {ExpandedPrItem} from "../aanvraag/observer";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
+import {emmet} from "../../libs/Emmeter/html";
+import {RequestBasicInfo} from "./observer";
+import {getGlobalSettingsCached} from "../plugin_options/options";
 
 export async function fetchRequestList() {
     let chain = new FetchChain();
@@ -178,5 +181,22 @@ export function getPrItemLedger(prItem: SapLineItem) {
 
 export function getPrItemAsset(prItem: SapLineItem) {
     return getAccountingField(prItem, "pAtHAsset");
+}
+
+export interface TagDef {
+    name: string,
+    description: string,
+    color: string,
+    bkgColor: string,
+    order: number
+}
+
+let globalTagsMap: Map<string, TagDef> | null = null;
+
+export async function getGlobalTags() {
+    let globalSettings = await getGlobalSettingsCached();
+    if(!globalTagsMap)
+        globalTagsMap = new Map<string, TagDef>(globalSettings.tagDefs.map(t => [t.name, t]));
+    return globalTagsMap;
 }
 

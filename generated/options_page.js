@@ -329,7 +329,22 @@
 			blockId
 		});
 	}
-	let defaultGlobalSettings = { projects: [] };
+	let defaultGlobalSettings = {
+		projects: [],
+		tagDefs: structuredClone([{
+			name: "BB>",
+			description: "Bestelbon verzonden",
+			color: "",
+			bkgColor: "orange",
+			order: 0
+		}, {
+			name: "✔",
+			description: "Bestelling ontvangen",
+			color: "green",
+			bkgColor: "",
+			order: 100
+		}])
+	};
 	let globalSettings = null;
 	async function getGlobalSettingsCached() {
 		if (globalSettings) return globalSettings;
@@ -363,8 +378,30 @@
 	};
 	async function saveGlobalsFromGui() {
 		if (prompt("Zijdezeker? Tik dan GRINGO en klik Ok.") != "GRINGO") return;
-		console.log("SAVING GLOBALS");
-		await saveGlobalSettings({ projects: document.getElementById("txtProjects").value.split("\n").map((l) => l.trim()).filter((l) => l != "") });
+		let projects = document.getElementById("txtProjects").value.split("\n").map((l) => l.trim()).filter((l) => l != "");
+		let tags = document.getElementById("txtGlobalTags").value.split("\n").map((l) => l.trim()).filter((l) => l != "");
+		let order = 0;
+		await saveGlobalSettings({
+			projects,
+			tagDefs: tags.map((t) => {
+				let values = t.split(",").map((t) => t.trim());
+				let name = "";
+				let description = "";
+				let color = "";
+				let bkgColor = "";
+				if (values.length >= 1) name = values[0];
+				if (values.length >= 2) description = values[1];
+				if (values.length >= 3) color = values[2];
+				if (values.length >= 4) bkgColor = values[3];
+				return {
+					name,
+					description,
+					color,
+					bkgColor,
+					order: order++
+				};
+			})
+		});
 	}
 	async function restoreOptionsToGui() {
 		let items = await chrome.storage.sync.get(null);
@@ -377,8 +414,16 @@
 	}
 	async function fillGlobalOptionsInGui() {
 		let txtProjects = document.getElementById("txtProjects");
+		let txtGlobalTags = document.getElementById("txtGlobalTags");
 		setGlobalSetting(await fetchGlobalSettings());
-		txtProjects.value = (await getGlobalSettingsCached()).projects.join("\n");
+		let globalSettings = await getGlobalSettingsCached();
+		txtProjects.value = globalSettings.projects.join("\n");
+		txtGlobalTags.value = globalSettings.tagDefs.map((tagDef) => {
+			if (tagDef.bkgColor != "") return `${tagDef.name}, ${tagDef.description}, ${tagDef.color}, ${tagDef.bkgColor}`;
+			else if (tagDef.color != "") return `${tagDef.name}, ${tagDef.description}, ${tagDef.color}`;
+			else if (tagDef.description != "") return `${tagDef.name}, ${tagDef.description}`;
+			else return tagDef.name;
+		}).join("\n");
 	}
 	async function fillOptionsInGui() {
 		for (let optiondDef of htmlOptionDefs.values()) {

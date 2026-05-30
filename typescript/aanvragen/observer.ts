@@ -5,7 +5,7 @@ import {saveMetasLocal} from "../db/gringoDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchPr} from "../sap/api";
 import {calcPrTotal, createExpandedPr} from "../aanvraag/observer";
-import {fetchChangedMetas, fetchFullRequest, fetchMetaCached, fetchRequestList, fetchRequestListAndDetails, PrMeta, saveMeta} from "./requests";
+import {fetchChangedMetas, fetchFullRequest, fetchMetaCached, fetchRequestList, fetchRequestListAndDetails, getGlobalTags, PrMeta, saveMeta, TagDef} from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
 
@@ -272,7 +272,7 @@ function onTabButtonClick(tabContainer: HTMLDivElement) {
     fillTotalsTab();
 }
 
-function decorateSearchPanel() {
+async function decorateSearchPanel() {
     let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
     let divSearchPanel = document.querySelector(`div.gringoSearchPanel`) as HTMLDivElement | null;
     if(!divSearchPanel)
@@ -285,7 +285,8 @@ function decorateSearchPanel() {
         )    
     `).first as HTMLDetailsElement;
     let tbody = tagsCollapse.querySelector("tbody") as HTMLTableSectionElement
-    defaultTags
+    let globalTags = await getGlobalTags();
+    [...globalTags.values()]
         .sort((a, b) => a.order - b.order)
         .forEach(tagDef => {
             createTagFilterRow(tbody, tagDef);
@@ -396,27 +397,6 @@ async function decoratePr(request: RequestBasicInfo) {
     await updatePrLine(request, meta);
 }
 
-interface TagDef  {
-    name: string,
-    description: string,
-    color: string,
-    bkgColor: string,
-    order: number
-}
-const defaultTags: TagDef[] = [
-    { name: "BB>", description: "Bestelbon verzonden", color: "", bkgColor: "orange", order: 0},
-    { name: "✔", description: "Bestelling ontvangen", color: "green", bkgColor: "", order: 100},
-    { name: "MW", description: "", color: "", bkgColor: "", order: 300},
-    { name: "BK", description: "", color: "", bkgColor: "", order: 301},
-    { name: "brol", description: "", color: "", bkgColor: "", order: 330},
-    { name: "Zever", description: "", color: "blue", bkgColor: "", order: 390},
-    { name: "En", description: "", color: "blue", bkgColor: "", order: 400},
-    { name: "Nog", description: "", color: "blue", bkgColor: "", order: 500},
-    { name: "Veel", description: "", color: "blue", bkgColor: "", order: 600},
-    { name: "Langerx", description: "", color: "blue", bkgColor: "", order: 700},
-];
-const defaultTagsMap: Map<string, TagDef> = new Map(defaultTags.map(t => [t.name, t]));
-
 function getTagsFilters() {
     let json = localStorage.getItem('gringo.tagsFilters');
     if(!json)
@@ -436,9 +416,10 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     if(!tagsContainer)
         return;
     tagsContainer.innerHTML = "";
+    let globalTagsMap = await getGlobalTags();
     meta.tags
         .map(tag => {
-            return defaultTagsMap.get(tag);
+            return globalTagsMap.get(tag);
         })
         .filter(t  => !!t)
         .sort((a, b) => a.order - b.order)
@@ -448,7 +429,7 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
             `).first as HTMLSpanElement;
                 paintTag(tagSpan, tagDef, true);
         });
-    let orphans = meta.tags.filter(tag => !defaultTags.find(tagDef => tagDef.name == tag));
+    let orphans = meta.tags.filter(tag => ![...globalTagsMap.values()].find(tagDef => tagDef.name == tag));
     if(orphans.length > 0) {
         emmet.appendChild(tagsContainer, orphans.map(tag => `span.gringoTag{${tag}}`).join("+"));
     }
@@ -543,7 +524,7 @@ async function onSelectProjectClick(request: RequestBasicInfo, meta: PrMeta, sel
     await saveMeta(meta.prId, meta, "localStorage and cloud");
 }
 
-function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button: HTMLButtonElement) {
+async function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button: HTMLButtonElement) {
     let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
     if(!popover)
         return;
@@ -554,7 +535,8 @@ function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button: HTMLB
     container.classList.add("tagList");
     container.innerHTML = "";
     globalLastRequestTagsClicked = request;
-    defaultTags
+    let globalTags = await getGlobalTags();
+    [...globalTags.values()]
         .sort((a, b) => a.order - b.order)
         .forEach(tagDef => {
             let tagButton = emmet.appendChild(container, `

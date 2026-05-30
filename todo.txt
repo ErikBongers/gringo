@@ -1,3 +1,32 @@
+Expand settings
+=================
+* Add standard tags to global settings.
+* Add local colors to settings
+* Add options to (de)activate certain features.
+  - tags
+  - projects
+  - bruto
+  - calculator
+  > all of these are opt-in.
+
+
+
+Decorate price
+===============
+* remove dot and comma on paste intelligently
+  > right-most indicator wins.
+
+* Add calculator buttons.
+  > fill in the bruto amount and press "-21%"
+  > allow simple arithmetic in field
+
+
+
+
+
+
+
+
 * Totals and exports: exclude non active statusses (rejected, 'In aanmaak', ...)
 
 To Excel...

@@ -26,8 +26,16 @@
     <div id="globalWrapper">
         <label for="txtProjects">Project namen</label>
         <textarea id="txtProjects"></textarea>
-        <p>Settings 2</p>
-        <p>Settings<3.../p>
+        <label for="txtGlobalTags">Tags</label>
+        <p class="info">
+            Plaats hier de tags die beschikbaar zijn voor alle gebruikers.
+            Elke tag op een nieuwe regel.
+            Het formaat per regel is 4 comma-gescheiden waarden:
+            <pre>tagnaam, omschrijving, tekstkleur, achtergrondkleur</pre>
+            ...waarbij de kleuren geldige CSS color values moeten zijn.
+            De tagnaam is verplicht, de andere waarden zijn optioneel.
+        </p>
+        <textarea id="txtGlobalTags" class="tags"></textarea>
     </div>
     <button id="btnSaveGlobal" class="red">Bewaren</button>
 </details>

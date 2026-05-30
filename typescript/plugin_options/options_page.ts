@@ -1,5 +1,6 @@
 import {emmet} from "../../libs/Emmeter/html";
 import {defineHtmlOptions, fetchGlobalSettings, getGlobalSettingsCached, GlobalSettings, htmlOptionDefs, options, saveGlobalSettings, setGlobalSetting} from "./options";
+import {TagDef} from "../aanvragen/requests";
 
 defineHtmlOptions();
 
@@ -30,14 +31,43 @@ async function saveGlobalsFromGui() {
     let answer = prompt("Zijdezeker? Tik dan GRINGO en klik Ok.");
     if(answer != "GRINGO")
         return;
-    console.log("SAVING GLOBALS");
     let txtProjects =  document.getElementById("txtProjects") as HTMLTextAreaElement;
     let projects = txtProjects.value
         .split("\n")
         .map(l => l.trim())
         .filter(l => l != "");
+    let txtGlobalTags =  document.getElementById("txtGlobalTags") as HTMLTextAreaElement;
+    let tags = txtGlobalTags.value
+        .split("\n")
+        .map(l => l.trim())
+        .filter(l => l != "");
+    let order = 0;
+    let tagDefs = tags.map(t => {
+        let values = t.split(",").map(t => t.trim());
+        let name: string = "";
+        let description: string = "";
+        let color: string = "";
+        let bkgColor: string = "";
+        if(values.length >= 1 )
+            name = values[0];
+        if(values.length >= 2 )
+            description = values[1];
+        if(values.length >= 3 )
+            color = values[2];
+        if(values.length >= 4 )
+            bkgColor = values[3];
+        return {
+            name,
+            description,
+            color,
+            bkgColor,
+            order: order++,
+
+        } satisfies TagDef as TagDef;
+    });
     let globalSettings: GlobalSettings = {
-        projects
+        projects,
+        tagDefs
     }
 
     await saveGlobalSettings(globalSettings);
@@ -57,9 +87,21 @@ async function restoreOptionsToGui(){
 
 async function fillGlobalOptionsInGui() {
     let txtProjects =  document.getElementById("txtProjects") as HTMLTextAreaElement;
+    let txtGlobalTags =  document.getElementById("txtGlobalTags") as HTMLTextAreaElement;
     setGlobalSetting(await fetchGlobalSettings());
     let globalSettings = await getGlobalSettingsCached();
     txtProjects.value = globalSettings.projects.join("\n");
+    txtGlobalTags.value = globalSettings.tagDefs.map(tagDef => {
+        if(tagDef.bkgColor != "")
+            return `${tagDef.name}, ${tagDef.description}, ${tagDef.color}, ${tagDef.bkgColor}`;
+        else if(tagDef.color != "")
+            return `${tagDef.name}, ${tagDef.description}, ${tagDef.color}`;
+        else if(tagDef.description != "")
+            return `${tagDef.name}, ${tagDef.description}`;
+        else
+            return tagDef.name;
+
+    }).join("\n");
 }
 
 async function fillOptionsInGui() {

@@ -320,7 +320,22 @@
 	//#endregion
 	//#region typescript/plugin_options/options.ts
 	const options = { showDebug: false };
-	let defaultGlobalSettings = { projects: [] };
+	let defaultGlobalSettings = {
+		projects: [],
+		tagDefs: structuredClone([{
+			name: "BB>",
+			description: "Bestelbon verzonden",
+			color: "",
+			bkgColor: "orange",
+			order: 0
+		}, {
+			name: "✔",
+			description: "Bestelling ontvangen",
+			color: "green",
+			bkgColor: "",
+			order: 100
+		}])
+	};
 	let globalSettings = null;
 	async function getGlobalSettingsCached() {
 		if (globalSettings) return globalSettings;
@@ -1030,6 +1045,12 @@
 	}
 	function getPrItemAsset(prItem) {
 		return getAccountingField(prItem, "pAtHAsset");
+	}
+	let globalTagsMap = null;
+	async function getGlobalTags() {
+		let globalSettings = await getGlobalSettingsCached();
+		if (!globalTagsMap) globalTagsMap = new Map(globalSettings.tagDefs.map((t) => [t.name, t]));
+		return globalTagsMap;
 	}
 	//#endregion
 	//#region typescript/aanvragen/aggregate.ts
@@ -1956,7 +1977,7 @@
 		document.querySelector("main").classList.add("hide");
 		fillTotalsTab();
 	}
-	function decorateSearchPanel() {
+	async function decorateSearchPanel() {
 		let requestSearchPanel = document.querySelector(".request-search-panel");
 		let divSearchPanel = document.querySelector(`div.gringoSearchPanel`);
 		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first;
@@ -1968,7 +1989,7 @@
         )    
     `).first;
 		let tbody = tagsCollapse.querySelector("tbody");
-		defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
+		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			createTagFilterRow(tbody, tagDef);
 		});
 		updateTagsFilters(getTagsFilters());
@@ -2051,79 +2072,6 @@
 		await decoratePrWithMeta(request, meta);
 		await updatePrLine(request, meta);
 	}
-	const defaultTags = [
-		{
-			name: "BB>",
-			description: "Bestelbon verzonden",
-			color: "",
-			bkgColor: "orange",
-			order: 0
-		},
-		{
-			name: "✔",
-			description: "Bestelling ontvangen",
-			color: "green",
-			bkgColor: "",
-			order: 100
-		},
-		{
-			name: "MW",
-			description: "",
-			color: "",
-			bkgColor: "",
-			order: 300
-		},
-		{
-			name: "BK",
-			description: "",
-			color: "",
-			bkgColor: "",
-			order: 301
-		},
-		{
-			name: "brol",
-			description: "",
-			color: "",
-			bkgColor: "",
-			order: 330
-		},
-		{
-			name: "Zever",
-			description: "",
-			color: "blue",
-			bkgColor: "",
-			order: 390
-		},
-		{
-			name: "En",
-			description: "",
-			color: "blue",
-			bkgColor: "",
-			order: 400
-		},
-		{
-			name: "Nog",
-			description: "",
-			color: "blue",
-			bkgColor: "",
-			order: 500
-		},
-		{
-			name: "Veel",
-			description: "",
-			color: "blue",
-			bkgColor: "",
-			order: 600
-		},
-		{
-			name: "Langerx",
-			description: "",
-			color: "blue",
-			bkgColor: "",
-			order: 700
-		}
-	];
-	const defaultTagsMap = new Map(defaultTags.map((t) => [t.name, t]));
 	function getTagsFilters() {
 		let json = localStorage.getItem("gringo.tagsFilters");
 		if (!json) return [];
@@ -2138,15 +2086,16 @@
 		let tagsContainer = reqDiv.querySelector(".tagsContainer");
 		if (!tagsContainer) return;
 		tagsContainer.innerHTML = "";
+		let globalTagsMap = await getGlobalTags();
 		meta.tags.map((tag) => {
-			return defaultTagsMap.get(tag);
+			return globalTagsMap.get(tag);
 		}).filter((t) => !!t).sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			let tagSpan = emmet.appendChild(tagsContainer, `
                 span    
             `).first;
 			paintTag(tagSpan, tagDef, true);
 		});
-		let orphans = meta.tags.filter((tag) => !defaultTags.find((tagDef) => tagDef.name == tag));
+		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
 		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
 		let select = reqDiv.querySelector("div.projectWrapper select");
 		if (meta.project) select.value = meta.project;
@@ -2219,7 +2168,7 @@
 		meta.project = select.value;
 		await saveMeta(meta.prId, meta, "localStorage and cloud");
 	}
-	function onTagButtonClick(request, meta, button) {
+	async function onTagButtonClick(request, meta, button) {
 		let popover = document.getElementById("gringo-tags-popover");
 		if (!popover) return;
 		gringo("popover");
@@ -2228,7 +2177,7 @@
 		container.classList.add("tagList");
 		container.innerHTML = "";
 		globalLastRequestTagsClicked = request;
-		defaultTags.sort((a, b) => a.order - b.order).forEach((tagDef) => {
+		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			let tagButton = emmet.appendChild(container, `
                     button.naked.gringoTag{${tagDef.name}}
                 `).first;
