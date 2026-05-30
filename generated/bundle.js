@@ -413,7 +413,7 @@
 		minimumFractionDigits: 2
 	});
 	function formatPrice(price, currencySymbol = "€", currency = "") {
-		return `${currencySymbol}${priceFormatter$1.format(price)} ${currency}`.trim();
+		return `${currencySymbol} ${priceFormatter$1.format(price)} ${currency}`.trim();
 	}
 	//#endregion
 	//#region typescript/pageObserver.ts
@@ -1697,6 +1697,8 @@
 		await fillTotalsTab();
 	}
 	async function fillTotalsTab() {
+		let helpPopup = document.querySelector("div.helplinkContainer");
+		helpPopup.style.display = "none";
 		let totalsTab = document.querySelector("div.gringo.totalsTab");
 		totalsTab.innerHTML = "";
 		let container = emmet.appendChild(totalsTab, `
@@ -1732,21 +1734,24 @@
 		emmet.appendChild(container, `h2{Per Budgetpost}`);
 		displayBudgetLevel(container, expensesRoot);
 	}
-	async function displayPerProject(container, expenses) {
+	async function displayPerProject(wrapper, expenses) {
 		let perProject = await getRequestsPerProject(expenses);
+		let container = emmet.appendChild(wrapper, "div.perProject").first;
 		for (let [project, requests] of perProject) {
 			let total = requests.map((i) => parseFloat(i.bruto)).reduce((a, b) => a + b, 0);
-			emmet.appendChild(container, `
-            div.group.flexRow.w100>(
-                (
-                    span>(
-                        span.dscr{${project}}
+			let details = emmet.appendChild(container, `
+            div.details.midBlue>
+                div.summary>
+                    div.group.flexInline>(
+                        (
+                            span>(
+                                span.dscr{${project}}
+                            )
+                        )+
+                        span.price{${formatPrice(total)}}
                     )
-                )+
-                span.price{${formatPrice(total)}}
-            )
-        `);
-			for (let item of requests) emmet.appendChild(container, `
+        `).first;
+			for (let item of requests) emmet.appendChild(details, `
                 div.item.flexRow.w100>(
                     (
                         span>(
@@ -1758,6 +1763,11 @@
                     span.price{${formatPrice(parseFloat(item.bruto))}}
                 )
             `);
+			container.querySelectorAll(".summary").forEach((s) => {
+				s.onclick = () => {
+					s.parentElement.classList.toggle("open");
+				};
+			});
 		}
 	}
 	function displayBudgetLevel(container, budgetLvl) {

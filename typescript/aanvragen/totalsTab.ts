@@ -9,6 +9,8 @@ async function onRefreshClicked(ev: PointerEvent) {
 }
 
 export async function fillTotalsTab() {
+    let helpPopup = document.querySelector("div.helplinkContainer") as HTMLElement;
+    helpPopup.style.display = "none";
     let totalsTab = document.querySelector("div.gringo.totalsTab") as HTMLElement;
     totalsTab.innerHTML = "";
     let container = emmet.appendChild(totalsTab, `
@@ -60,24 +62,27 @@ export async function fillTotalsTab() {
     displayBudgetLevel(container, expensesRoot);
 }
 
-async function displayPerProject(container: HTMLElement, expenses: JsonPrItem[]) {
+async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
     let perProject = await getRequestsPerProject(expenses);
+    let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement;
     for(let [project, requests] of perProject) {
         let total = requests
             .map(i => parseFloat(i.bruto))
             .reduce((a, b) => a+b, 0);
-        emmet.appendChild(container, `
-            div.group.flexRow.w100>(
-                (
-                    span>(
-                        span.dscr{${project}}
+        let details = emmet.appendChild(container, `
+            div.details.midBlue>
+                div.summary>
+                    div.group.flexInline>(
+                        (
+                            span>(
+                                span.dscr{${project}}
+                            )
+                        )+
+                        span.price{${formatPrice(total)}}
                     )
-                )+
-                span.price{${formatPrice(total)}}
-            )
-        `);
+        `).first as HTMLDetailsElement;
         for(let item of requests) {
-            emmet.appendChild(container, `
+            emmet.appendChild(details, `
                 div.item.flexRow.w100>(
                     (
                         span>(
@@ -90,6 +95,13 @@ async function displayPerProject(container: HTMLElement, expenses: JsonPrItem[])
                 )
             `);
         }
+
+        let summaries = container.querySelectorAll(".summary") as NodeListOf<HTMLElement>;
+        summaries.forEach(s => {
+            s.onclick = () => {
+                s.parentElement!.classList.toggle("open");
+            };
+        })
     }
 }
 

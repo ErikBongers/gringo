@@ -13,6 +13,11 @@
 
 :root {
     --dko3-blue: #007bff;
+    --dark-blue: #4b5881;
+    --very-dark-blue: lch(from var(--dark-blue) calc(l - 20) c h);
+    --mid-blue: lch(from var(--dark-blue) calc(l + 20) c h);
+    --light-blue: lch(from var(--dark-blue) calc(l + 40) c h);
+    --very-light-blue: lch(from var(--dark-blue) calc(l + 60) c h);
 }
 
 .flexColumn {
@@ -21,6 +26,11 @@
 }
 .flexRow {
     display: flex;
+    flex-direction: row;
+}
+
+.flexInline {
+    display: inline-flex;
     flex-direction: row;
 }
 
@@ -287,27 +297,62 @@ request-info-item.hidden {
     display: none;
 }
 
+
+
 .totalsTab {
     padding-inline: 5ch;
+    & div.details {
+        padding-inline: .5ch;
+    }
+    & div.summary::before {
+        content: "▶";
+        width: 2ch;
+        display: inline-block;
+        color: white;
+    }
+    & div.summary .group {
+        width: calc( 100% - 2ch);
+        padding-block: .4ch;
+    }
+    & div.details {
+        &:not(.open) > * {
+            display: none;
+        }
+        & > div.summary {
+            display: block;
+        }
+        &.open {
+            & > div.summary::before {
+                content: "▼";
+            }
+        }
+    }
     & span {
-        padding-inline: 1ch;
+        margin-inline: .5ch;
     }
     & > div {
-        padding-block: .2ch;
+        padding-block: .3ch;
     }
     & .group {
         &.indent1 {
-            background-color: #2c2555;
+            background-color: var(--dark-blue);
             color: white;
         }
-        background-color: #6d63a8;
+        background-color: var(--mid-blue);
         color: white;
     }
     & .item {
-        background-color: #e6e3fa;
+        background-color: var(--very-light-blue);
         color: black;
+        &:nth-child(odd) {
+            background-color: white;
+        }
     }
     & span.price {
         margin-inline-start: auto;
     }
+    & .midBlue {
+        background-color: var(--mid-blue);
+    }
+
 }
