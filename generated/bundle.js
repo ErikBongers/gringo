@@ -1855,6 +1855,11 @@
 		let paginationElement = document.querySelector("fd-pagination");
 		if (!paginationElement) return null;
 		let currentPageElement = paginationElement.querySelector("input");
+		if (!currentPageElement) return {
+			currentPage: 1,
+			currentPageElement: null,
+			hasNext: false
+		};
 		let currentPage = parseInt(currentPageElement.value);
 		let nextButton = paginationElement.querySelector("button[glyph='navigation-right-arrow']");
 		if (!nextButton) return null;

@@ -53,6 +53,13 @@ function getPagination(): Pagination | null {
     if (!paginationElement)
         return null;
     let currentPageElement = paginationElement.querySelector('input')!;
+    if(!currentPageElement) {
+        return {
+            currentPage: 1,
+            currentPageElement: null,
+            hasNext: false
+        }
+    }
     let currentPage = parseInt(currentPageElement.value);
     let nextButton = paginationElement.querySelector("button[glyph='navigation-right-arrow']") as HTMLButtonElement | null;
     if(!nextButton)
@@ -67,7 +74,7 @@ function getPagination(): Pagination | null {
 
 interface Pagination {
     currentPage: number;
-    currentPageElement: HTMLElement;
+    currentPageElement: HTMLElement | null;
     hasNext: boolean;
 }
 
