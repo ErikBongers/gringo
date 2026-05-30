@@ -2,7 +2,7 @@ import {FetchChain} from "../fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
-import {getOptions, gringo} from "../globals";
+import {getOptions, gringo, InfoBlock} from "../globals";
 import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
@@ -38,19 +38,30 @@ export async function fetchRequestList() {
     return requestList
 }
 
-export async function fetchFullRequest(prId: string) {
+export async function fetchFullRequest(prId: string, ctx: FetchListContext) {
     let pr = await fetchPr(prId);
+    ctx.infoBlock.info.innerHTML = `PR details ophalen...(${ctx.counter++})`;
     if(pr.title == null)
         return null; //todo : report this error somehow.
     return pr;
 }
 
-export async function fetchRequestListAndDetails() {
+export interface FetchListContext {
+    counter: number;
+    infoBlock: InfoBlock;
+}
+
+export async function fetchRequestListAndDetails(infoBlock: InfoBlock) {
+    infoBlock.info.innerHTML = "PR lijst ophalen...";
     let requestList = await fetchRequestList();
-    gringo(requestList);
+    infoBlock.info.innerHTML = "PR details ophalen...";
+    let ctx: FetchListContext = {
+        counter: 0,
+        infoBlock
+    }
     let promises = requestList.requestList.map(r => {
         let requestId = r.reqUniqueName;
-        return fetchFullRequest(requestId)
+        return fetchFullRequest(requestId, ctx);
     })
 
     let detailsList = await Promise.all(promises);

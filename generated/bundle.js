@@ -951,17 +951,23 @@
 		});
 		return await chain.getJson();
 	}
-	async function fetchFullRequest(prId) {
+	async function fetchFullRequest(prId, ctx) {
 		let pr = await fetchPr(prId);
+		ctx.infoBlock.info.innerHTML = `PR details ophalen...(${ctx.counter++})`;
 		if (pr.title == null) return null;
 		return pr;
 	}
-	async function fetchRequestListAndDetails() {
+	async function fetchRequestListAndDetails(infoBlock) {
+		infoBlock.info.innerHTML = "PR lijst ophalen...";
 		let requestList = await fetchRequestList();
-		gringo(requestList);
+		infoBlock.info.innerHTML = "PR details ophalen...";
+		let ctx = {
+			counter: 0,
+			infoBlock
+		};
 		let promises = requestList.requestList.map((r) => {
 			let requestId = r.reqUniqueName;
-			return fetchFullRequest(requestId);
+			return fetchFullRequest(requestId, ctx);
 		});
 		return await Promise.all(promises);
 	}
@@ -1402,8 +1408,8 @@
 			budget: "0"
 		}
 	];
-	async function getExtendedRequests() {
-		let reqs = (await fetchRequestListAndDetails()).filter((pr) => pr != null).filter((pr) => pr.status != "sdfsdf");
+	async function getExtendedRequests(infoBlock) {
+		let reqs = (await fetchRequestListAndDetails(infoBlock)).filter((pr) => pr != null).filter((pr) => pr.status != "sdfsdf");
 		let extendedReqs = [];
 		for (const pr of reqs) extendedReqs.push(await createExpandedPr(pr));
 		return extendedReqs;
@@ -1418,8 +1424,8 @@
 		}
 		return projectMap;
 	}
-	async function exportPrItemsToExcel() {
-		let jsonPrData = await createJsonPrData();
+	async function exportPrItemsToExcel(infoBlock) {
+		let jsonPrData = await createJsonPrData(infoBlock);
 		let headers = [
 			"prId",
 			"status",
@@ -1450,8 +1456,8 @@
 		await navigator.clipboard.writeText(table.outerHTML);
 		console.log("CIOPIED.");
 	}
-	async function createJsonPrData() {
-		let prs = await getExtendedRequests();
+	async function createJsonPrData(infoBlock) {
+		let prs = await getExtendedRequests(infoBlock);
 		let jsonPrData = { items: [] };
 		for (let pr of prs) for (const item of pr.items) {
 			const index = pr.items.indexOf(item);
@@ -1686,17 +1692,27 @@
 	}
 	//#endregion
 	//#region typescript/aanvragen/totalsTab.ts
+	async function onRefreshClicked(ev) {
+		sessionStorage.removeItem("jsonPrData");
+		await fillTotalsTab();
+	}
 	async function fillTotalsTab() {
-		let container = document.querySelector("div.gringo.totalsTab");
-		container.innerHTML = "";
+		let totalsTab = document.querySelector("div.gringo.totalsTab");
+		totalsTab.innerHTML = "";
+		let container = emmet.appendChild(totalsTab, `
+        (button.naked.refresh>i.fa.fa-repeat)+
+        div
+    `).last;
+		let button = totalsTab.querySelector("button.refresh");
+		button.onclick = (ev) => onRefreshClicked(ev);
 		let infoBlock = createInfoBlock(container);
-		infoBlock.title.textContent = "Totals";
-		infoBlock.info.textContent = "Filling totals....";
+		infoBlock.title.textContent = "Totalen";
+		infoBlock.info.textContent = "Ophalen van gegevens....";
 		let jsonPrData;
 		let jsonPrDataStr = sessionStorage.getItem("jsonPrData");
 		if (jsonPrDataStr) jsonPrData = JSON.parse(jsonPrDataStr);
 		else {
-			jsonPrData = await createJsonPrData();
+			jsonPrData = await createJsonPrData(infoBlock);
 			sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
 		}
 		let expenses = jsonPrData.items.filter((item) => !["In aanmaak", "Afgewezen"].includes(item.status)).filter((item) => item.budget != "" && item.budget.startsWith("6"));
@@ -1709,6 +1725,8 @@
 			items: []
 		};
 		for (const item of expenses) insertItem(expensesRoot, item, 1);
+		container.innerHTML = "";
+		infoBlock.info.innerHTML = "";
 		emmet.appendChild(container, `h2{Per project}`);
 		await displayPerProject(container, expenses);
 		emmet.appendChild(container, `h2{Per Budgetpost}`);
@@ -1993,9 +2011,14 @@
 			createTagFilterRow(tbody, tagDef);
 		});
 		updateTagsFilters(getTagsFilters());
+		let infoBlock = createInfoBlock(divSearchPanel);
 		let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last;
+		let ctx = {
+			counter: 0,
+			infoBlock
+		};
 		btnTestFetch.onclick = async (ev) => {
-			if (globalLastRequestTagsClicked) await fetchFullRequest(globalLastRequestTagsClicked.id);
+			if (globalLastRequestTagsClicked) await fetchFullRequest(globalLastRequestTagsClicked.id, ctx);
 		};
 		let btnTestRequestList = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch all}`).last;
 		btnTestRequestList.onclick = async (ev) => {
@@ -2003,11 +2026,11 @@
 		};
 		let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last;
 		btnTestRequestListAndDetails.onclick = async (ev) => {
-			await fetchRequestListAndDetails();
+			await fetchRequestListAndDetails(infoBlock);
 		};
 		let btnTestExportToExcel = emmet.appendChild(tagsCollapse, `div>button#btnTestExportToExcel{TEST Export to Excel}`).last;
 		btnTestExportToExcel.onclick = async (ev) => {
-			await exportPrItemsToExcel();
+			await exportPrItemsToExcel(infoBlock);
 		};
 		function onAribaFilterButton() {
 			let inputCurrentPage = getListTabDecoratedElement();

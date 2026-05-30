@@ -3,12 +3,23 @@ import {createInfoBlock, formatPrice} from "../globals";
 import {ExpandedPrItem} from "../aanvraag/observer";
 import {createJsonPrData, getExtendedRequests, getRequestsPerProject, JsonPrData, JsonPrItem} from "./aggregate";
 
+async function onRefreshClicked(ev: PointerEvent) {
+    sessionStorage.removeItem("jsonPrData");
+    await fillTotalsTab();
+}
+
 export async function fillTotalsTab() {
-    let container = document.querySelector("div.gringo.totalsTab") as HTMLElement;
-    container.innerHTML = "";
+    let totalsTab = document.querySelector("div.gringo.totalsTab") as HTMLElement;
+    totalsTab.innerHTML = "";
+    let container = emmet.appendChild(totalsTab, `
+        (button.naked.refresh>i.fa.fa-repeat)+
+        div
+    `).last as HTMLDivElement;
+    let button = totalsTab.querySelector("button.refresh") as HTMLButtonElement;
+    button.onclick = (ev) => onRefreshClicked(ev);
     let infoBlock = createInfoBlock(container);
-    infoBlock.title.textContent = "Totals";
-    infoBlock.info.textContent = "Filling totals....";
+    infoBlock.title.textContent = "Totalen";
+    infoBlock.info.textContent = "Ophalen van gegevens....";
 
     //create a block "Uitgaven" for the 6xx ledgers.
     //On top have a Grand total
@@ -28,7 +39,7 @@ export async function fillTotalsTab() {
     if(jsonPrDataStr) {
         jsonPrData = JSON.parse(jsonPrDataStr) as JsonPrData;
     } else {
-        jsonPrData = await createJsonPrData();
+        jsonPrData = await createJsonPrData(infoBlock);
         sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
     }
     let expenses = jsonPrData.items
@@ -41,6 +52,8 @@ export async function fillTotalsTab() {
     for (const item of expenses) {
         insertItem(expensesRoot, item, 1);
     }
+    container.innerHTML = "";
+    infoBlock.info.innerHTML = "";
     emmet.appendChild(container, `h2{Per project}`)
     await displayPerProject(container, expenses);
     emmet.appendChild(container, `h2{Per Budgetpost}`)

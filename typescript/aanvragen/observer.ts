@@ -1,11 +1,11 @@
 import {PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter/html";
-import {gringo, priceFormatter} from "../globals";
+import {createInfoBlock, gringo, priceFormatter} from "../globals";
 import {saveMetasLocal} from "../db/gringoDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchPr} from "../sap/api";
 import {calcPrTotal, createExpandedPr} from "../aanvraag/observer";
-import {fetchChangedMetas, fetchFullRequest, fetchMetaCached, fetchRequestList, fetchRequestListAndDetails, getGlobalTags, PrMeta, saveMeta, TagDef} from "./requests";
+import {fetchChangedMetas, fetchFullRequest, FetchListContext, fetchMetaCached, fetchRequestList, fetchRequestListAndDetails, getGlobalTags, PrMeta, saveMeta, TagDef} from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
 
@@ -292,10 +292,15 @@ async function decorateSearchPanel() {
             createTagFilterRow(tbody, tagDef);
         });
     updateTagsFilters(getTagsFilters());
+    let infoBlock = createInfoBlock(divSearchPanel);
     let btnTestFetch = emmet.appendChild(tagsCollapse,`div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
+    let ctx: FetchListContext = {
+        counter: 0,
+        infoBlock
+    }
     btnTestFetch.onclick = async (ev) => {
         if(globalLastRequestTagsClicked)
-            await fetchFullRequest(globalLastRequestTagsClicked.id);
+            await fetchFullRequest(globalLastRequestTagsClicked.id, ctx);
     };
     let btnTestRequestList = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestList{TEST Fetch all}`).last as HTMLButtonElement;
     btnTestRequestList.onclick = async (ev) => {
@@ -303,11 +308,11 @@ async function decorateSearchPanel() {
     };
     let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last as HTMLButtonElement;
     btnTestRequestListAndDetails.onclick = async (ev) => {
-        await fetchRequestListAndDetails();
+        await fetchRequestListAndDetails(infoBlock);
     };
     let btnTestExportToExcel = emmet.appendChild(tagsCollapse,`div>button#btnTestExportToExcel{TEST Export to Excel}`).last as HTMLButtonElement;
     btnTestExportToExcel.onclick = async (ev) => {
-        await exportPrItemsToExcel();
+        await exportPrItemsToExcel(infoBlock);
     };
 
     function onAribaFilterButton() {

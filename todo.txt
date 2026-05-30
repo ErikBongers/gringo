@@ -1,6 +1,9 @@
+* Totals: refresh
+
+* Make totals overview much like the excel for easy comparison of bulk copying.
+
 Expand settings
 =================
-* Add standard tags to global settings.
 * Add local colors to settings
 * Add options to (de)activate certain features.
   - tags

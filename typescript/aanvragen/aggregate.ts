@@ -1,7 +1,7 @@
 import {calcBrutoLinePrice, createExpandedPr, ExpandedPrItem} from "../aanvraag/observer";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {ExpandedPr, fetchMetaCached, fetchRequestListAndDetails, PrMeta} from "./requests";
-import {createHtmlTable} from "../globals";
+import {createHtmlTable, InfoBlock} from "../globals";
 
 export interface LedgerToBudgetCode {
     ledger: string,
@@ -107,8 +107,8 @@ let ledgerToBudgetCodes: LedgerToBudgetCode[] = [
     { ledger: "4891000100", budget: "0"},
 ];
 
-export async function getExtendedRequests() {
-    let reqs = (await fetchRequestListAndDetails())
+export async function getExtendedRequests(infoBlock: InfoBlock) {
+    let reqs = (await fetchRequestListAndDetails(infoBlock))
         .filter(pr => pr != null)
         .filter(pr => pr.status != "sdfsdf");
 
@@ -134,8 +134,8 @@ export async function getRequestsPerProject(expenses: JsonPrItem[]) {
     return projectMap;
 }
 
-export async function getRequestsPerBudget() {
-    let extendedReqs = await getExtendedRequests();
+export async function getRequestsPerBudget(infoBlock: InfoBlock) {
+    let extendedReqs = await getExtendedRequests(infoBlock);
 
     let budgetMap = new Map<string, LedgerToBudgetCode>();
     for(let ledger of ledgerToBudgetCodes) {
@@ -160,8 +160,8 @@ export async function getRequestsPerBudget() {
     return legerPrMap;
 }
 
-export async function exportPrItemsToExcel(){
-    let jsonPrData = await createJsonPrData();
+export async function exportPrItemsToExcel(infoBlock: InfoBlock){
+    let jsonPrData = await createJsonPrData(infoBlock);
 
     let headers = ["prId", "status", "itemNo", "bruto", "tarif", "project", "tags", "title", "budget"];
     let rows: string[][] = [];
@@ -200,8 +200,8 @@ export interface JsonPrData {
     items: JsonPrItem[];
 }
 
-export async function createJsonPrData() {
-    let prs = await getExtendedRequests();
+export async function createJsonPrData(infoBlock: InfoBlock) {
+    let prs = await getExtendedRequests(infoBlock);
     let jsonPrData: JsonPrData = {
         items: []
     };
