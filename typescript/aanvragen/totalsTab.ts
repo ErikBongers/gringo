@@ -1,7 +1,8 @@
 import {emmet} from "../../libs/Emmeter/html";
 import {createInfoBlock, formatPrice} from "../globals";
-import {ExpandedPrItem} from "../aanvraag/observer";
-import {createJsonPrData, getExtendedRequests, getRequestsPerProject, JsonPrData, JsonPrItem} from "./aggregate";
+import {createJsonPrData, getRequestsPerProject, JsonPrData, JsonPrItem} from "./aggregate";
+import {hideFloatingHelp} from "./observer";
+import {Tabs} from "../tabs";
 
 async function onRefreshClicked(ev: PointerEvent) {
     sessionStorage.removeItem("jsonPrData");
@@ -9,20 +10,35 @@ async function onRefreshClicked(ev: PointerEvent) {
 }
 
 export async function fillTotalsTab() {
-    let helpPopup = document.querySelector("div.helplinkContainer") as HTMLElement;
-    helpPopup.style.display = "none";
+    hideFloatingHelp();
     let totalsTab = document.querySelector("div.gringo.totalsTab") as HTMLElement;
     totalsTab.innerHTML = "";
-    let container = emmet.appendChild(totalsTab, `
+    emmet.appendChild(totalsTab, `
         (button.naked.refresh>i.fa.fa-repeat)+
-        div
-    `).last as HTMLDivElement;
+        div.infoContainer+
+        div.tabsContainer
+    `);
     let button = totalsTab.querySelector("button.refresh") as HTMLButtonElement;
     button.onclick = (ev) => onRefreshClicked(ev);
-    let infoBlock = createInfoBlock(container);
+    let infoContainer = totalsTab.querySelector("div.infoContainer") as HTMLElement;
+    let tabsContainer = totalsTab.querySelector("div.tabsContainer") as HTMLElement;
+    let infoBlock = createInfoBlock(infoContainer);
     infoBlock.title.textContent = "Totalen";
     infoBlock.info.textContent = "Ophalen van gegevens....";
-
+    emmet.appendChild(tabsContainer, `
+        div.perProjectTab+div.perBudgetTab
+    `);
+    let tabs = new Tabs(tabsContainer, [
+        { btnId: "btnTabPerProject", tabId: "tabPerProject", btnContent: "Per project"},
+        { btnId: "btnTabPerBudget", tabId: "tabPerBudget", btnContent: "Per budget"},
+    ]);
+    emmet.appendChild(tabsContainer, `
+        div#tabPerProject+
+        div#tabPerBudget
+    `);
+    let tabPerProject = tabsContainer.querySelector("div#tabPerProject") as HTMLElement;
+    let tabPerBudget = tabsContainer.querySelector("div#tabPerBudget") as HTMLElement;
+    tabs.switch(0);
     //create a block "Uitgaven" for the 6xx ledgers.
     //On top have a Grand total
     //Below for the first digit, and so on.
@@ -49,20 +65,13 @@ export async function fillTotalsTab() {
         .filter(item => item.budget != "" && item.budget.startsWith("6"));
     expenses.sort((a, b) => a.budget.localeCompare(b.budget));
 
-    // 666 = expenses:
-    let expensesRoot: BudgetLevel = {key: "6", descr: "Uitgaven", price: 0, children: new Map<string, BudgetLevel>(), items: []};
-    for (const item of expenses) {
-        insertItem(expensesRoot, item, 1);
-    }
-    container.innerHTML = "";
     infoBlock.info.innerHTML = "";
-    emmet.appendChild(container, `h2{Per project}`)
-    await displayPerProject(container, expenses);
-    emmet.appendChild(container, `h2{Per Budgetpost}`)
-    displayBudgetLevel(container, expensesRoot);
+    await displayPerProject(tabPerProject, expenses);
+    displayPerBudget(tabPerBudget, expenses);
 }
 
 async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
+    emmet.appendChild(wrapper, `h2{Per project}`)
     let perProject = await getRequestsPerProject(expenses);
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement;
     for(let [project, requests] of perProject) {
@@ -103,6 +112,15 @@ async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
             };
         })
     }
+}
+
+function displayPerBudget(container: HTMLElement, expenses: JsonPrItem[]) {
+    let expensesRoot: BudgetLevel = {key: "6", descr: "Uitgaven", price: 0, children: new Map<string, BudgetLevel>(), items: []};
+    for (const item of expenses) {
+        insertItem(expensesRoot, item, 1);
+    }
+    emmet.appendChild(container, `h2{Per Budgetpost}`);
+    displayBudgetLevel(container, expensesRoot);
 }
 
 function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {
@@ -160,3 +178,4 @@ function insertItem(parent: BudgetLevel, item: JsonPrItem, level: number) {
     }
     insertItem(newParent, item, level+1);
 }
+

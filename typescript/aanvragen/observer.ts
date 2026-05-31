@@ -570,3 +570,8 @@ async function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button:
         });
 
 }
+
+export function hideFloatingHelp() {
+    let helpPopup = document.querySelector("div.helplinkContainer") as HTMLElement;
+    helpPopup.style.display = "none";
+}

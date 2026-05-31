@@ -13,7 +13,8 @@
 
 :root {
     --dko3-blue: #007bff;
-    --dark-blue: #4b5881;
+    --sap-very-dark-blue: #354a5f;
+    --dark-blue: lch(from var(--sap-very-dark-blue) calc(l + 20) calc(c + 10) h);
     --very-dark-blue: lch(from var(--dark-blue) calc(l - 20) c h);
     --mid-blue: lch(from var(--dark-blue) calc(l + 20) c h);
     --light-blue: lch(from var(--dark-blue) calc(l + 40) c h);
@@ -300,7 +301,9 @@ request-info-item.hidden {
 
 
 .totalsTab {
+    background-color: white;
     padding-inline: 5ch;
+    padding-block-end: 4rem;
     & div.details {
         padding-inline: .5ch;
     }

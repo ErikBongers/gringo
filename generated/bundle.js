@@ -1691,25 +1691,81 @@
 		updatePrItem(pr, lineEl, index);
 	}
 	//#endregion
+	//#region typescript/tabs.ts
+	var Tabs = class {
+		constructor(parent, tabDefs, beforeTabSwitch) {
+			this.tabDefs = tabDefs;
+			this.beforeTabSwitch = beforeTabSwitch ?? null;
+			this.tabs = emmet.appendChild(parent, "div.tabs").first;
+			for (let tabDef of tabDefs) {
+				let button = emmet.appendChild(this.tabs, `
+            button#${tabDef.btnId}.naked.hand.tab.notSelected[data-tab-id="${tabDef.tabId}"]
+        `).first;
+				if (typeof tabDef.btnContent == "string") button.innerHTML = tabDef.btnContent;
+				else button.appendChild(tabDef.btnContent);
+			}
+			this.addNavigation();
+		}
+		switch(to) {
+			let btn;
+			if (typeof to == "number") btn = document.getElementById(this.tabDefs[to].btnId);
+			else btn = to;
+			let tabId = btn.dataset.tabId;
+			btn.parentElement.querySelectorAll(".tab").forEach((tab) => {
+				tab.classList.add("notSelected");
+				document.getElementById(tab.dataset.tabId).style.display = "none";
+			});
+			btn.classList.remove("notSelected");
+			document.getElementById(tabId).style.display = "block";
+		}
+		addNavigation() {
+			document.querySelectorAll(".tabs > button.tab").forEach((btn) => btn.addEventListener("click", (ev) => {
+				let button = ev.currentTarget;
+				if (this.beforeTabSwitch?.(button, button.dataset.tabId) != "cancel") this.switch(ev.currentTarget);
+			}));
+		}
+	};
+	//#endregion
 	//#region typescript/aanvragen/totalsTab.ts
 	async function onRefreshClicked(ev) {
 		sessionStorage.removeItem("jsonPrData");
 		await fillTotalsTab();
 	}
 	async function fillTotalsTab() {
-		let helpPopup = document.querySelector("div.helplinkContainer");
-		helpPopup.style.display = "none";
+		hideFloatingHelp();
 		let totalsTab = document.querySelector("div.gringo.totalsTab");
 		totalsTab.innerHTML = "";
-		let container = emmet.appendChild(totalsTab, `
+		emmet.appendChild(totalsTab, `
         (button.naked.refresh>i.fa.fa-repeat)+
-        div
-    `).last;
+        div.infoContainer+
+        div.tabsContainer
+    `);
 		let button = totalsTab.querySelector("button.refresh");
 		button.onclick = (ev) => onRefreshClicked(ev);
-		let infoBlock = createInfoBlock(container);
+		let infoContainer = totalsTab.querySelector("div.infoContainer");
+		let tabsContainer = totalsTab.querySelector("div.tabsContainer");
+		let infoBlock = createInfoBlock(infoContainer);
 		infoBlock.title.textContent = "Totalen";
 		infoBlock.info.textContent = "Ophalen van gegevens....";
+		emmet.appendChild(tabsContainer, `
+        div.perProjectTab+div.perBudgetTab
+    `);
+		let tabs = new Tabs(tabsContainer, [{
+			btnId: "btnTabPerProject",
+			tabId: "tabPerProject",
+			btnContent: "Per project"
+		}, {
+			btnId: "btnTabPerBudget",
+			tabId: "tabPerBudget",
+			btnContent: "Per budget"
+		}]);
+		emmet.appendChild(tabsContainer, `
+        div#tabPerProject+
+        div#tabPerBudget
+    `);
+		let tabPerProject = tabsContainer.querySelector("div#tabPerProject");
+		let tabPerBudget = tabsContainer.querySelector("div#tabPerBudget");
+		tabs.switch(0);
 		let jsonPrData;
 		let jsonPrDataStr = sessionStorage.getItem("jsonPrData");
 		if (jsonPrDataStr) jsonPrData = JSON.parse(jsonPrDataStr);
@@ -1719,22 +1775,12 @@
 		}
 		let expenses = jsonPrData.items.filter((item) => !["In aanmaak", "Afgewezen"].includes(item.status)).filter((item) => item.budget != "" && item.budget.startsWith("6"));
 		expenses.sort((a, b) => a.budget.localeCompare(b.budget));
-		let expensesRoot = {
-			key: "6",
-			descr: "Uitgaven",
-			price: 0,
-			children: /* @__PURE__ */ new Map(),
-			items: []
-		};
-		for (const item of expenses) insertItem(expensesRoot, item, 1);
-		container.innerHTML = "";
 		infoBlock.info.innerHTML = "";
-		emmet.appendChild(container, `h2{Per project}`);
-		await displayPerProject(container, expenses);
-		emmet.appendChild(container, `h2{Per Budgetpost}`);
-		displayBudgetLevel(container, expensesRoot);
+		await displayPerProject(tabPerProject, expenses);
+		displayPerBudget(tabPerBudget, expenses);
 	}
 	async function displayPerProject(wrapper, expenses) {
+		emmet.appendChild(wrapper, `h2{Per project}`);
 		let perProject = await getRequestsPerProject(expenses);
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
 		for (let [project, requests] of perProject) {
@@ -1769,6 +1815,18 @@
 				};
 			});
 		}
+	}
+	function displayPerBudget(container, expenses) {
+		let expensesRoot = {
+			key: "6",
+			descr: "Uitgaven",
+			price: 0,
+			children: /* @__PURE__ */ new Map(),
+			items: []
+		};
+		for (const item of expenses) insertItem(expensesRoot, item, 1);
+		emmet.appendChild(container, `h2{Per Budgetpost}`);
+		displayBudgetLevel(container, expensesRoot);
 	}
 	function displayBudgetLevel(container, budgetLvl) {
 		emmet.appendChild(container, `
@@ -2231,6 +2289,10 @@
 				await updatePrLine(request, meta);
 			};
 		});
+	}
+	function hideFloatingHelp() {
+		let helpPopup = document.querySelector("div.helplinkContainer");
+		helpPopup.style.display = "none";
 	}
 	//#endregion
 	//#region typescript/main.ts
