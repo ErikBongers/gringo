@@ -1,4 +1,4 @@
-* Totals: refresh
+* Req list: when only one page, navivation has no input element and prs don't get decorated.
 
 * Make totals overview much like the excel for easy comparison of bulk copying.
 
