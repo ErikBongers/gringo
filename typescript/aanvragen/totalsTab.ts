@@ -91,18 +91,24 @@ async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
                     )
         `).first as HTMLDetailsElement;
         for(let item of requests) {
-            emmet.appendChild(details, `
+            let row = emmet.appendChild(details, `
                 div.item.flexRow.w100>(
                     (
                         span>(
                             span.lvl{${item.budget}}+
+                            (button.goto.naked>i.fa.fa-home)+
                             span.descr{${item.title}}+
                             span.status{${item.tags}}
                         )
                     )+
                     span.price{${formatPrice(parseFloat(item.bruto))}}
                 )
-            `);
+            `).first as HTMLDivElement;
+            let button = row.querySelector("button.goto") as HTMLButtonElement;
+            button.title = item.prId;
+            button.onclick = ()=> {
+                window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
+            }
         }
 
         let summaries = container.querySelectorAll(".summary") as NodeListOf<HTMLElement>;

@@ -350,6 +350,9 @@ request-info-item.hidden {
         &:nth-child(odd) {
             background-color: white;
         }
+        & .goto {
+            color: var(--mid-blue);
+        }
     }
     & span.price {
         margin-inline-start: auto;

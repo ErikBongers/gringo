@@ -1,3 +1,5 @@
+* Be able to quickly set project for PR when it's missing, using a link in the overview...or in  the overview itself.
+
 * Add investments to list.
 
 * Req list: when only one page, navivation has no input element and prs don't get decorated.

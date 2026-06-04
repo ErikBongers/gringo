@@ -1797,18 +1797,25 @@
                         span.price{${formatPrice(total)}}
                     )
         `).first;
-			for (let item of requests) emmet.appendChild(details, `
+			for (let item of requests) {
+				let button = emmet.appendChild(details, `
                 div.item.flexRow.w100>(
                     (
                         span>(
                             span.lvl{${item.budget}}+
+                            (button.goto.naked>i.fa.fa-home)+
                             span.descr{${item.title}}+
                             span.status{${item.tags}}
                         )
                     )+
                     span.price{${formatPrice(parseFloat(item.bruto))}}
                 )
-            `);
+            `).first.querySelector("button.goto");
+				button.title = item.prId;
+				button.onclick = () => {
+					window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
+				};
+			}
 			container.querySelectorAll(".summary").forEach((s) => {
 				s.onclick = () => {
 					s.parentElement.classList.toggle("open");
