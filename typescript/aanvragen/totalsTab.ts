@@ -97,15 +97,14 @@ async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
                         span>(
                             span.lvl{${item.budget}}+
                             (button.goto.naked>i.fa.fa-home)+
-                            span.descr{${item.title}}+
-                            span.status{${item.tags}}
+                            span.descr{${item.title}}
                         )
                     )+
                     span.price{${formatPrice(parseFloat(item.bruto))}}
                 )
             `).first as HTMLDivElement;
             let button = row.querySelector("button.goto") as HTMLButtonElement;
-            button.title = item.prId;
+            button.title = item.prId + "\n" + item.tags;
             button.onclick = ()=> {
                 window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
             }
