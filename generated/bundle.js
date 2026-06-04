@@ -1783,9 +1783,12 @@
 		emmet.appendChild(wrapper, `h2{Per project}`);
 		let perProject = await getRequestsPerProject(expenses);
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
-		for (let [project, requests] of perProject) {
-			let total = requests.map((i) => parseFloat(i.bruto)).reduce((a, b) => a + b, 0);
-			let details = emmet.appendChild(container, `
+		for (let [project, requests] of perProject) displayProjectBlock(requests, container, project);
+	}
+	function displayProjectBlock(requests, container, project) {
+		let total = requests.map((i) => parseFloat(i.bruto)).reduce((a, b) => a + b, 0);
+		if (project == "") project = "--nog geen project--";
+		let details = emmet.appendChild(container, `
             div.details.midBlue>
                 div.summary>
                     div.group.flexInline>(
@@ -1797,8 +1800,8 @@
                         span.price{${formatPrice(total)}}
                     )
         `).first;
-			for (let item of requests) {
-				let button = emmet.appendChild(details, `
+		for (let item of requests) {
+			let button = emmet.appendChild(details, `
                 div.item.flexRow.w100>(
                     (
                         span>(
@@ -1810,17 +1813,16 @@
                     span.price{${formatPrice(parseFloat(item.bruto))}}
                 )
             `).first.querySelector("button.goto");
-				button.title = item.prId + "\n" + item.tags;
-				button.onclick = () => {
-					window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
-				};
-			}
-			container.querySelectorAll(".summary").forEach((s) => {
-				s.onclick = () => {
-					s.parentElement.classList.toggle("open");
-				};
-			});
+			button.title = item.prId + "\n" + item.tags;
+			button.onclick = () => {
+				window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
+			};
 		}
+		container.querySelectorAll(".summary").forEach((s) => {
+			s.onclick = () => {
+				s.parentElement.classList.toggle("open");
+			};
+		});
 	}
 	function displayPerBudget(container, expenses) {
 		let expensesRoot = {

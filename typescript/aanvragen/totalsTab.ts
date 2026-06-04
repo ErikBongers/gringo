@@ -75,10 +75,17 @@ async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
     let perProject = await getRequestsPerProject(expenses);
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement;
     for(let [project, requests] of perProject) {
-        let total = requests
-            .map(i => parseFloat(i.bruto))
-            .reduce((a, b) => a+b, 0);
-        let details = emmet.appendChild(container, `
+        displayProjectBlock(requests, container, project);
+    }
+}
+
+function displayProjectBlock(requests: JsonPrItem[], container: HTMLDivElement, project: string) {
+    let total = requests
+        .map(i => parseFloat(i.bruto))
+        .reduce((a, b) => a + b, 0);
+    if(project == "")
+        project = "--nog geen project--";
+    let details = emmet.appendChild(container, `
             div.details.midBlue>
                 div.summary>
                     div.group.flexInline>(
@@ -90,8 +97,8 @@ async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
                         span.price{${formatPrice(total)}}
                     )
         `).first as HTMLDetailsElement;
-        for(let item of requests) {
-            let row = emmet.appendChild(details, `
+    for (let item of requests) {
+        let row = emmet.appendChild(details, `
                 div.item.flexRow.w100>(
                     (
                         span>(
@@ -103,20 +110,19 @@ async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
                     span.price{${formatPrice(parseFloat(item.bruto))}}
                 )
             `).first as HTMLDivElement;
-            let button = row.querySelector("button.goto") as HTMLButtonElement;
-            button.title = item.prId + "\n" + item.tags;
-            button.onclick = ()=> {
-                window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
-            }
+        let button = row.querySelector("button.goto") as HTMLButtonElement;
+        button.title = item.prId + "\n" + item.tags;
+        button.onclick = () => {
+            window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
         }
-
-        let summaries = container.querySelectorAll(".summary") as NodeListOf<HTMLElement>;
-        summaries.forEach(s => {
-            s.onclick = () => {
-                s.parentElement!.classList.toggle("open");
-            };
-        })
     }
+
+    let summaries = container.querySelectorAll(".summary") as NodeListOf<HTMLElement>;
+    summaries.forEach(s => {
+        s.onclick = () => {
+            s.parentElement!.classList.toggle("open");
+        };
+    })
 }
 
 function displayPerBudget(container: HTMLElement, expenses: JsonPrItem[]) {
