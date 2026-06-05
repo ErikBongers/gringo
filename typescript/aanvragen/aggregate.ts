@@ -119,19 +119,22 @@ export async function getExtendedRequests(infoBlock: InfoBlock) {
     return extendedReqs;
 }
 
-export async function getRequestsPerProject(expenses: JsonPrItem[]) {
-    let projects = (await getGlobalSettingsCached()).projects;
-    let projectMap = new Map<string, JsonPrItem[]>();
-    for (const project of projects) {
-        projectMap.set(project, []);
+export type GroupFunc = (item: JsonPrItem) => string;
+
+export async function getRequestsPerGroup(expenses: JsonPrItem[], groupFunc: GroupFunc) {
+    let groups = (await getGlobalSettingsCached()).projects;
+    let groupMap = new Map<string, JsonPrItem[]>();
+    for (const project of groups) {
+        groupMap.set(project, []);
     }
     for (const item of expenses) {
-        if (!projectMap.has(item.project)) {
-            projectMap.set(item.project, []);
+        let group = groupFunc(item);
+        if (!groupMap.has(group)) {
+            groupMap.set(group, []);
         }
-        projectMap.get(item.project)!.push(item); //! just created in map if it was missing.
+        groupMap.get(group)!.push(item); //! just created group in map if it was missing.
     }
-    return projectMap;
+    return groupMap;
 }
 
 export async function getRequestsPerBudget(infoBlock: InfoBlock) {

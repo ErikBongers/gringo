@@ -1,6 +1,6 @@
 import {emmet} from "../../libs/Emmeter/html";
 import {createInfoBlock, formatPrice} from "../globals";
-import {createJsonPrData, getRequestsPerProject, JsonPrData, JsonPrItem} from "./aggregate";
+import {createJsonPrData, getRequestsPerGroup, JsonPrData, JsonPrItem} from "./aggregate";
 import {hideFloatingHelp} from "./observer";
 import {Tabs} from "../tabs";
 
@@ -72,7 +72,7 @@ export async function fillTotalsTab() {
 
 async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
     emmet.appendChild(wrapper, `h2{Per project}`)
-    let perProject = await getRequestsPerProject(expenses);
+    let perProject = await getRequestsPerGroup(expenses, (item) => item.project);
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement;
     for(let [project, requests] of perProject) {
         displayProjectBlock(requests, container, project);
@@ -136,7 +136,7 @@ function calcBudgetTotals(budgetLevel: BudgetLevel) {
 function displayPerBudget(container: HTMLElement, expenses: JsonPrItem[]) {
     let expensesRoot: BudgetLevel = {key: "6", descr: "Uitgaven", price: 0, children: new Map<string, BudgetLevel>(), items: []};
     for (const item of expenses) {
-        insertItem(expensesRoot, item, 1);
+        insertLevel(expensesRoot, item, 1);
     }
     calcBudgetTotals(expensesRoot);
     emmet.appendChild(container, `h2{Per Budgetpost}`);
@@ -181,7 +181,7 @@ interface BudgetLevel {
     items: JsonPrItem[];
 }
 
-function insertItem(parent: BudgetLevel, item: JsonPrItem, level: number) {
+function insertLevel(parent: BudgetLevel, item: JsonPrItem, level: number) {
     if(!item.budget)
         return; //todo: handle this instead of ignoring.
     let key = item.budget.substring(0, level+1);
@@ -197,6 +197,6 @@ function insertItem(parent: BudgetLevel, item: JsonPrItem, level: number) {
         newParent = {key, descr: "todo...", price: 0, children: new Map<string, BudgetLevel>(), items: []};
         parent.children.set(key, newParent);
     }
-    insertItem(newParent, item, level+1);
+    insertLevel(newParent, item, level+1);
 }
 
