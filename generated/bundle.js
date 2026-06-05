@@ -1443,7 +1443,7 @@
 			row.push(item.prId);
 			row.push(item.status);
 			row.push(item.itemNo);
-			row.push(item.bruto);
+			row.push(item.bruto.toString());
 			row.push(item.tarif);
 			row.push(item.project);
 			row.push(item.tags);
@@ -1464,9 +1464,9 @@
 			let prId = pr.pr.reqId;
 			let status = pr.pr.status;
 			let itemNo = index.toString();
-			let bruto = "";
-			if (item.tarif) bruto = calcBrutoLinePrice(item.item, item.tarif.tarif).toString();
-			else bruto = calcBrutoLinePrice(item.item, 0).toString();
+			let bruto = 0;
+			if (item.tarif) bruto = calcBrutoLinePrice(item.item, item.tarif.tarif);
+			else bruto = calcBrutoLinePrice(item.item, 0);
 			let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
 			let meta = await fetchMetaCached(pr.pr.reqId);
 			let project = meta.project ?? "";
@@ -1786,7 +1786,7 @@
 		for (let [project, requests] of perProject) displayProjectBlock(requests, container, project);
 	}
 	function displayProjectBlock(requests, container, project) {
-		let total = requests.map((i) => parseFloat(i.bruto)).reduce((a, b) => a + b, 0);
+		let total = requests.map((i) => i.bruto).reduce((a, b) => a + b, 0);
 		if (project == "") project = "--nog geen project--";
 		let details = emmet.appendChild(container, `
             div.details.midBlue>
@@ -1810,7 +1810,7 @@
                             span.descr{${item.title}}
                         )
                     )+
-                    span.price{${formatPrice(parseFloat(item.bruto))}}
+                    span.price{${formatPrice(item.bruto)}}
                 )
             `).first.querySelector("button.goto");
 			button.title = item.prId + "\n" + item.tags;
@@ -1824,6 +1824,11 @@
 			};
 		});
 	}
+	function calcBudgetTotals(budgetLevel) {
+		budgetLevel.price = budgetLevel.items.map((i) => i.bruto).reduce((sum, price) => sum + price, 0);
+		budgetLevel.children.forEach((c) => calcBudgetTotals(c));
+		for (let child of budgetLevel.children.values()) budgetLevel.price += child.price;
+	}
 	function displayPerBudget(container, expenses) {
 		let expensesRoot = {
 			key: "6",
@@ -1833,10 +1838,12 @@
 			items: []
 		};
 		for (const item of expenses) insertItem(expensesRoot, item, 1);
+		calcBudgetTotals(expensesRoot);
 		emmet.appendChild(container, `h2{Per Budgetpost}`);
 		displayBudgetLevel(container, expensesRoot);
 	}
 	function displayBudgetLevel(container, budgetLvl) {
+		budgetLvl.items.map((i) => i.bruto).reduce((sum, price) => sum + price, 0);
 		emmet.appendChild(container, `
         div.group.flexRow.w100.indent${budgetLvl.key.length}>(
             (
@@ -1845,7 +1852,7 @@
                     span.descr{${budgetLvl.descr}}
                 )
             )+
-            span.price{ todo:total price }
+            span.price{${formatPrice(budgetLvl.price)}}
         )
     `);
 		for (let item of budgetLvl.items) emmet.appendChild(container, `
@@ -1857,7 +1864,7 @@
                     span.status{${item.tags}}
                 )
             )+
-            span.price{${item.bruto}}
+            span.price{${formatPrice(item.bruto)}}
         )
     `);
 		budgetLvl.children.forEach((b) => displayBudgetLevel(container, b));

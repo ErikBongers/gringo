@@ -81,7 +81,7 @@ async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
 
 function displayProjectBlock(requests: JsonPrItem[], container: HTMLDivElement, project: string) {
     let total = requests
-        .map(i => parseFloat(i.bruto))
+        .map(i => i.bruto)
         .reduce((a, b) => a + b, 0);
     if(project == "")
         project = "--nog geen project--";
@@ -107,7 +107,7 @@ function displayProjectBlock(requests: JsonPrItem[], container: HTMLDivElement, 
                             span.descr{${item.title}}
                         )
                     )+
-                    span.price{${formatPrice(parseFloat(item.bruto))}}
+                    span.price{${formatPrice(item.bruto)}}
                 )
             `).first as HTMLDivElement;
         let button = row.querySelector("button.goto") as HTMLButtonElement;
@@ -125,16 +125,26 @@ function displayProjectBlock(requests: JsonPrItem[], container: HTMLDivElement, 
     })
 }
 
+function calcBudgetTotals(budgetLevel: BudgetLevel) {
+    budgetLevel.price = budgetLevel.items.map(i => i.bruto).reduce((sum, price) => sum + price, 0);
+    budgetLevel.children.forEach(c => calcBudgetTotals(c));
+    for(let child of budgetLevel.children.values()) {
+        budgetLevel.price += child.price;
+    }
+}
+
 function displayPerBudget(container: HTMLElement, expenses: JsonPrItem[]) {
     let expensesRoot: BudgetLevel = {key: "6", descr: "Uitgaven", price: 0, children: new Map<string, BudgetLevel>(), items: []};
     for (const item of expenses) {
         insertItem(expensesRoot, item, 1);
     }
+    calcBudgetTotals(expensesRoot);
     emmet.appendChild(container, `h2{Per Budgetpost}`);
     displayBudgetLevel(container, expensesRoot);
 }
 
 function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {
+    let total = budgetLvl.items.map(i => i.bruto).reduce((sum, price) => sum + price, 0);
     emmet.appendChild(container, `
         div.group.flexRow.w100.indent${budgetLvl.key.length}>(
             (
@@ -143,7 +153,7 @@ function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {
                     span.descr{${budgetLvl.descr}}
                 )
             )+
-            span.price{ todo:total price }
+            span.price{${formatPrice(budgetLvl.price)}}
         )
     `);
     for(let item of budgetLvl.items) {
@@ -156,7 +166,7 @@ function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {
                     span.status{${item.tags}}
                 )
             )+
-            span.price{${item.bruto}}
+            span.price{${formatPrice(item.bruto)}}
         )
     `);
     }

@@ -170,7 +170,7 @@ export async function exportPrItemsToExcel(infoBlock: InfoBlock){
         row.push(item.prId);
         row.push(item.status);
         row.push(item.itemNo);
-        row.push(item.bruto);
+        row.push(item.bruto.toString());
         row.push(item.tarif);
         row.push(item.project);
         row.push(item.tags);
@@ -188,7 +188,7 @@ export interface JsonPrItem {
     prId: string;
     status: string;
     itemNo: string;
-    bruto: string;
+    bruto: number;
     tarif: string;
     project: string;
     tags: string;
@@ -211,11 +211,11 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
             let prId = pr.pr.reqId;
             let status = pr.pr.status;
             let itemNo = index.toString();
-            let bruto = "";
+            let bruto = 0;
             if(item.tarif)
-                bruto = calcBrutoLinePrice(item.item, item.tarif.tarif).toString();
+                bruto = calcBrutoLinePrice(item.item, item.tarif.tarif);
             else
-                bruto = calcBrutoLinePrice(item.item, 0).toString(); //use netto pri;
+                bruto = calcBrutoLinePrice(item.item, 0); //use netto pri;
             let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
             let meta = await fetchMetaCached(pr.pr.reqId);
             let project = meta.project??"";
