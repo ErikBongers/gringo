@@ -1414,15 +1414,15 @@
 		for (const pr of reqs) extendedReqs.push(await createExpandedPr(pr));
 		return extendedReqs;
 	}
-	async function getRequestsPerProject(expenses) {
-		let projects = (await getGlobalSettingsCached()).projects;
-		let projectMap = /* @__PURE__ */ new Map();
-		for (const project of projects) projectMap.set(project, []);
-		for (const item of expenses) {
-			if (!projectMap.has(item.project)) projectMap.set(item.project, []);
-			projectMap.get(item.project).push(item);
+	function getRequestsPerGroup(expenses, groupFunc, groups) {
+		let groupMap = /* @__PURE__ */ new Map();
+		for (let group of groups) groupMap.set(group, []);
+		for (let item of expenses) {
+			let group = groupFunc(item);
+			if (!groupMap.has(group)) groupMap.set(group, []);
+			groupMap.get(group).push(item);
 		}
-		return projectMap;
+		return groupMap;
 	}
 	async function exportPrItemsToExcel(infoBlock) {
 		let jsonPrData = await createJsonPrData(infoBlock);
@@ -1781,13 +1781,18 @@
 	}
 	async function displayPerProject(wrapper, expenses) {
 		emmet.appendChild(wrapper, `h2{Per project}`);
-		let perProject = await getRequestsPerProject(expenses);
+		let perProject = getRequestsPerGroup(expenses, (item) => item.project, (await getGlobalSettingsCached()).projects);
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
-		for (let [project, requests] of perProject) displayProjectBlock(requests, container, project);
+		for (let [project, requests] of perProject) displayGroupedBlock(requests, container, project == "" ? "--nog geen project--" : project);
 	}
-	function displayProjectBlock(requests, container, project) {
+	function displayPerBudget(wrapper, expenses) {
+		emmet.appendChild(wrapper, `h2{Per Budget}`);
+		let perBudget = getRequestsPerGroup(expenses, (item) => item.budget, []);
+		let container = emmet.appendChild(wrapper, "div.perProject").first;
+		for (let [budget, requests] of perBudget) displayGroupedBlock(requests, container, budget == "" ? "--nog geen budget--" : budget);
+	}
+	function displayGroupedBlock(requests, container, project) {
 		let total = requests.map((i) => i.bruto).reduce((a, b) => a + b, 0);
-		if (project == "") project = "--nog geen project--";
 		let details = emmet.appendChild(container, `
             div.details.midBlue>
                 div.summary>
@@ -1823,72 +1828,6 @@
 				s.parentElement.classList.toggle("open");
 			};
 		});
-	}
-	function calcBudgetTotals(budgetLevel) {
-		budgetLevel.price = budgetLevel.items.map((i) => i.bruto).reduce((sum, price) => sum + price, 0);
-		budgetLevel.children.forEach((c) => calcBudgetTotals(c));
-		for (let child of budgetLevel.children.values()) budgetLevel.price += child.price;
-	}
-	function displayPerBudget(container, expenses) {
-		let expensesRoot = {
-			key: "6",
-			descr: "Uitgaven",
-			price: 0,
-			children: /* @__PURE__ */ new Map(),
-			items: []
-		};
-		for (const item of expenses) insertItem(expensesRoot, item, 1);
-		calcBudgetTotals(expensesRoot);
-		emmet.appendChild(container, `h2{Per Budgetpost}`);
-		displayBudgetLevel(container, expensesRoot);
-	}
-	function displayBudgetLevel(container, budgetLvl) {
-		budgetLvl.items.map((i) => i.bruto).reduce((sum, price) => sum + price, 0);
-		emmet.appendChild(container, `
-        div.group.flexRow.w100.indent${budgetLvl.key.length}>(
-            (
-                span>(
-                    span.lvl{${budgetLvl.key}}+
-                    span.descr{${budgetLvl.descr}}
-                )
-            )+
-            span.price{${formatPrice(budgetLvl.price)}}
-        )
-    `);
-		for (let item of budgetLvl.items) emmet.appendChild(container, `
-        div.item.flexRow.w100>(
-            (
-                span>(
-                    span.lvl{${item.budget}}+
-                    span.descr{${item.title}}+
-                    span.status{${item.tags}}
-                )
-            )+
-            span.price{${formatPrice(item.bruto)}}
-        )
-    `);
-		budgetLvl.children.forEach((b) => displayBudgetLevel(container, b));
-	}
-	function insertItem(parent, item, level) {
-		if (!item.budget) return;
-		let key = item.budget.substring(0, level + 1);
-		if (item.budget.substring(level + 1).replaceAll("0", "").length == 0) {
-			parent.items.push(item);
-			return;
-		}
-		let newParent;
-		if (parent.children.has(key)) newParent = parent.children.get(key);
-		else {
-			newParent = {
-				key,
-				descr: "todo...",
-				price: 0,
-				children: /* @__PURE__ */ new Map(),
-				items: []
-			};
-			parent.children.set(key, newParent);
-		}
-		insertItem(newParent, item, level + 1);
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts

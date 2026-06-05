@@ -1,6 +1,5 @@
 import {calcBrutoLinePrice, createExpandedPr, ExpandedPrItem} from "../aanvraag/observer";
-import {getGlobalSettingsCached} from "../plugin_options/options";
-import {ExpandedPr, fetchMetaCached, fetchRequestListAndDetails, PrMeta} from "./requests";
+import {ExpandedPr, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
 import {createHtmlTable, InfoBlock} from "../globals";
 
 export interface LedgerToBudgetCode {
@@ -121,13 +120,12 @@ export async function getExtendedRequests(infoBlock: InfoBlock) {
 
 export type GroupFunc = (item: JsonPrItem) => string;
 
-export async function getRequestsPerGroup(expenses: JsonPrItem[], groupFunc: GroupFunc) {
-    let groups = (await getGlobalSettingsCached()).projects;
+export function getRequestsPerGroup(expenses: JsonPrItem[], groupFunc: GroupFunc, groups: string[]) {
     let groupMap = new Map<string, JsonPrItem[]>();
-    for (const project of groups) {
-        groupMap.set(project, []);
+    for (let group of groups) {
+        groupMap.set(group, []);
     }
-    for (const item of expenses) {
+    for (let item of expenses) {
         let group = groupFunc(item);
         if (!groupMap.has(group)) {
             groupMap.set(group, []);

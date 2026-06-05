@@ -3,6 +3,7 @@ import {createInfoBlock, formatPrice} from "../globals";
 import {createJsonPrData, getRequestsPerGroup, JsonPrData, JsonPrItem} from "./aggregate";
 import {hideFloatingHelp} from "./observer";
 import {Tabs} from "../tabs";
+import {getGlobalSettingsCached} from "../plugin_options/options";
 
 async function onRefreshClicked(ev: PointerEvent) {
     sessionStorage.removeItem("jsonPrData");
@@ -72,19 +73,26 @@ export async function fillTotalsTab() {
 
 async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
     emmet.appendChild(wrapper, `h2{Per project}`)
-    let perProject = await getRequestsPerGroup(expenses, (item) => item.project);
+    let perProject = getRequestsPerGroup(expenses, (item) => item.project, (await getGlobalSettingsCached()).projects);
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement;
     for(let [project, requests] of perProject) {
-        displayProjectBlock(requests, container, project);
+        displayGroupedBlock(requests, container, project == "" ? "--nog geen project--" : project);
     }
 }
 
-function displayProjectBlock(requests: JsonPrItem[], container: HTMLDivElement, project: string) {
+function displayPerBudget(wrapper: HTMLElement, expenses: JsonPrItem[]) {
+    emmet.appendChild(wrapper, `h2{Per Budget}`)
+    let perBudget = getRequestsPerGroup(expenses, (item) => item.budget, []);
+    let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement; //todo: rename css class?
+    for(let [budget, requests] of perBudget) {
+        displayGroupedBlock(requests, container, budget == "" ? "--nog geen budget--" : budget);
+    }
+}
+
+function displayGroupedBlock(requests: JsonPrItem[], container: HTMLDivElement, project: string) {
     let total = requests
         .map(i => i.bruto)
         .reduce((a, b) => a + b, 0);
-    if(project == "")
-        project = "--nog geen project--";
     let details = emmet.appendChild(container, `
             div.details.midBlue>
                 div.summary>
@@ -124,79 +132,3 @@ function displayProjectBlock(requests: JsonPrItem[], container: HTMLDivElement, 
         };
     })
 }
-
-function calcBudgetTotals(budgetLevel: BudgetLevel) {
-    budgetLevel.price = budgetLevel.items.map(i => i.bruto).reduce((sum, price) => sum + price, 0);
-    budgetLevel.children.forEach(c => calcBudgetTotals(c));
-    for(let child of budgetLevel.children.values()) {
-        budgetLevel.price += child.price;
-    }
-}
-
-function displayPerBudget(container: HTMLElement, expenses: JsonPrItem[]) {
-    let expensesRoot: BudgetLevel = {key: "6", descr: "Uitgaven", price: 0, children: new Map<string, BudgetLevel>(), items: []};
-    for (const item of expenses) {
-        insertLevel(expensesRoot, item, 1);
-    }
-    calcBudgetTotals(expensesRoot);
-    emmet.appendChild(container, `h2{Per Budgetpost}`);
-    displayBudgetLevel(container, expensesRoot);
-}
-
-function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {
-    let total = budgetLvl.items.map(i => i.bruto).reduce((sum, price) => sum + price, 0);
-    emmet.appendChild(container, `
-        div.group.flexRow.w100.indent${budgetLvl.key.length}>(
-            (
-                span>(
-                    span.lvl{${budgetLvl.key}}+
-                    span.descr{${budgetLvl.descr}}
-                )
-            )+
-            span.price{${formatPrice(budgetLvl.price)}}
-        )
-    `);
-    for(let item of budgetLvl.items) {
-        emmet.appendChild(container, `
-        div.item.flexRow.w100>(
-            (
-                span>(
-                    span.lvl{${item.budget}}+
-                    span.descr{${item.title}}+
-                    span.status{${item.tags}}
-                )
-            )+
-            span.price{${formatPrice(item.bruto)}}
-        )
-    `);
-    }
-    budgetLvl.children.forEach(b => displayBudgetLevel(container, b));
-}
-
-interface BudgetLevel {
-    key: string;
-    descr: string;
-    price: number;
-    children: Map<string, BudgetLevel>;
-    items: JsonPrItem[];
-}
-
-function insertLevel(parent: BudgetLevel, item: JsonPrItem, level: number) {
-    if(!item.budget)
-        return; //todo: handle this instead of ignoring.
-    let key = item.budget.substring(0, level+1);
-    let remainder = item.budget.substring(level+1).replaceAll("0", "");
-    if(remainder.length == 0) {
-        parent.items.push(item);
-        return;
-    }
-    let newParent: BudgetLevel;
-    if(parent.children.has(key)) {
-        newParent = parent.children.get(key)!;
-    } else {
-        newParent = {key, descr: "todo...", price: 0, children: new Map<string, BudgetLevel>(), items: []};
-        parent.children.set(key, newParent);
-    }
-    insertLevel(newParent, item, level+1);
-}
-
