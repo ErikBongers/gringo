@@ -19,6 +19,45 @@ export function getBudgetCode(ledger: string) {
     return _budgetMap.get(ledger)??null;
 }
 
+let _budgetDscrMap: Map<string, string> | null = null;
+export function getBudgetDscr(budget: string) {
+    if(!_budgetDscrMap) {
+        _budgetDscrMap = new Map<string, string>();
+        budgetDscrs.forEach(budget => {
+            _budgetDscrMap!.set(budget[0], budget[1]); //! just created map.
+        })
+    }
+
+    return _budgetDscrMap.get(budget)??null;
+}
+
+export let budgetDscrs = [
+    ["60320000", "Niet-maximumfactuur"],
+    ["60320000", "Aankopen lln niet maximumfactuur voor doorverkoop"],
+    ["60330000", "Doorverkoop: voeding en drank"],
+    ["61000000", "Huur onroerende goederen"],
+    ["61030000", "Onderhoud en herstel van onroerende goederen"],
+    ["61200000", "Verzekeringen"],
+    ["61300000", "Auteursrechten, bijdragen en lidgelden"],
+    ["61310000", "Erelonen zonder inhouding BV"],
+    ["61314000", "Wijkwerkcheques"],
+    ["61410000", "Kosten ivm roerende goederen"],
+    ["61411000", "Gereedschappen en materialen"],
+    ["61450000", "Schoonmaak en WC-papier, handdoeken"],
+    ["61460000", "Communicatiekosten"],
+    ["61490000", "Klein kantoormateriaal"],
+    ["61510000", "Evenementen"],
+    ["61520001", "WS Vlaanderen Nascholingsgelden"],
+    ["61530000", "Personeel- en leerlingenkosten allerlei"],
+    ["61560000", "Veiligheid personeel en leerlingen"],
+    ["61580000", "Dienstverplaatsingen"],
+    ["61611000", "Kosten uitstappen niet doorgerekend"],
+    ["61612000", "Didactische kosten"],
+    ["61613000", "Projecten"],
+    ["64300000", "Andere werkingskosten"],
+    ["65700000", "Andere financiële kosten"],
+];
+
 let ledgerToBudgetCodes: LedgerToBudgetCode[] = [
     { ledger: "2110000000", budget: "21100000"},
     { ledger: "2231000000", budget: "22310000"},

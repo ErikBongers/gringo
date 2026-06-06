@@ -1,6 +1,6 @@
 import {emmet} from "../../libs/Emmeter/html";
 import {createInfoBlock, formatPrice} from "../globals";
-import {createJsonPrData, getRequestsPerGroup, JsonPrData, JsonPrItem} from "./aggregate";
+import {createJsonPrData, getBudgetDscr, getRequestsPerGroup, JsonPrData, JsonPrItem} from "./aggregate";
 import {hideFloatingHelp} from "./observer";
 import {Tabs} from "../tabs";
 import {getGlobalSettingsCached} from "../plugin_options/options";
@@ -85,11 +85,12 @@ function displayPerBudget(wrapper: HTMLElement, expenses: JsonPrItem[]) {
     let perBudget = getRequestsPerGroup(expenses, (item) => item.budget, []);
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement; //todo: rename css class?
     for(let [budget, requests] of perBudget) {
-        displayGroupedBlock(requests, container, budget == "" ? "--nog geen budget--" : budget);
+        let budgetDscr = budget + " " + (getBudgetDscr(budget)?? "--geen omschrijving--");
+        displayGroupedBlock(requests, container, budget == "" ? "--nog geen budget--" : budgetDscr);
     }
 }
 
-function displayGroupedBlock(requests: JsonPrItem[], container: HTMLDivElement, project: string) {
+function displayGroupedBlock(requests: JsonPrItem[], container: HTMLDivElement, groupTitle: string) {
     let total = requests
         .map(i => i.bruto)
         .reduce((a, b) => a + b, 0);
@@ -99,7 +100,7 @@ function displayGroupedBlock(requests: JsonPrItem[], container: HTMLDivElement, 
                     div.group.flexInline>(
                         (
                             span>(
-                                span.dscr{${project}}
+                                span.dscr{${groupTitle}}
                             )
                         )+
                         span.price{${formatPrice(total)}}

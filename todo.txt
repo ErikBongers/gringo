@@ -1,3 +1,11 @@
+* Totals groups: within group: have totals per tag?
+  > tags are not mutually exclusive.
+    > even MW/BK are not always exclusive: some costs are for both.
+      > so...
+        > group for the selected tags.
+          > remember settings.
+  > also allow grouping per project within budget?
+
 * Be able to quickly set project for PR when it's missing, using a link in the overview...or in  the overview itself.
 
 * Add investments to list.

@@ -1070,6 +1070,42 @@
 		}
 		return _budgetMap.get(ledger) ?? null;
 	}
+	let _budgetDscrMap = null;
+	function getBudgetDscr(budget) {
+		if (!_budgetDscrMap) {
+			_budgetDscrMap = /* @__PURE__ */ new Map();
+			budgetDscrs.forEach((budget) => {
+				_budgetDscrMap.set(budget[0], budget[1]);
+			});
+		}
+		return _budgetDscrMap.get(budget) ?? null;
+	}
+	let budgetDscrs = [
+		["60320000", "Niet-maximumfactuur"],
+		["60320000", "Aankopen lln niet maximumfactuur voor doorverkoop"],
+		["60330000", "Doorverkoop: voeding en drank"],
+		["61000000", "Huur onroerende goederen"],
+		["61030000", "Onderhoud en herstel van onroerende goederen"],
+		["61200000", "Verzekeringen"],
+		["61300000", "Auteursrechten, bijdragen en lidgelden"],
+		["61310000", "Erelonen zonder inhouding BV"],
+		["61314000", "Wijkwerkcheques"],
+		["61410000", "Kosten ivm roerende goederen"],
+		["61411000", "Gereedschappen en materialen"],
+		["61450000", "Schoonmaak en WC-papier, handdoeken"],
+		["61460000", "Communicatiekosten"],
+		["61490000", "Klein kantoormateriaal"],
+		["61510000", "Evenementen"],
+		["61520001", "WS Vlaanderen Nascholingsgelden"],
+		["61530000", "Personeel- en leerlingenkosten allerlei"],
+		["61560000", "Veiligheid personeel en leerlingen"],
+		["61580000", "Dienstverplaatsingen"],
+		["61611000", "Kosten uitstappen niet doorgerekend"],
+		["61612000", "Didactische kosten"],
+		["61613000", "Projecten"],
+		["64300000", "Andere werkingskosten"],
+		["65700000", "Andere financiële kosten"]
+	];
 	let ledgerToBudgetCodes = [
 		{
 			ledger: "2110000000",
@@ -1789,9 +1825,12 @@
 		emmet.appendChild(wrapper, `h2{Per Budget}`);
 		let perBudget = getRequestsPerGroup(expenses, (item) => item.budget, []);
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
-		for (let [budget, requests] of perBudget) displayGroupedBlock(requests, container, budget == "" ? "--nog geen budget--" : budget);
+		for (let [budget, requests] of perBudget) {
+			let budgetDscr = budget + " " + (getBudgetDscr(budget) ?? "--geen omschrijving--");
+			displayGroupedBlock(requests, container, budget == "" ? "--nog geen budget--" : budgetDscr);
+		}
 	}
-	function displayGroupedBlock(requests, container, project) {
+	function displayGroupedBlock(requests, container, groupTitle) {
 		let total = requests.map((i) => i.bruto).reduce((a, b) => a + b, 0);
 		let details = emmet.appendChild(container, `
             div.details.midBlue>
@@ -1799,7 +1838,7 @@
                     div.group.flexInline>(
                         (
                             span>(
-                                span.dscr{${project}}
+                                span.dscr{${groupTitle}}
                             )
                         )+
                         span.price{${formatPrice(total)}}
