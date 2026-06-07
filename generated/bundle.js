@@ -2170,9 +2170,9 @@
 			};
 		});
 	}
-	function displayItem(details, item) {
+	async function displayItem(details, item) {
 		let itemId = item.prId + "_" + item.itemNo;
-		let button = emmet.appendChild(details, `
+		let row = emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (
                 span>(
@@ -2189,13 +2189,15 @@
                 button.naked.goto{${item.prId}}+
                 div{budget:${item.budget}}+
                 div{tags: ${item.tags}}+
-                div{etc...}
+                div.metaFieldsContainer
             )
         )
-    `).first.querySelector("button.goto");
+    `).first;
+		let button = row.querySelector("button.goto");
 		button.onclick = () => {
 			window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
 		};
+		await displayMetaFields(row.querySelector(".metaFieldsContainer"), await fetchMetaCached(item.prId), async (meta) => {});
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts
@@ -2549,7 +2551,7 @@
 		tagElement.classList.toggle("selected", selected);
 	}
 	let globalLastRequestTagsClicked = null;
-	async function displayMetaFields(container, request, meta) {
+	async function displayMetaFields(container, meta, afterMetaChange) {
 		let metaWrapper = emmet.appendChild(container, `
         div.metaWrapper>(
             (
@@ -2568,9 +2570,7 @@
     `).first;
 		let button = metaWrapper.querySelector("button.tagButton");
 		button.onclick = (ev) => {
-			onTagButtonClick(meta, button, async (meta) => {
-				await updatePrLine(request, meta);
-			});
+			onTagButtonClick(meta, button, afterMetaChange);
 		};
 		let select = container.querySelector("select");
 		let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
@@ -2591,7 +2591,9 @@
 		let divStatusContainer = reqDiv.querySelector("div.item-status-container");
 		if (!divStatusContainer) return;
 		divStatusContainer = divStatusContainer.parentElement;
-		let metaWrapper = await displayMetaFields(divStatusContainer, request, meta);
+		let metaWrapper = await displayMetaFields(divStatusContainer, meta, async (meta) => {
+			await updatePrLine(request, meta);
+		});
 		metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
 			ev.stopPropagation();
 		};

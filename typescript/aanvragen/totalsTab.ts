@@ -1,9 +1,11 @@
 import {emmet} from "../../libs/Emmeter/html";
 import {createInfoBlock, formatPrice} from "../globals";
 import {createJsonPrData, getBudgetDscr, getRequestsPerGroup, JsonPrData, JsonPrItem} from "./aggregate";
-import {hideFloatingHelp} from "./observer";
+import {displayMetaFields, hideFloatingHelp} from "./observer";
 import {Tabs} from "../tabs";
 import {getGlobalSettingsCached} from "../plugin_options/options";
+import {getMetaLocal} from "../db/gringoDb";
+import {fetchMetaCached} from "./requests";
 
 async function onRefreshClicked(ev: PointerEvent) {
     sessionStorage.removeItem("jsonPrData");
@@ -124,7 +126,7 @@ function displayGroupedBlock(requests: JsonPrItem[], container: HTMLDivElement, 
     })
 }
 
-function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
+async function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
     let itemId = item.prId + "_" + item.itemNo;
     let row = emmet.appendChild(details, `
         div.item.flexRow.w100>(
@@ -143,7 +145,7 @@ function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
                 button.naked.goto{${item.prId}}+
                 div{budget:${item.budget}}+
                 div{tags: ${item.tags}}+
-                div{etc...}
+                div.metaFieldsContainer
             )
         )
     `).first as HTMLDivElement;
@@ -151,4 +153,9 @@ function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
     button.onclick = () => {
         window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
     }
+    let metaFieldsContainer = row.querySelector(".metaFieldsContainer") as HTMLDivElement;
+    let meta = await fetchMetaCached(item.prId);
+    await displayMetaFields(metaFieldsContainer, meta, async (meta) => {
+        //todo: update popover.
+    });
 }

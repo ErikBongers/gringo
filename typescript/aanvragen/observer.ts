@@ -488,7 +488,7 @@ function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
 
 let globalLastRequestTagsClicked: RequestBasicInfo | null = null;
 
-async function displayMetaFields(container: HTMLDivElement, request: RequestBasicInfo, meta: PrMeta) {
+export async function displayMetaFields(container: HTMLDivElement, meta: PrMeta, afterMetaChange: (meta: PrMeta) => Promise<any>) {
     let metaWrapper = emmet.appendChild(container, `
         div.metaWrapper>(
             (
@@ -509,9 +509,7 @@ async function displayMetaFields(container: HTMLDivElement, request: RequestBasi
     let button = metaWrapper.querySelector("button.tagButton") as HTMLButtonElement;
 
     button.onclick = (ev) => {
-        onTagButtonClick(meta, button, async (meta) => {
-            await updatePrLine(request, meta);
-        });
+        onTagButtonClick(meta, button, afterMetaChange);
     };
 
     let select = container.querySelector("select")!;
@@ -537,7 +535,9 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     if(!divStatusContainer)
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
-    let metaWrapper = await displayMetaFields(divStatusContainer, request, meta);
+    let metaWrapper = await displayMetaFields(divStatusContainer, meta, async (meta) => {
+        await updatePrLine(request, meta);
+    });
 
     metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
         ev.stopPropagation();
