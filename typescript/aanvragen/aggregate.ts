@@ -39,15 +39,15 @@ export async function getExtendedRequests(infoBlock: InfoBlock) {
     return extendedReqs;
 }
 
-export type GroupFunc = (item: JsonPrItem) => string;
+export type GroupFunc = (item: JsonPrItem) => Promise<string>;
 
-export function getRequestsPerGroup(expenses: JsonPrItem[], groupFunc: GroupFunc, groups: string[]) {
+export async function getRequestsPerGroup(expenses: JsonPrItem[], groupFunc: GroupFunc, groups: string[]) {
     let groupMap = new Map<string, JsonPrItem[]>();
     for (let group of groups) {
         groupMap.set(group, []);
     }
     for (let item of expenses) {
-        let group = groupFunc(item);
+        let group = await groupFunc(item);
         if (!groupMap.has(group)) {
             groupMap.set(group, []);
         }
@@ -83,14 +83,15 @@ export async function exportPrItemsToExcel(infoBlock: InfoBlock){
     let headers = ["prId", "status", "itemNo", "bruto", "tarif", "project", "tags", "title", "budget"];
     let rows: string[][] = [];
     for (let item of jsonPrData.items) {
+        let meta = await fetchMetaCached(item.prId);
         let row: string[] = [];
         row.push(item.prId);
         row.push(item.status);
         row.push(item.itemNo);
         row.push(item.bruto.toString());
         row.push(item.tarif);
-        row.push(item.project);
-        row.push(item.tags);
+        row.push(meta.project??"");
+        row.push(meta.tags.join(","));
         row.push(item.title);
         row.push(item.budget);
         rows.push(row);
@@ -107,8 +108,6 @@ export interface JsonPrItem {
     itemNo: string;
     bruto: number;
     tarif: string;
-    project: string;
-    tags: string;
     title: string;
     budget: string;
     grant: string;
@@ -147,8 +146,6 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
                 itemNo,
                 bruto,
                 tarif,
-                project,
-                tags,
                 title,
                 budget,
                 grant,

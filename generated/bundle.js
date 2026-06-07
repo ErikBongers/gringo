@@ -1762,11 +1762,11 @@
 		for (const pr of reqs) extendedReqs.push(await createExpandedPr(pr));
 		return extendedReqs;
 	}
-	function getRequestsPerGroup(expenses, groupFunc, groups) {
+	async function getRequestsPerGroup(expenses, groupFunc, groups) {
 		let groupMap = /* @__PURE__ */ new Map();
 		for (let group of groups) groupMap.set(group, []);
 		for (let item of expenses) {
-			let group = groupFunc(item);
+			let group = await groupFunc(item);
 			if (!groupMap.has(group)) groupMap.set(group, []);
 			groupMap.get(group).push(item);
 		}
@@ -1787,14 +1787,15 @@
 		];
 		let rows = [];
 		for (let item of jsonPrData.items) {
+			let meta = await fetchMetaCached(item.prId);
 			let row = [];
 			row.push(item.prId);
 			row.push(item.status);
 			row.push(item.itemNo);
 			row.push(item.bruto.toString());
 			row.push(item.tarif);
-			row.push(item.project);
-			row.push(item.tags);
+			row.push(meta.project ?? "");
+			row.push(meta.tags.join(","));
 			row.push(item.title);
 			row.push(item.budget);
 			rows.push(row);
@@ -1817,8 +1818,8 @@
 			else bruto = calcBrutoLinePrice(item.item, 0);
 			let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
 			let meta = await fetchMetaCached(pr.pr.reqId);
-			let project = meta.project ?? "";
-			let tags = meta.tags.join(",");
+			meta.project;
+			meta.tags.join(",");
 			let title = pr.pr.title.value;
 			let budget = item.budget?.budget ?? "";
 			let grant = item.grant?.code ?? "";
@@ -1828,8 +1829,6 @@
 				itemNo,
 				bruto,
 				tarif,
-				project,
-				tags,
 				title,
 				budget,
 				grant
@@ -2135,13 +2134,17 @@
 	}
 	async function displayPerProject(wrapper, expenses) {
 		emmet.appendChild(wrapper, `h2{Per project}`);
-		let perProject = getRequestsPerGroup(expenses, (item) => item.project, (await getGlobalSettingsCached()).projects);
+		let perProject = await getRequestsPerGroup(expenses, async (item) => {
+			return (await fetchMetaCached(item.prId)).project ?? "";
+		}, (await getGlobalSettingsCached()).projects);
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
 		for (let [project, requests] of perProject) displayGroupedBlock(requests, container, project == "" ? "--nog geen project--" : project);
 	}
-	function displayPerBudget(wrapper, expenses) {
+	async function displayPerBudget(wrapper, expenses) {
 		emmet.appendChild(wrapper, `h2{Per Budget}`);
-		let perBudget = getRequestsPerGroup(expenses, (item) => item.budget, []);
+		let perBudget = await getRequestsPerGroup(expenses, async (item) => {
+			return item.budget;
+		}, []);
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
 		for (let [budget, requests] of perBudget) {
 			let budgetDscr = budget + " " + (getBudgetDscr(budget) ?? "--geen omschrijving--");
@@ -2172,6 +2175,7 @@
 	}
 	async function displayItem(details, item) {
 		let itemId = item.prId + "_" + item.itemNo;
+		let meta = await fetchMetaCached(item.prId);
 		let row = emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (
@@ -2188,7 +2192,7 @@
             div.content>(
                 button.naked.goto{${item.prId}}+
                 div{budget:${item.budget}}+
-                div{tags: ${item.tags}}+
+                div.tagsContainer+
                 div.metaFieldsContainer
             )
         )
@@ -2197,7 +2201,17 @@
 		button.onclick = () => {
 			window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
 		};
-		await displayMetaFields(row.querySelector(".metaFieldsContainer"), await fetchMetaCached(item.prId), async (meta) => {});
+		await displayMetaFields(row.querySelector(".metaFieldsContainer"), meta, async (meta) => {
+			await updateRelatedItemPopover(item.prId, meta);
+		});
+		await updateMetaFields(document.getElementById("popover" + itemId), meta);
+	}
+	async function updatePopover(popover, meta) {
+		await displayTags(popover.querySelector(".tagsContainer"), meta);
+	}
+	async function updateRelatedItemPopover(prId, meta) {
+		let popovers = document.querySelectorAll("div.totalsTab div.item div.gringoPopover");
+		for (let popover of [...popovers].filter((p) => p.id.includes("popover" + prId))) await updatePopover(popover, meta);
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts
@@ -2516,11 +2530,7 @@
 	function saveTagsFilters(tagsFilters) {
 		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
 	}
-	async function updatePrLine(request, meta) {
-		let reqDiv = document.getElementById("request-" + request.id);
-		if (!reqDiv) return;
-		let tagsContainer = reqDiv.querySelector(".tagsContainer");
-		if (!tagsContainer) return;
+	async function displayTags(tagsContainer, meta) {
 		tagsContainer.innerHTML = "";
 		let globalTagsMap = await getGlobalTags();
 		meta.tags.map((tag) => {
@@ -2533,8 +2543,18 @@
 		});
 		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
 		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
-		let select = reqDiv.querySelector("div.projectWrapper select");
+	}
+	async function updateMetaFields(metaWrapper, meta) {
+		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
+		let select = metaWrapper.querySelector("div.projectWrapper select");
 		if (meta.project) select.value = meta.project;
+	}
+	async function updatePrLine(request, meta) {
+		let reqDiv = document.getElementById("request-" + request.id);
+		if (!reqDiv) return;
+		let metaWrapper = reqDiv.querySelector(".metaWrapper");
+		if (!metaWrapper) return;
+		await updateMetaFields(metaWrapper, meta);
 		let newTotal = reqDiv.querySelector("div.gringo.listRowTotal");
 		let { total, currencySymbel } = calcPrTotal(await createExpandedPr(await fetchPr(request.id)));
 		if (total != 0) {

@@ -1,11 +1,11 @@
 import {emmet} from "../../libs/Emmeter/html";
 import {createInfoBlock, formatPrice} from "../globals";
 import {createJsonPrData, getBudgetDscr, getRequestsPerGroup, JsonPrData, JsonPrItem} from "./aggregate";
-import {displayMetaFields, hideFloatingHelp} from "./observer";
+import {displayMetaFields, displayTags, hideFloatingHelp, updateMetaFields} from "./observer";
 import {Tabs} from "../tabs";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {getMetaLocal} from "../db/gringoDb";
-import {fetchMetaCached} from "./requests";
+import {fetchMetaCached, PrMeta} from "./requests";
 
 async function onRefreshClicked(ev: PointerEvent) {
     sessionStorage.removeItem("jsonPrData");
@@ -80,16 +80,21 @@ export async function fillTotalsTab() {
 
 async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
     emmet.appendChild(wrapper, `h2{Per project}`)
-    let perProject = getRequestsPerGroup(expenses, (item) => item.project, (await getGlobalSettingsCached()).projects);
+    let perProject = await getRequestsPerGroup(expenses, async (item) => {
+        let meta = await fetchMetaCached(item.prId);
+        return meta.project??"";
+    }, (await getGlobalSettingsCached()).projects);
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement;
     for(let [project, requests] of perProject) {
         displayGroupedBlock(requests, container, project == "" ? "--nog geen project--" : project);
     }
 }
 
-function displayPerBudget(wrapper: HTMLElement, expenses: JsonPrItem[]) {
+async function displayPerBudget(wrapper: HTMLElement, expenses: JsonPrItem[]) {
     emmet.appendChild(wrapper, `h2{Per Budget}`)
-    let perBudget = getRequestsPerGroup(expenses, (item) => item.budget, []);
+    let perBudget = await getRequestsPerGroup(expenses, async (item) => {
+        return item.budget;
+    }, []);
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement; //todo: rename css class?
     for(let [budget, requests] of perBudget) {
         let budgetDscr = budget + " " + (getBudgetDscr(budget)?? "--geen omschrijving--");
@@ -128,6 +133,7 @@ function displayGroupedBlock(requests: JsonPrItem[], container: HTMLDivElement, 
 
 async function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
     let itemId = item.prId + "_" + item.itemNo;
+    let meta = await fetchMetaCached(item.prId);
     let row = emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (
@@ -144,7 +150,7 @@ async function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
             div.content>(
                 button.naked.goto{${item.prId}}+
                 div{budget:${item.budget}}+
-                div{tags: ${item.tags}}+
+                div.tagsContainer+
                 div.metaFieldsContainer
             )
         )
@@ -154,8 +160,21 @@ async function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
         window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
     }
     let metaFieldsContainer = row.querySelector(".metaFieldsContainer") as HTMLDivElement;
-    let meta = await fetchMetaCached(item.prId);
     await displayMetaFields(metaFieldsContainer, meta, async (meta) => {
-        //todo: update popover.
+        await updateRelatedItemPopover(item.prId, meta);
     });
+    let popover = document.getElementById("popover"+itemId) as HTMLDivElement;
+    await updateMetaFields(popover, meta);
+}
+
+async function updatePopover(popover: any, meta: PrMeta) {
+    let tagsContainer = popover.querySelector(".tagsContainer") as HTMLDivElement;
+    await displayTags(tagsContainer, meta);
+}
+
+async function updateRelatedItemPopover(prId: string, meta: PrMeta) {
+    let popovers = document.querySelectorAll("div.totalsTab div.item div.gringoPopover") as NodeListOf<HTMLDivElement>;
+    for (let popover of [...popovers].filter(p => p.id.includes("popover" + prId))) {
+        await updatePopover(popover, meta);
+    }
 }

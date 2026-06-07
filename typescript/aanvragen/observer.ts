@@ -436,34 +436,43 @@ function saveTagsFilters(tagsFilters: TagsFilter[]) {
     localStorage.setItem('gringo.tagsFilters', JSON.stringify(tagsFilters));
 }
 
-async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
-    let reqDiv = document.getElementById("request-" + request.id);
-    if(!reqDiv)
-        return;
-    let tagsContainer = reqDiv.querySelector(".tagsContainer") as HTMLButtonElement | null;
-    if(!tagsContainer)
-        return;
+export async function displayTags(tagsContainer: HTMLElement , meta: PrMeta) {
     tagsContainer.innerHTML = "";
     let globalTagsMap = await getGlobalTags();
     meta.tags
         .map(tag => {
             return globalTagsMap.get(tag);
         })
-        .filter(t  => !!t)
+        .filter(t => !!t)
         .sort((a, b) => a.order - b.order)
         .forEach(tagDef => {
             let tagSpan = emmet.appendChild(tagsContainer, `
                 span    
             `).first as HTMLSpanElement;
-                paintTag(tagSpan, tagDef, true);
+            paintTag(tagSpan, tagDef, true);
         });
     let orphans = meta.tags.filter(tag => ![...globalTagsMap.values()].find(tagDef => tagDef.name == tag));
-    if(orphans.length > 0) {
+    if (orphans.length > 0) {
         emmet.appendChild(tagsContainer, orphans.map(tag => `span.gringoTag{${tag}}`).join("+"));
     }
-    let select = reqDiv.querySelector("div.projectWrapper select")! as HTMLSelectElement;
-    if(meta.project)
+}
+
+export async function updateMetaFields(metaWrapper: HTMLElement, meta: PrMeta) {
+    let tagsContainer = metaWrapper.querySelector(".tagsContainer") as HTMLElement;
+    await displayTags(tagsContainer, meta);
+    let select = metaWrapper.querySelector("div.projectWrapper select")! as HTMLSelectElement;
+    if (meta.project)
         select.value = meta.project;
+}
+
+async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
+    let reqDiv = document.getElementById("request-" + request.id);
+    if(!reqDiv)
+        return;
+    let metaWrapper = reqDiv.querySelector(".metaWrapper") as HTMLElement | null;
+    if(!metaWrapper)
+        return;
+    await updateMetaFields(metaWrapper, meta);
     let newTotal = reqDiv.querySelector("div.gringo.listRowTotal") as HTMLDivElement;
     let pr = await fetchPr(request.id);
     let expPr = await createExpandedPr(pr);
