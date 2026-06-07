@@ -1065,10 +1065,10 @@
 		if (!_budgetMap) {
 			_budgetMap = /* @__PURE__ */ new Map();
 			ledgerToBudgetCodes.forEach((budget) => {
-				_budgetMap.set(budget.ledger, budget);
+				_budgetMap.set(budget.ledger10, budget);
 			});
 		}
-		return _budgetMap.get(ledger) ?? null;
+		return _budgetMap.get(ledger.substring(0, 10)) ?? null;
 	}
 	let _budgetDscrMap = null;
 	function getBudgetDscr(budget) {
@@ -1104,343 +1104,347 @@
 		["61612000", "Didactische kosten"],
 		["61613000", "Projecten"],
 		["64300000", "Andere werkingskosten"],
-		["65700000", "Andere financiële kosten"]
+		["65700000", "Andere financiële kosten"],
+		["23020000", "Uitrusting en inrichting"],
+		["24020000", "Computers en ICT"],
+		["24000000", "Meubilair"],
+		["24200000", "Muziekinstrumenten"]
 	];
 	let ledgerToBudgetCodes = [
 		{
-			ledger: "2110000000",
+			ledger10: "2110000000",
 			budget: "21100000"
 		},
 		{
-			ledger: "2231000000",
+			ledger10: "2231000000",
 			budget: "22310000"
 		},
 		{
-			ledger: "2300000000",
+			ledger10: "2300000000",
 			budget: "23000000"
 		},
 		{
-			ledger: "2301000000",
+			ledger10: "2301000000",
 			budget: "23010000"
 		},
 		{
-			ledger: "2302000000",
+			ledger10: "2302000000",
 			budget: "23020000"
 		},
 		{
-			ledger: "2400000000",
+			ledger10: "2400000000",
 			budget: "24000000"
 		},
 		{
-			ledger: "2402000000",
+			ledger10: "2402000000",
 			budget: "24020000"
 		},
 		{
-			ledger: "2406000000",
+			ledger10: "2406000000",
 			budget: "24060000"
 		},
 		{
-			ledger: "2410000000",
+			ledger10: "2410000000",
 			budget: "24100000"
 		},
 		{
-			ledger: "2420000000",
+			ledger10: "2420000000",
 			budget: "24200000"
 		},
 		{
-			ledger: "2510000000",
+			ledger10: "2510000000",
 			budget: "25100000"
 		},
 		{
-			ledger: "6030000100",
+			ledger10: "6030000100",
 			budget: "60310100"
 		},
 		{
-			ledger: "6030000150",
+			ledger10: "6030000150",
 			budget: "60310150"
 		},
 		{
-			ledger: "6030000200",
+			ledger10: "6030000200",
 			budget: "60320000"
 		},
 		{
-			ledger: "6030000300",
+			ledger10: "6030000300",
 			budget: "60330000"
 		},
 		{
-			ledger: "6100000100",
+			ledger10: "6100000100",
 			budget: "61000000"
 		},
 		{
-			ledger: "6103000900",
+			ledger10: "6103000900",
 			budget: "61030000"
 		},
 		{
-			ledger: "6103000300",
+			ledger10: "6103000300",
 			budget: "61030000"
 		},
 		{
-			ledger: "6103000400",
+			ledger10: "6103000400",
 			budget: "61030004"
 		},
 		{
-			ledger: "6103000500",
+			ledger10: "6103000500",
 			budget: "61030005"
 		},
 		{
-			ledger: "6103000600",
+			ledger10: "6103000600",
 			budget: "61030006"
 		},
 		{
-			ledger: "6103000700",
+			ledger10: "6103000700",
 			budget: "61030007"
 		},
 		{
-			ledger: "6103001000",
+			ledger10: "6103001000",
 			budget: "61030009"
 		},
 		{
-			ledger: "6112000000",
+			ledger10: "6112000000",
 			budget: "61120000"
 		},
 		{
-			ledger: "6120000300",
+			ledger10: "6120000300",
 			budget: "61200000"
 		},
 		{
-			ledger: "6120000200",
+			ledger10: "6120000200",
 			budget: "61200000"
 		},
 		{
-			ledger: "6120009000",
+			ledger10: "6120009000",
 			budget: "61200000"
 		},
 		{
-			ledger: "6120000100",
+			ledger10: "6120000100",
 			budget: "61200000"
 		},
 		{
-			ledger: "6130001000",
+			ledger10: "6130001000",
 			budget: "61300000"
 		},
 		{
-			ledger: "6130000600",
+			ledger10: "6130000600",
 			budget: "61310000"
 		},
 		{
-			ledger: "6130000400",
+			ledger10: "6130000400",
 			budget: "61310000"
 		},
 		{
-			ledger: "6130009000",
+			ledger10: "6130009000",
 			budget: "61310000"
 		},
 		{
-			ledger: "6130000100",
+			ledger10: "6130000100",
 			budget: "61310000"
 		},
 		{
-			ledger: "6130000200",
+			ledger10: "6130000200",
 			budget: "61310000"
 		},
 		{
-			ledger: "6130000800",
+			ledger10: "6130000800",
 			budget: "61310000"
 		},
 		{
-			ledger: "6131000600",
+			ledger10: "6131000600",
 			budget: "61310000"
 		},
 		{
-			ledger: "6130000500",
+			ledger10: "6130000500",
 			budget: "61310000"
 		},
 		{
-			ledger: "6130000900",
+			ledger10: "6130000900",
 			budget: "61310000"
 		},
 		{
-			ledger: "6130001400",
+			ledger10: "6130001400",
 			budget: "61314000"
 		},
 		{
-			ledger: "6141000100",
+			ledger10: "6141000100",
 			budget: "61410000"
 		},
 		{
-			ledger: "6141100300",
+			ledger10: "6141100300",
 			budget: "61410000"
 		},
 		{
-			ledger: "6141100400",
+			ledger10: "6141100400",
 			budget: "61410000"
 		},
 		{
-			ledger: "6144000200",
+			ledger10: "6144000200",
 			budget: "61410000"
 		},
 		{
-			ledger: "6144000400",
+			ledger10: "6144000400",
 			budget: "61410000"
 		},
 		{
-			ledger: "6147000100",
+			ledger10: "6147000100",
 			budget: "61410000"
 		},
 		{
-			ledger: "6141100100",
+			ledger10: "6141100100",
 			budget: "61411000"
 		},
 		{
-			ledger: "6142100200",
+			ledger10: "6142100200",
 			budget: "61420002"
 		},
 		{
-			ledger: "6142100300",
+			ledger10: "6142100300",
 			budget: "61420003"
 		},
 		{
-			ledger: "6142100400",
+			ledger10: "6142100400",
 			budget: "61420004"
 		},
 		{
-			ledger: "6142000100",
+			ledger10: "6142000100",
 			budget: "61420100"
 		},
 		{
-			ledger: "6142000200",
+			ledger10: "6142000200",
 			budget: "61420200"
 		},
 		{
-			ledger: "6145000100",
+			ledger10: "6145000100",
 			budget: "61450000"
 		},
 		{
-			ledger: "6145000200",
+			ledger10: "6145000200",
 			budget: "61450000"
 		},
 		{
-			ledger: "6146000400",
+			ledger10: "6146000400",
 			budget: "61460000"
 		},
 		{
-			ledger: "6146000700",
+			ledger10: "6146000700",
 			budget: "61460000"
 		},
 		{
-			ledger: "6146000100",
+			ledger10: "6146000100",
 			budget: "61460000"
 		},
 		{
-			ledger: "6146000500",
+			ledger10: "6146000500",
 			budget: "61460000"
 		},
 		{
-			ledger: "6146000300",
+			ledger10: "6146000300",
 			budget: "61460000"
 		},
 		{
-			ledger: "6146000200",
+			ledger10: "6146000200",
 			budget: "61460000"
 		},
 		{
-			ledger: "6146000900",
+			ledger10: "6146000900",
 			budget: "61490000"
 		},
 		{
-			ledger: "6151000400",
+			ledger10: "6151000400",
 			budget: "61510000"
 		},
 		{
-			ledger: "6152000100",
+			ledger10: "6152000100",
 			budget: "61520001"
 		},
 		{
-			ledger: "6152100100",
+			ledger10: "6152100100",
 			budget: "61520001"
 		},
 		{
-			ledger: "6152000200",
+			ledger10: "6152000200",
 			budget: "61520002"
 		},
 		{
-			ledger: "6152000300",
+			ledger10: "6152000300",
 			budget: "61530000"
 		},
 		{
-			ledger: "6152000600",
+			ledger10: "6152000600",
 			budget: "61560000"
 		},
 		{
-			ledger: "6152001200",
+			ledger10: "6152001200",
 			budget: "61560000"
 		},
 		{
-			ledger: "6152001300",
+			ledger10: "6152001300",
 			budget: "61560000"
 		},
 		{
-			ledger: "6152000800",
+			ledger10: "6152000800",
 			budget: "61580000"
 		},
 		{
-			ledger: "6161000100",
+			ledger10: "6161000100",
 			budget: "61611000"
 		},
 		{
-			ledger: "6161000200",
+			ledger10: "6161000200",
 			budget: "61612000"
 		},
 		{
-			ledger: "6161000300",
+			ledger10: "6161000300",
 			budget: "61613000"
 		},
 		{
-			ledger: "6170000000",
+			ledger10: "6170000000",
 			budget: "61700000"
 		},
 		{
-			ledger: "6230000100",
+			ledger10: "6230000100",
 			budget: "62300000"
 		},
 		{
-			ledger: "6400009000",
+			ledger10: "6400009000",
 			budget: "64000000"
 		},
 		{
-			ledger: "6400000600",
+			ledger10: "6400000600",
 			budget: "64000000"
 		},
 		{
-			ledger: "6400000400",
+			ledger10: "6400000400",
 			budget: "64000000"
 		},
 		{
-			ledger: "6400000500",
+			ledger10: "6400000500",
 			budget: "64000000"
 		},
 		{
-			ledger: "6430000700",
+			ledger10: "6430000700",
 			budget: "64300000"
 		},
 		{
-			ledger: "6430000200",
+			ledger10: "6430000200",
 			budget: "64300000"
 		},
 		{
-			ledger: "6430000800",
+			ledger10: "6430000800",
 			budget: "64300000"
 		},
 		{
-			ledger: "4991000100",
+			ledger10: "4991000100",
 			budget: "0"
 		},
 		{
-			ledger: "4160100100",
+			ledger10: "4160100100",
 			budget: "0"
 		},
 		{
-			ledger: "4891000100",
+			ledger10: "4891000100",
 			budget: "0"
 		}
 	];
@@ -1809,7 +1813,9 @@
 			jsonPrData = await createJsonPrData(infoBlock);
 			sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
 		}
-		let expenses = jsonPrData.items.filter((item) => !["In aanmaak", "Afgewezen"].includes(item.status)).filter((item) => item.budget != "" && item.budget.startsWith("6"));
+		let expenses = jsonPrData.items.filter((item) => !["In aanmaak", "Afgewezen"].includes(item.status)).filter((item) => {
+			return item.budget != "" && (item.budget.startsWith("6") || item.budget.startsWith("2"));
+		});
 		expenses.sort((a, b) => a.budget.localeCompare(b.budget));
 		infoBlock.info.innerHTML = "";
 		await displayPerProject(tabPerProject, expenses);

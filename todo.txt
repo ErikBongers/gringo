@@ -1,14 +1,47 @@
-* Totals groups: within group: have totals per tag?
-  > tags are not mutually exclusive.
-    > even MW/BK are not always exclusive: some costs are for both.
-      > so...
-        > group for the selected tags.
-          > remember settings.
-  > also allow grouping per project within budget?
+* Add Subsidie to jpr data and totals
+  > allow splitting budget lines per subsidie.
+
+* Add investments, revenue to list.
+
+* Save totals on cloud
+  > can then be read by excel script.
+
+Excel reqs
+===========
+Have overview of allocated and spent budget.
+  > needs to be updated from 2 sources:
+    - allocated: source? Bahati overview?
+      > likely manual update.
+    - spent: ariba?
+      > excelscript button?
+        > fetch is possible.
+          > ariba totals can be on cloud.
+
+* Totals groups: within group:
+  ** have totals per tag?
+      > tags are not mutually exclusive.
+        > even MW/BK are not always exclusive: some costs are for both.
+          > so...
+            > group for the selected tags.
+              > remember settings.
+      > also allow grouping per project within budget?
+  ** or split price column into multiple columns?
+      > how many?
+        > User defined?
+          > a column can have a source or definition or formula
+            : `=mw+bk` : arithmetic
+            : `mw+bk` : has mw AND bk
+            : `mw,bk` : has mw OR bk
+            does not work with projects, unless...
+            : `'My project', 'Your project'` : has mw OR bk
+
+            > title of column?
+              : `mw,bk "titel"` : has mw OR bk
+
+        > essentially only mw/bk?
+        > but..."didactische materiaal per project?"
 
 * Be able to quickly set project for PR when it's missing, using a link in the overview...or in  the overview itself.
-
-* Add investments to list.
 
 * Req list: when only one page, navivation has no input element and prs don't get decorated.
 

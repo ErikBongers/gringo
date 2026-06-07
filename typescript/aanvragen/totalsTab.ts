@@ -63,7 +63,12 @@ export async function fillTotalsTab() {
     }
     let expenses = jsonPrData.items
         .filter(item => !["In aanmaak", "Afgewezen"].includes(item.status))
-        .filter(item => item.budget != "" && item.budget.startsWith("6"));
+        .filter(item => {
+            return item.budget != ""
+                && ( item.budget.startsWith("6")
+                    || item.budget.startsWith("2")
+                );
+        });
     expenses.sort((a, b) => a.budget.localeCompare(b.budget));
 
     infoBlock.info.innerHTML = "";
