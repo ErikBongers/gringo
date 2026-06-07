@@ -313,6 +313,7 @@ request-info-item.hidden {
             }
         }
         & div.item {
+            padding-block: .3ch;
             &:hover {
                 background-color: var(--light-blue);
             }
