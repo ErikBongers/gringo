@@ -113,3 +113,19 @@ export abstract class PartialUrlObserver extends BaseObserver {
         super(undefined, new PartialUrlPageFilter(partialUrl), onMutationCallback, trackModal, onPageRefreshedCallback);
     }
 }
+
+export function checkAndSetDecoration(el: HTMLElement | null, decorator: (el: HTMLElement) => void, customCheckAndSet?: (el: HTMLElement) => boolean) {
+    if(!el)
+        return;
+    if(customCheckAndSet) {
+        if(!customCheckAndSet(el)) {
+            decorator(el);
+        }
+        return;
+    }
+
+    if(el.dataset.gringoDecorated != "true") {
+        el.dataset.gringoDecorated = "true";
+        decorator(el);
+    }
+}

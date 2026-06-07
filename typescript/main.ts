@@ -2,6 +2,7 @@ import {equals, getOptions, observers, registerObserver, settingsObservers} from
 import {fetchGlobalSettings, setGlobalSetting} from "./plugin_options/options";
 import aanvragenObserver from "./aanvragen/observer";
 import aanvraagObserver from "./aanvraag/observer";
+import requestObservers from "./aanvragen/observer";
 
 init();
 
@@ -24,7 +25,8 @@ function init() {
         });
 
         //do registrations here to get all these observers/pages into the same compilation unit.
-        registerObserver(aanvragenObserver);
+        registerObserver(requestObservers.aanvragenObserver);
+        registerObserver(requestObservers.recentRequestsObsverver);
         registerObserver(aanvraagObserver);
 
         onPageChanged();

@@ -480,6 +480,225 @@
 			super(void 0, new PartialUrlPageFilter(partialUrl), onMutationCallback, trackModal, onPageRefreshedCallback);
 		}
 	};
+	function checkAndSetDecoration(el, decorator, customCheckAndSet) {
+		if (!el) return;
+		if (customCheckAndSet) {
+			if (!customCheckAndSet(el)) decorator(el);
+			return;
+		}
+		if (el.dataset.gringoDecorated != "true") {
+			el.dataset.gringoDecorated = "true";
+			decorator(el);
+		}
+	}
+	//#endregion
+	//#region typescript/tokenScanner.ts
+	var ScannerElse = class {
+		constructor(scannerIf) {
+			this.scannerIf = scannerIf;
+		}
+		not(callback) {
+			if (!this.scannerIf.yes) callback?.(this.scannerIf.scanner);
+			return this.scannerIf.scanner;
+		}
+	};
+	var ScannerIf = class {
+		constructor(yes, scanner) {
+			this.yes = yes;
+			this.scanner = scanner;
+		}
+		then(callback) {
+			if (this.yes) callback(this.scanner);
+			return new ScannerElse(this);
+		}
+	};
+	var TokenScanner = class TokenScanner {
+		constructor(text) {
+			this.valid = true;
+			this.source = text;
+			this.cursor = text;
+		}
+		static create(text) {
+			return new TokenScanner(text);
+		}
+		result() {
+			if (this.valid) return this.cursor;
+		}
+		find(...tokens) {
+			return this.#find("", tokens);
+		}
+		match(...tokens) {
+			return this.#find("^\\s*", tokens);
+		}
+		#find(prefix, tokens) {
+			if (!this.valid) return this;
+			let rxString = prefix + tokens.map((token) => escapeRegexChars(token) + "\\s*").join("");
+			let match = RegExp(rxString).exec(this.cursor);
+			if (match) {
+				this.cursor = this.cursor.substring(match.index + match[0].length);
+				return this;
+			}
+			this.valid = false;
+			return this;
+		}
+		ifMatch(...tokens) {
+			if (!this.valid) return new ScannerIf(true, this);
+			this.match(...tokens);
+			if (this.valid) return new ScannerIf(true, this);
+			else {
+				this.valid = true;
+				return new ScannerIf(false, this);
+			}
+		}
+		clip(len) {
+			if (!this.valid) return this;
+			this.cursor = this.cursor.substring(0, len);
+			return this;
+		}
+		clipTo(end) {
+			if (!this.valid) return this;
+			let found = this.cursor.indexOf(end);
+			if (found < 0) {
+				this.valid = false;
+				return this;
+			}
+			this.cursor = this.cursor.substring(0, found);
+			return this;
+		}
+		clone() {
+			let newScanner = new TokenScanner(this.cursor);
+			newScanner.valid = this.valid;
+			return newScanner;
+		}
+		clipString() {
+			let isString = false;
+			this.ifMatch("'").then((result) => {
+				isString = true;
+				return result.clipTo("'");
+			}).not().ifMatch("\"").then((result) => {
+				isString = true;
+				return result.clipTo("\"");
+			}).not();
+			this.valid = this.valid && isString;
+			return this;
+		}
+		captureString(callback) {
+			let result = this.clone().clipString().result();
+			if (result) {
+				callback(result);
+				this.ifMatch("'").then((result) => result.find("'")).not().ifMatch("\"").then((result) => result.find("\"")).not();
+			}
+			return this;
+		}
+		getString() {
+			return this.clipString().result();
+		}
+	};
+	//#endregion
+	//#region typescript/fetchChain.ts
+	var FetchChain = class {
+		constructor() {
+			this.lastText = "";
+		}
+		get() {
+			return this.lastText;
+		}
+		getJson() {
+			if (this.lastText === void 0) return null;
+			return JSON.parse(this.lastText);
+		}
+		set(text) {
+			this.lastText = text;
+		}
+		async fetch(url) {
+			this.lastText = await fetchText(url ?? this.lastText ?? "--null--");
+			return this.lastText;
+		}
+		async post(url, body) {
+			this.lastText = await fetchTextPost(url, body);
+			return this.lastText;
+		}
+		findDocReadyLoadUrl() {
+			this.lastText = getDocReadyLoadUrl(this.lastText ?? "--null--");
+			return this.lastText;
+		}
+		findDocReadyLoadScript() {
+			this.lastText = getDocReadyLoadScript(this.lastText ?? "--null--")?.result();
+			return this.lastText;
+		}
+		find(...args) {
+			this.lastText = new TokenScanner(this.lastText ?? "--null--").find(...args).result();
+			return this.lastText;
+		}
+		getQuotedString() {
+			let daString = "";
+			this.lastText = new TokenScanner(this.lastText ?? "--null--").captureString(((res) => daString = res)).result();
+			return daString;
+		}
+		clipTo(end) {
+			this.lastText = new TokenScanner(this.lastText ?? "--null--").clipTo(end).result();
+		}
+		div() {
+			let el = document.createElement("div");
+			el.innerHTML = this.lastText ?? "";
+			return el;
+		}
+		includes(text) {
+			return this.lastText?.includes(text) ?? false;
+		}
+	};
+	function findDocReady(scanner) {
+		return scanner.find("$", "(", "document", ")", ".", "ready", "(");
+	}
+	function getDocReadyLoadUrl(text) {
+		let scanner = new TokenScanner(text);
+		while (true) {
+			let docReady = findDocReady(scanner);
+			if (!docReady.valid) return void 0;
+			let url = docReady.clone().clipTo("<\/script>").find(".", "load", "(").clipString().result();
+			if (url) return url;
+			scanner = docReady;
+		}
+	}
+	function getDocReadyLoadScript(text) {
+		let scanner = new TokenScanner(text);
+		while (true) {
+			let docReady = findDocReady(scanner);
+			if (!docReady.valid) return void 0;
+			let script = docReady.clone().clipTo("<\/script>");
+			if (script.clone().find(".", "load", "(").valid) return script;
+			scanner = docReady;
+		}
+	}
+	async function fetchText(url) {
+		return (await fetch(url)).text();
+	}
+	async function fetchTextPost(url, body) {
+		let bodyText;
+		let headers;
+		if (typeof body == "string") {
+			bodyText = body;
+			headers = { "Content-Type": "text/plain" };
+		} else {
+			bodyText = JSON.stringify(body);
+			headers = { "Content-Type": "application/json" };
+		}
+		return (await fetch(url, {
+			method: "POST",
+			body: bodyText,
+			headers
+		})).text();
+	}
+	//#endregion
+	//#region typescript/sap/api.ts
+	async function fetchPr(prId) {
+		let chain = new FetchChain();
+		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
+		let userInfo = chain.getJson();
+		if (!userInfo) console.error("gringo: could not get userInfo.");
+		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
+		return chain.getJson();
+	}
 	//#endregion
 	//#region node_modules/idb/build/index.js
 	const instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
@@ -723,214 +942,6 @@
 	}
 	async function saveMetasLocal(prMetas) {
 		return setAll(prMetas);
-	}
-	//#endregion
-	//#region typescript/tokenScanner.ts
-	var ScannerElse = class {
-		constructor(scannerIf) {
-			this.scannerIf = scannerIf;
-		}
-		not(callback) {
-			if (!this.scannerIf.yes) callback?.(this.scannerIf.scanner);
-			return this.scannerIf.scanner;
-		}
-	};
-	var ScannerIf = class {
-		constructor(yes, scanner) {
-			this.yes = yes;
-			this.scanner = scanner;
-		}
-		then(callback) {
-			if (this.yes) callback(this.scanner);
-			return new ScannerElse(this);
-		}
-	};
-	var TokenScanner = class TokenScanner {
-		constructor(text) {
-			this.valid = true;
-			this.source = text;
-			this.cursor = text;
-		}
-		static create(text) {
-			return new TokenScanner(text);
-		}
-		result() {
-			if (this.valid) return this.cursor;
-		}
-		find(...tokens) {
-			return this.#find("", tokens);
-		}
-		match(...tokens) {
-			return this.#find("^\\s*", tokens);
-		}
-		#find(prefix, tokens) {
-			if (!this.valid) return this;
-			let rxString = prefix + tokens.map((token) => escapeRegexChars(token) + "\\s*").join("");
-			let match = RegExp(rxString).exec(this.cursor);
-			if (match) {
-				this.cursor = this.cursor.substring(match.index + match[0].length);
-				return this;
-			}
-			this.valid = false;
-			return this;
-		}
-		ifMatch(...tokens) {
-			if (!this.valid) return new ScannerIf(true, this);
-			this.match(...tokens);
-			if (this.valid) return new ScannerIf(true, this);
-			else {
-				this.valid = true;
-				return new ScannerIf(false, this);
-			}
-		}
-		clip(len) {
-			if (!this.valid) return this;
-			this.cursor = this.cursor.substring(0, len);
-			return this;
-		}
-		clipTo(end) {
-			if (!this.valid) return this;
-			let found = this.cursor.indexOf(end);
-			if (found < 0) {
-				this.valid = false;
-				return this;
-			}
-			this.cursor = this.cursor.substring(0, found);
-			return this;
-		}
-		clone() {
-			let newScanner = new TokenScanner(this.cursor);
-			newScanner.valid = this.valid;
-			return newScanner;
-		}
-		clipString() {
-			let isString = false;
-			this.ifMatch("'").then((result) => {
-				isString = true;
-				return result.clipTo("'");
-			}).not().ifMatch("\"").then((result) => {
-				isString = true;
-				return result.clipTo("\"");
-			}).not();
-			this.valid = this.valid && isString;
-			return this;
-		}
-		captureString(callback) {
-			let result = this.clone().clipString().result();
-			if (result) {
-				callback(result);
-				this.ifMatch("'").then((result) => result.find("'")).not().ifMatch("\"").then((result) => result.find("\"")).not();
-			}
-			return this;
-		}
-		getString() {
-			return this.clipString().result();
-		}
-	};
-	//#endregion
-	//#region typescript/fetchChain.ts
-	var FetchChain = class {
-		constructor() {
-			this.lastText = "";
-		}
-		get() {
-			return this.lastText;
-		}
-		getJson() {
-			if (this.lastText === void 0) return null;
-			return JSON.parse(this.lastText);
-		}
-		set(text) {
-			this.lastText = text;
-		}
-		async fetch(url) {
-			this.lastText = await fetchText(url ?? this.lastText ?? "--null--");
-			return this.lastText;
-		}
-		async post(url, body) {
-			this.lastText = await fetchTextPost(url, body);
-			return this.lastText;
-		}
-		findDocReadyLoadUrl() {
-			this.lastText = getDocReadyLoadUrl(this.lastText ?? "--null--");
-			return this.lastText;
-		}
-		findDocReadyLoadScript() {
-			this.lastText = getDocReadyLoadScript(this.lastText ?? "--null--")?.result();
-			return this.lastText;
-		}
-		find(...args) {
-			this.lastText = new TokenScanner(this.lastText ?? "--null--").find(...args).result();
-			return this.lastText;
-		}
-		getQuotedString() {
-			let daString = "";
-			this.lastText = new TokenScanner(this.lastText ?? "--null--").captureString(((res) => daString = res)).result();
-			return daString;
-		}
-		clipTo(end) {
-			this.lastText = new TokenScanner(this.lastText ?? "--null--").clipTo(end).result();
-		}
-		div() {
-			let el = document.createElement("div");
-			el.innerHTML = this.lastText ?? "";
-			return el;
-		}
-		includes(text) {
-			return this.lastText?.includes(text) ?? false;
-		}
-	};
-	function findDocReady(scanner) {
-		return scanner.find("$", "(", "document", ")", ".", "ready", "(");
-	}
-	function getDocReadyLoadUrl(text) {
-		let scanner = new TokenScanner(text);
-		while (true) {
-			let docReady = findDocReady(scanner);
-			if (!docReady.valid) return void 0;
-			let url = docReady.clone().clipTo("<\/script>").find(".", "load", "(").clipString().result();
-			if (url) return url;
-			scanner = docReady;
-		}
-	}
-	function getDocReadyLoadScript(text) {
-		let scanner = new TokenScanner(text);
-		while (true) {
-			let docReady = findDocReady(scanner);
-			if (!docReady.valid) return void 0;
-			let script = docReady.clone().clipTo("<\/script>");
-			if (script.clone().find(".", "load", "(").valid) return script;
-			scanner = docReady;
-		}
-	}
-	async function fetchText(url) {
-		return (await fetch(url)).text();
-	}
-	async function fetchTextPost(url, body) {
-		let bodyText;
-		let headers;
-		if (typeof body == "string") {
-			bodyText = body;
-			headers = { "Content-Type": "text/plain" };
-		} else {
-			bodyText = JSON.stringify(body);
-			headers = { "Content-Type": "application/json" };
-		}
-		return (await fetch(url, {
-			method: "POST",
-			body: bodyText,
-			headers
-		})).text();
-	}
-	//#endregion
-	//#region typescript/sap/api.ts
-	async function fetchPr(prId) {
-		let chain = new FetchChain();
-		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
-		let userInfo = chain.getJson();
-		if (!userInfo) console.error("gringo: could not get userInfo.");
-		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
-		return chain.getJson();
 	}
 	//#endregion
 	//#region typescript/aanvragen/requests.ts
@@ -1836,7 +1847,7 @@
 			return isPageProbablyLoaded$1();
 		}
 	};
-	var observer_default$1 = new AanvraagObserver();
+	var observer_default = new AanvraagObserver();
 	function onPageRefreshed$2() {
 		gringo("page Aanvraag refreshed.");
 		decoratePage();
@@ -2196,16 +2207,34 @@
 			return isPageProbablyLoaded();
 		}
 	};
-	var observer_default = new AanvragenObserver();
+	var RecentRequestsObserver = class extends PartialUrlObserver {
+		constructor() {
+			super("request-info-list/recentrequests", onRecentRequestMutation, false, onRecentRequestPageRefreshed);
+		}
+		isPageReallyLoaded() {
+			return isPageProbablyLoaded();
+		}
+	};
+	let requestObservers = {
+		aanvragenObserver: new AanvragenObserver(),
+		recentRequestsObsverver: new RecentRequestsObserver()
+	};
 	function onPageRefreshed$1() {
 		gringo("page Aanvragen refreshed xxx.");
 		checkDecorations();
+	}
+	function onRecentRequestPageRefreshed() {
+		checkRecentRequestsDecorations();
 	}
 	function isPageProbablyLoaded() {
 		return !!getPagination();
 	}
 	function onMutation(mutation) {
 		checkDecorations();
+		return false;
+	}
+	function onRecentRequestMutation(mutation) {
+		checkRecentRequestsDecorations();
 		return false;
 	}
 	function checkAndSetListPageDecorated(el) {
@@ -2215,10 +2244,24 @@
 		return isDecorated;
 	}
 	function checkDecorations() {
+		checkAndSetDecoration(document.querySelector("body"), decorateBody);
 		checkAndSetDecoration(document.querySelector("main"), decorateMain);
 		checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
 		checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
 		checkAndSetDecoration(getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
+	}
+	function decorateBody() {
+		emmet.appendChild(document.body, `
+        div#gringo-tags-popover[popover=""]> (
+            (div.flexRow>button.closePopup.naked{x})+
+            div.popoverContainer{Container...}
+        )        
+    `);
+	}
+	function checkRecentRequestsDecorations() {
+		checkAndSetDecoration(document.querySelector("body"), decorateBody);
+		checkAndSetDecoration(document.querySelector("main"), decorateMain);
+		checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
 	}
 	function getPagination() {
 		let paginationElement = document.querySelector("fd-pagination");
@@ -2241,17 +2284,6 @@
 	function getListTabDecoratedElement() {
 		if (!document.querySelector("request-info-requisitions")) return null;
 		return getPagination()?.currentPageElement ?? null;
-	}
-	function checkAndSetDecoration(el, decorator, customCheckAndSet) {
-		if (!el) return;
-		if (customCheckAndSet) {
-			if (!customCheckAndSet(el)) decorator(el);
-			return;
-		}
-		if (el.dataset.gringoDecorated != "true") {
-			el.dataset.gringoDecorated = "true";
-			decorator(el);
-		}
 	}
 	let globalPrs = [];
 	async function applyFilters(requests) {
@@ -2281,12 +2313,7 @@
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
 		});
-		let button = emmet.appendChild(document.body, `
-        div#gringo-tags-popover[popover=""]> (
-            (div.flexRow>button.closePopup.naked{x})+
-            div.popoverContainer{Container...}
-        )        
-    `).first.querySelector("button.closePopup");
+		let button = document.getElementById("gringo-tags-popover").querySelector("button.closePopup");
 		addButtonClickNoPropagation(button, (ev) => {
 			let popover = document.getElementById("gringo-tags-popover");
 			if (!popover) return;
@@ -2521,14 +2548,9 @@
 		tagElement.title = tagDef.description;
 		tagElement.classList.toggle("selected", selected);
 	}
-	let globalLastRequestTagsClicked;
-	async function decoratePrWithMeta(request, meta) {
-		let reqDiv = document.getElementById("request-" + request.id);
-		if (!reqDiv) return;
-		let divStatusContainer = reqDiv.querySelector("div.item-status-container");
-		if (!divStatusContainer) return;
-		divStatusContainer = divStatusContainer.parentElement;
-		let metaWrapper = emmet.appendChild(divStatusContainer, `
+	let globalLastRequestTagsClicked = null;
+	async function displayMetaFields(container, request, meta) {
+		let metaWrapper = emmet.appendChild(container, `
         div.metaWrapper>(
             (
                 div.tagsWrapper.flexRow>(
@@ -2546,9 +2568,11 @@
     `).first;
 		let button = metaWrapper.querySelector("button.tagButton");
 		button.onclick = (ev) => {
-			onTagButtonClick(request, meta, button);
+			onTagButtonClick(meta, button, async (meta) => {
+				await updatePrLine(request, meta);
+			});
 		};
-		let select = divStatusContainer.querySelector("select");
+		let select = container.querySelector("select");
 		let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
 		for (let option of options) {
 			let optionEl = document.createElement("option");
@@ -2557,8 +2581,17 @@
 			select.appendChild(optionEl);
 		}
 		select.onchange = async (ev) => {
-			await onSelectProjectClick(request, meta, select);
+			await onSelectProjectClick(meta, select);
 		};
+		return metaWrapper;
+	}
+	async function decoratePrWithMeta(request, meta) {
+		let reqDiv = document.getElementById("request-" + request.id);
+		if (!reqDiv) return;
+		let divStatusContainer = reqDiv.querySelector("div.item-status-container");
+		if (!divStatusContainer) return;
+		divStatusContainer = divStatusContainer.parentElement;
+		let metaWrapper = await displayMetaFields(divStatusContainer, request, meta);
 		metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
 			ev.stopPropagation();
 		};
@@ -2571,19 +2604,17 @@
         div.gringo.blueBlock.listRowTotal{€1.234,56}    
     `);
 	}
-	async function onSelectProjectClick(request, meta, select) {
+	async function onSelectProjectClick(meta, select) {
 		meta.project = select.value;
 		await saveMeta(meta.prId, meta, "localStorage and cloud");
 	}
-	async function onTagButtonClick(request, meta, button) {
+	async function onTagButtonClick(meta, button, afterMetaChange) {
 		let popover = document.getElementById("gringo-tags-popover");
 		if (!popover) return;
-		gringo("popover");
 		popover.togglePopover({ source: button });
 		let container = popover.querySelector(".popoverContainer");
 		container.classList.add("tagList");
 		container.innerHTML = "";
-		globalLastRequestTagsClicked = request;
 		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			let tagButton = emmet.appendChild(container, `
                     button.naked.gringoTag{${tagDef.name}}
@@ -2591,13 +2622,10 @@
 			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
 			tagButton.onclick = async (ev) => {
 				tagButton.classList.toggle("selected");
-				let selected = tagButton.classList.contains("selected");
-				gringo(`clicked ${tagDef.name} for ${request.id}(meta:${meta.prId})`);
-				if (selected) meta.tags.push(tagDef.name);
+				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
 				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
-				meta.prId = request.id;
-				await saveMeta(request.id, meta, "localStorage and cloud");
-				await updatePrLine(request, meta);
+				await saveMeta(meta.prId, meta, "localStorage and cloud");
+				await afterMetaChange(meta);
 			};
 		});
 	}
@@ -2618,8 +2646,9 @@
 			window.navigation.addEventListener("navigatesuccess", () => {
 				onPageChanged();
 			});
+			registerObserver(requestObservers.aanvragenObserver);
+			registerObserver(requestObservers.recentRequestsObsverver);
 			registerObserver(observer_default);
-			registerObserver(observer_default$1);
 			onPageChanged();
 			if (document.readyState == "complete") {
 				console.log("document ready. firing onPageRefreshed.");

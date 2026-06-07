@@ -1,4 +1,4 @@
-import {PartialUrlObserver} from "../pageObserver";
+import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter/html";
 import {createInfoBlock, gringo, priceFormatter} from "../globals";
 import {saveMetasLocal} from "../db/gringoDb";
@@ -18,11 +18,28 @@ class AanvragenObserver extends PartialUrlObserver {
     }
 }
 
-export default new AanvragenObserver();
+export class RecentRequestsObserver extends PartialUrlObserver {
+    constructor() {
+        super( "request-info-list/recentrequests", onRecentRequestMutation, false, onRecentRequestPageRefreshed );
+    }
+    isPageReallyLoaded(): boolean {
+        return isPageProbablyLoaded();
+    }
+}
+
+let requestObservers = {
+    aanvragenObserver: new AanvragenObserver(),
+    recentRequestsObsverver: new RecentRequestsObserver(),
+}
+export default requestObservers;
 
 function onPageRefreshed() {
     gringo("page Aanvragen refreshed xxx.");
     checkDecorations();
+}
+
+function onRecentRequestPageRefreshed() {
+    checkRecentRequestsDecorations();
 }
 
 function isPageProbablyLoaded(): boolean {
@@ -34,6 +51,11 @@ function onMutation(mutation: MutationRecord) {
     return false;
 }
 
+function onRecentRequestMutation(mutation: MutationRecord) {
+    checkRecentRequestsDecorations();
+    return false;
+}
+
 function checkAndSetListPageDecorated(el: HTMLElement) {
     let input = el as HTMLInputElement;
     let isDecorated = el.dataset.gringoCurrentPage == input.value;
@@ -42,10 +64,25 @@ function checkAndSetListPageDecorated(el: HTMLElement) {
 }
 
 function checkDecorations() {
+    checkAndSetDecoration(document.querySelector("body"), decorateBody);
     checkAndSetDecoration(document.querySelector("main"), decorateMain);
     checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
     checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
     checkAndSetDecoration(getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
+}
+
+function decorateBody() {
+    emmet.appendChild(document.body, `
+        div#gringo-tags-popover[popover=""]> (
+            (div.flexRow>button.closePopup.naked{x})+
+            div.popoverContainer{Container...}
+        )        
+    `);
+}
+function checkRecentRequestsDecorations() {
+    checkAndSetDecoration(document.querySelector("body"), decorateBody);
+    checkAndSetDecoration(document.querySelector("main"), decorateMain);
+    checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
 }
 
 function getPagination(): Pagination | null {
@@ -83,22 +120,6 @@ function getListTabDecoratedElement() {
     if(!tabContainer)
         return null;
     return getPagination()?.currentPageElement??null;
-}
-
-function checkAndSetDecoration(el: HTMLElement | null, decorator: (el: HTMLElement) => void, customCheckAndSet?: (el: HTMLElement) => boolean) {
-    if(!el)
-        return;
-    if(customCheckAndSet) {
-        if(!customCheckAndSet(el)) {
-            decorator(el);
-        }
-        return;
-    }
-
-    if(el.dataset.gringoDecorated != "true") {
-        el.dataset.gringoDecorated = "true";
-        decorator(el);
-    }
 }
 
 let globalPrs: RequestBasicInfo[] = [];
@@ -151,12 +172,7 @@ function decorateRequestList() {
         await applyFilters(requests);
     });
 
-    let popover = emmet.appendChild(document.body, `
-        div#gringo-tags-popover[popover=""]> (
-            (div.flexRow>button.closePopup.naked{x})+
-            div.popoverContainer{Container...}
-        )        
-    `).first as HTMLDivElement;
+    let popover = document.getElementById("gringo-tags-popover") as HTMLDivElement;
     let button = popover.querySelector("button.closePopup") as HTMLButtonElement;
     addButtonClickNoPropagation(button as HTMLButtonElement, (ev) => {
         let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
@@ -470,17 +486,10 @@ function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
     tagElement.classList.toggle("selected", selected);
 }
 
-let globalLastRequestTagsClicked: RequestBasicInfo | null;
+let globalLastRequestTagsClicked: RequestBasicInfo | null = null;
 
-async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
-    let reqDiv = document.getElementById("request-" + request.id);
-    if(!reqDiv)
-        return;
-    let divStatusContainer = reqDiv.querySelector("div.item-status-container") as HTMLDivElement | null;
-    if(!divStatusContainer)
-        return;
-    divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
-    let metaWrapper = emmet.appendChild(divStatusContainer, `
+async function displayMetaFields(container: HTMLDivElement, request: RequestBasicInfo, meta: PrMeta) {
+    let metaWrapper = emmet.appendChild(container, `
         div.metaWrapper>(
             (
                 div.tagsWrapper.flexRow>(
@@ -500,11 +509,13 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     let button = metaWrapper.querySelector("button.tagButton") as HTMLButtonElement;
 
     button.onclick = (ev) => {
-        onTagButtonClick(request, meta, button);
+        onTagButtonClick(meta, button, async (meta) => {
+            await updatePrLine(request, meta);
+        });
     };
 
-    let select = divStatusContainer.querySelector("select")!;
-    let options = [ "--selecteer--", ...(await getGlobalSettingsCached()).projects];
+    let select = container.querySelector("select")!;
+    let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
     for (let option of options) {
         let optionEl = document.createElement("option");
         optionEl.textContent = option;
@@ -513,8 +524,20 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     }
 
     select.onchange = async (ev) => {
-        await onSelectProjectClick(request, meta, select);
+        await onSelectProjectClick(meta, select);
     }
+    return metaWrapper;
+}
+
+async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
+    let reqDiv = document.getElementById("request-" + request.id);
+    if(!reqDiv)
+        return;
+    let divStatusContainer = reqDiv.querySelector("div.item-status-container") as HTMLDivElement | null;
+    if(!divStatusContainer)
+        return;
+    divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
+    let metaWrapper = await displayMetaFields(divStatusContainer, request, meta);
 
     metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
         ev.stopPropagation();
@@ -531,22 +554,20 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     `);
 }
 
-async function onSelectProjectClick(request: RequestBasicInfo, meta: PrMeta, select: HTMLSelectElement) {
+async function onSelectProjectClick(meta: PrMeta, select: HTMLSelectElement) {
     meta.project = select.value;
     await saveMeta(meta.prId, meta, "localStorage and cloud");
 }
 
-async function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button: HTMLButtonElement) {
+async function onTagButtonClick(meta: PrMeta, button: HTMLButtonElement, afterMetaChange: (meta: PrMeta) => Promise<any>) {
     let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
     if(!popover)
         return;
-    gringo("popover");
     // @ts-ignore
     popover.togglePopover({source:button});
     let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
     container.classList.add("tagList");
     container.innerHTML = "";
-    globalLastRequestTagsClicked = request;
     let globalTags = await getGlobalTags();
     [...globalTags.values()]
         .sort((a, b) => a.order - b.order)
@@ -558,14 +579,12 @@ async function onTagButtonClick(request: RequestBasicInfo, meta: PrMeta, button:
             tagButton.onclick = async (ev) => {
                 tagButton.classList.toggle("selected");
                 let selected = tagButton.classList.contains("selected");
-                gringo(`clicked ${tagDef.name} for ${request.id}(meta:${meta.prId})`);
                 if(selected)
                     meta.tags.push(tagDef.name);
                 else
                     meta.tags = meta.tags.filter(t => t != tagDef.name);
-                meta.prId = request.id; //temp!
-                await saveMeta(request.id, meta, "localStorage and cloud");
-                await updatePrLine(request, meta);
+                await saveMeta(meta.prId, meta, "localStorage and cloud");
+                await afterMetaChange(meta);
             };
         });
 
