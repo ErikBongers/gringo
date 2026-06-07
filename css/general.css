@@ -17,6 +17,7 @@
     --dark-blue: lch(from var(--sap-very-dark-blue) calc(l + 20) calc(c + 10) h);
     --very-dark-blue: lch(from var(--dark-blue) calc(l - 20) c h);
     --mid-blue: lch(from var(--dark-blue) calc(l + 20) c h);
+    --mid-light-blue: lch(from var(--dark-blue) calc(l + 25) c h);
     --light-blue: lch(from var(--dark-blue) calc(l + 40) c h);
     --very-light-blue: lch(from var(--dark-blue) calc(l + 60) c h);
 }
@@ -301,11 +302,21 @@ request-info-item.hidden {
 
 
 .totalsTab {
-    background-color: white;
+    background-color: transparent;
     padding-inline: 5ch;
     padding-block-end: 4rem;
     & div.details {
         padding-inline: .5ch;
+        & div.summary {
+            &:hover {
+                background-color: var(--mid-light-blue);
+            }
+        }
+        & div.item {
+            &:hover {
+                background-color: var(--light-blue);
+            }
+        }
     }
     & div.summary::before {
         content: "▶";
@@ -341,7 +352,6 @@ request-info-item.hidden {
             background-color: var(--dark-blue);
             color: white;
         }
-        background-color: var(--mid-blue);
         color: white;
     }
     & .item {
