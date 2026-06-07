@@ -4,7 +4,8 @@ import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
 import {AccountingField, Btw, ExpandedPr, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
-import {getBudgetCode, LedgerToBudgetCode} from "../aanvragen/aggregate";
+import {getBudgetCode} from "../aanvragen/aggregate";
+import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 
 class AanvraagObserver extends PartialUrlObserver {
     constructor() {

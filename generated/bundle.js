@@ -1062,57 +1062,7 @@
 		return globalTagsMap;
 	}
 	//#endregion
-	//#region typescript/aanvragen/aggregate.ts
-	let _budgetMap = null;
-	function getBudgetCode(ledger) {
-		if (!_budgetMap) {
-			_budgetMap = /* @__PURE__ */ new Map();
-			ledgerToBudgetCodes.forEach((budget) => {
-				_budgetMap.set(budget.ledger10, budget);
-			});
-		}
-		return _budgetMap.get(ledger.substring(0, 10)) ?? null;
-	}
-	let _budgetDscrMap = null;
-	function getBudgetDscr(budget) {
-		if (!_budgetDscrMap) {
-			_budgetDscrMap = /* @__PURE__ */ new Map();
-			budgetDscrs.forEach((budget) => {
-				_budgetDscrMap.set(budget[0], budget[1]);
-			});
-		}
-		return _budgetDscrMap.get(budget) ?? null;
-	}
-	let budgetDscrs = [
-		["60320000", "Niet-maximumfactuur"],
-		["60320000", "Aankopen lln niet maximumfactuur voor doorverkoop"],
-		["60330000", "Doorverkoop: voeding en drank"],
-		["61000000", "Huur onroerende goederen"],
-		["61030000", "Onderhoud en herstel van onroerende goederen"],
-		["61200000", "Verzekeringen"],
-		["61300000", "Auteursrechten, bijdragen en lidgelden"],
-		["61310000", "Erelonen zonder inhouding BV"],
-		["61314000", "Wijkwerkcheques"],
-		["61410000", "Kosten ivm roerende goederen"],
-		["61411000", "Gereedschappen en materialen"],
-		["61450000", "Schoonmaak en WC-papier, handdoeken"],
-		["61460000", "Communicatiekosten"],
-		["61490000", "Klein kantoormateriaal"],
-		["61510000", "Evenementen"],
-		["61520001", "WS Vlaanderen Nascholingsgelden"],
-		["61530000", "Personeel- en leerlingenkosten allerlei"],
-		["61560000", "Veiligheid personeel en leerlingen"],
-		["61580000", "Dienstverplaatsingen"],
-		["61611000", "Kosten uitstappen niet doorgerekend"],
-		["61612000", "Didactische kosten"],
-		["61613000", "Projecten"],
-		["64300000", "Andere werkingskosten"],
-		["65700000", "Andere financiële kosten"],
-		["23020000", "Uitrusting en inrichting"],
-		["24020000", "Computers en ICT"],
-		["24000000", "Meubilair"],
-		["24200000", "Muziekinstrumenten"]
-	];
+	//#region typescript/aanvragen/budgetCodes.ts
 	let ledgerToBudgetCodes = [
 		{
 			ledger10: "2110000000",
@@ -1179,10 +1129,6 @@
 			budget: "61000000"
 		},
 		{
-			ledger10: "6103000900",
-			budget: "61030000"
-		},
-		{
 			ledger10: "6103000300",
 			budget: "61030000"
 		},
@@ -1203,6 +1149,10 @@
 			budget: "61030007"
 		},
 		{
+			ledger10: "6103000900",
+			budget: "61030000"
+		},
+		{
 			ledger10: "6103001000",
 			budget: "61030009"
 		},
@@ -1211,7 +1161,7 @@
 			budget: "61120000"
 		},
 		{
-			ledger10: "6120000300",
+			ledger10: "6120000100",
 			budget: "61200000"
 		},
 		{
@@ -1219,28 +1169,16 @@
 			budget: "61200000"
 		},
 		{
+			ledger10: "6120000300",
+			budget: "61200000"
+		},
+		{
+			ledger10: "6120000400",
+			budget: "61200000"
+		},
+		{
 			ledger10: "6120009000",
 			budget: "61200000"
-		},
-		{
-			ledger10: "6120000100",
-			budget: "61200000"
-		},
-		{
-			ledger10: "6130001000",
-			budget: "61300000"
-		},
-		{
-			ledger10: "6130000600",
-			budget: "61310000"
-		},
-		{
-			ledger10: "6130000400",
-			budget: "61310000"
-		},
-		{
-			ledger10: "6130009000",
-			budget: "61310000"
 		},
 		{
 			ledger10: "6130000100",
@@ -1251,11 +1189,11 @@
 			budget: "61310000"
 		},
 		{
-			ledger10: "6130000800",
+			ledger10: "6130000300",
 			budget: "61310000"
 		},
 		{
-			ledger10: "6131000600",
+			ledger10: "6130000400",
 			budget: "61310000"
 		},
 		{
@@ -1263,7 +1201,27 @@
 			budget: "61310000"
 		},
 		{
+			ledger10: "6130000600",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6130000800",
+			budget: "61310000"
+		},
+		{
 			ledger10: "6130000900",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6130001000",
+			budget: "61300000"
+		},
+		{
+			ledger10: "6130001200",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6130001300",
 			budget: "61310000"
 		},
 		{
@@ -1271,8 +1229,44 @@
 			budget: "61314000"
 		},
 		{
+			ledger10: "6130001500",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6130009000",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6131000100",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6131000200",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6131000300",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6131000400",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6131000500",
+			budget: "61310000"
+		},
+		{
+			ledger10: "6131000600",
+			budget: "61310000"
+		},
+		{
 			ledger10: "6141000100",
 			budget: "61410000"
+		},
+		{
+			ledger10: "6141100100",
+			budget: "61411000"
 		},
 		{
 			ledger10: "6141100300",
@@ -1283,20 +1277,12 @@
 			budget: "61410000"
 		},
 		{
-			ledger10: "6144000200",
-			budget: "61410000"
+			ledger10: "6142000100",
+			budget: "61420100"
 		},
 		{
-			ledger10: "6144000400",
-			budget: "61410000"
-		},
-		{
-			ledger10: "6147000100",
-			budget: "61410000"
-		},
-		{
-			ledger10: "6141100100",
-			budget: "61411000"
+			ledger10: "6142000200",
+			budget: "61420200"
 		},
 		{
 			ledger10: "6142100200",
@@ -1311,12 +1297,12 @@
 			budget: "61420004"
 		},
 		{
-			ledger10: "6142000100",
-			budget: "61420100"
+			ledger10: "6144000200",
+			budget: "61410000"
 		},
 		{
-			ledger10: "6142000200",
-			budget: "61420200"
+			ledger10: "6144000400",
+			budget: "61410000"
 		},
 		{
 			ledger10: "6145000100",
@@ -1327,23 +1313,7 @@
 			budget: "61450000"
 		},
 		{
-			ledger10: "6146000400",
-			budget: "61460000"
-		},
-		{
-			ledger10: "6146000700",
-			budget: "61460000"
-		},
-		{
 			ledger10: "6146000100",
-			budget: "61460000"
-		},
-		{
-			ledger10: "6146000500",
-			budget: "61460000"
-		},
-		{
-			ledger10: "6146000300",
 			budget: "61460000"
 		},
 		{
@@ -1351,8 +1321,40 @@
 			budget: "61460000"
 		},
 		{
+			ledger10: "6146000300",
+			budget: "61460000"
+		},
+		{
+			ledger10: "6146000400",
+			budget: "61460000"
+		},
+		{
+			ledger10: "6146000500",
+			budget: "61460000"
+		},
+		{
+			ledger10: "6146000700",
+			budget: "61460000"
+		},
+		{
+			ledger10: "6146000800",
+			budget: "61460000"
+		},
+		{
 			ledger10: "6146000900",
 			budget: "61490000"
+		},
+		{
+			ledger10: "6146001100",
+			budget: "61460000"
+		},
+		{
+			ledger10: "6147000100",
+			budget: "61410000"
+		},
+		{
+			ledger10: "6148000000",
+			budget: "61480000"
 		},
 		{
 			ledger10: "6151000400",
@@ -1360,10 +1362,6 @@
 		},
 		{
 			ledger10: "6152000100",
-			budget: "61520001"
-		},
-		{
-			ledger10: "6152100100",
 			budget: "61520001"
 		},
 		{
@@ -1375,8 +1373,20 @@
 			budget: "61530000"
 		},
 		{
+			ledger10: "6152000400",
+			budget: "61530000"
+		},
+		{
 			ledger10: "6152000600",
 			budget: "61560000"
+		},
+		{
+			ledger10: "6152000800",
+			budget: "61580000"
+		},
+		{
+			ledger10: "6152000900",
+			budget: "61529000"
 		},
 		{
 			ledger10: "6152001200",
@@ -1387,8 +1397,12 @@
 			budget: "61560000"
 		},
 		{
-			ledger10: "6152000800",
-			budget: "61580000"
+			ledger10: "6152009000",
+			budget: "61530000"
+		},
+		{
+			ledger10: "6152100100",
+			budget: "61520001"
 		},
 		{
 			ledger10: "6161000100",
@@ -1407,15 +1421,179 @@
 			budget: "61700000"
 		},
 		{
+			ledger10: "6170000100",
+			budget: "61700000"
+		},
+		{
+			ledger10: "6180000000",
+			budget: "61800000"
+		},
+		{
+			ledger10: "6201000000",
+			budget: "62010000"
+		},
+		{
+			ledger10: "6201000100",
+			budget: "62010000"
+		},
+		{
+			ledger10: "6201000200",
+			budget: "62010000"
+		},
+		{
+			ledger10: "6201000300",
+			budget: "62010000"
+		},
+		{
+			ledger10: "6201000500",
+			budget: "62010000"
+		},
+		{
+			ledger10: "6201000700",
+			budget: "62010000"
+		},
+		{
+			ledger10: "6202100000",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6202100100",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6202100200",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6202100300",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6202100500",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6202100700",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6202200000",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6202200100",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6202200200",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6202200300",
+			budget: "62020000"
+		},
+		{
+			ledger10: "6207000000",
+			budget: "62070000"
+		},
+		{
+			ledger10: "6208000000",
+			budget: "62080300"
+		},
+		{
+			ledger10: "6211000000",
+			budget: "62110000"
+		},
+		{
+			ledger10: "6211000100",
+			budget: "62110000"
+		},
+		{
+			ledger10: "6211000200",
+			budget: "62110000"
+		},
+		{
+			ledger10: "6212100000",
+			budget: "62120000"
+		},
+		{
+			ledger10: "6212200000",
+			budget: "62120000"
+		},
+		{
+			ledger10: "6218000000",
+			budget: "62180300"
+		},
+		{
+			ledger10: "6219000000",
+			budget: "62190000"
+		},
+		{
+			ledger10: "6221000000",
+			budget: "62210000"
+		},
+		{
+			ledger10: "6222000000",
+			budget: "62220000"
+		},
+		{
+			ledger10: "6223000000",
+			budget: "62230000"
+		},
+		{
+			ledger10: "6230000000",
+			budget: "62300000"
+		},
+		{
 			ledger10: "6230000100",
 			budget: "62300000"
 		},
 		{
-			ledger10: "6400009000",
+			ledger10: "6230000300",
+			budget: "62300000"
+		},
+		{
+			ledger10: "6230000400",
+			budget: "62300000"
+		},
+		{
+			ledger10: "6230000600",
+			budget: "62300000"
+		},
+		{
+			ledger10: "6230000700",
+			budget: "62300000"
+		},
+		{
+			ledger10: "6230001000",
+			budget: "62300000"
+		},
+		{
+			ledger10: "6230001100",
+			budget: "62300000"
+		},
+		{
+			ledger10: "6230001200",
+			budget: "62300000"
+		},
+		{
+			ledger10: "6230001300",
+			budget: "62300000"
+		},
+		{
+			ledger10: "6241000000",
+			budget: "62410000"
+		},
+		{
+			ledger10: "6241000100",
+			budget: "62410000"
+		},
+		{
+			ledger10: "6400000100",
 			budget: "64000000"
 		},
 		{
-			ledger10: "6400000600",
+			ledger10: "6400000300",
 			budget: "64000000"
 		},
 		{
@@ -1427,11 +1605,31 @@
 			budget: "64000000"
 		},
 		{
-			ledger10: "6430000700",
-			budget: "64300000"
+			ledger10: "6400000600",
+			budget: "64000000"
+		},
+		{
+			ledger10: "6400009000",
+			budget: "64000000"
+		},
+		{
+			ledger10: "6420000000",
+			budget: "64200000"
 		},
 		{
 			ledger10: "6430000200",
+			budget: "64300000"
+		},
+		{
+			ledger10: "6430000400",
+			budget: "64300000"
+		},
+		{
+			ledger10: "6430000600",
+			budget: "64300000"
+		},
+		{
+			ledger10: "6430000700",
 			budget: "64300000"
 		},
 		{
@@ -1439,18 +1637,114 @@
 			budget: "64300000"
 		},
 		{
-			ledger10: "4991000100",
-			budget: "0"
+			ledger10: "6430009000",
+			budget: "64300000"
 		},
 		{
-			ledger10: "4160100100",
-			budget: "0"
+			ledger10: "6440000100",
+			budget: "64410001"
 		},
 		{
-			ledger10: "4891000100",
-			budget: "0"
+			ledger10: "6440000200",
+			budget: "64420000"
+		},
+		{
+			ledger10: "6440000300",
+			budget: "64410003"
+		},
+		{
+			ledger10: "6440000400",
+			budget: "64440000"
+		},
+		{
+			ledger10: "6490000000",
+			budget: "64900000"
+		},
+		{
+			ledger10: "6500000000",
+			budget: "65000000"
+		},
+		{
+			ledger10: "6500001200",
+			budget: "65000000"
+		},
+		{
+			ledger10: "6500001500",
+			budget: "65000330"
+		},
+		{
+			ledger10: "6540000000",
+			budget: "65400000"
+		},
+		{
+			ledger10: "6570000000",
+			budget: "65700000"
+		},
+		{
+			ledger10: "6570000200",
+			budget: "65700000"
+		},
+		{
+			ledger10: "6570000400",
+			budget: "65700000"
+		},
+		{
+			ledger10: "6570009000",
+			budget: "65700000"
 		}
 	];
+	let budgetDscrs = [
+		["60320000", "Niet-maximumfactuur"],
+		["60320000", "Aankopen lln niet maximumfactuur voor doorverkoop"],
+		["60330000", "Doorverkoop: voeding en drank"],
+		["61000000", "Huur onroerende goederen"],
+		["61030000", "Onderhoud en herstel van onroerende goederen"],
+		["61200000", "Verzekeringen"],
+		["61300000", "Auteursrechten, bijdragen en lidgelden"],
+		["61310000", "Erelonen zonder inhouding BV"],
+		["61314000", "Wijkwerkcheques"],
+		["61410000", "Kosten ivm roerende goederen"],
+		["61411000", "Gereedschappen en materialen"],
+		["61450000", "Schoonmaak en WC-papier, handdoeken"],
+		["61460000", "Communicatiekosten"],
+		["61490000", "Klein kantoormateriaal"],
+		["61510000", "Evenementen"],
+		["61520001", "WS Vlaanderen Nascholingsgelden"],
+		["61530000", "Personeel- en leerlingenkosten allerlei"],
+		["61560000", "Veiligheid personeel en leerlingen"],
+		["61580000", "Dienstverplaatsingen"],
+		["61611000", "Kosten uitstappen niet doorgerekend"],
+		["61612000", "Didactische kosten"],
+		["61613000", "Projecten"],
+		["64300000", "Andere werkingskosten"],
+		["65700000", "Andere financiële kosten"],
+		["23020000", "Uitrusting en inrichting"],
+		["24020000", "Computers en ICT"],
+		["24000000", "Meubilair"],
+		["24200000", "Muziekinstrumenten"]
+	];
+	//#endregion
+	//#region typescript/aanvragen/aggregate.ts
+	let _budgetMap = null;
+	function getBudgetCode(ledger) {
+		if (!_budgetMap) {
+			_budgetMap = /* @__PURE__ */ new Map();
+			ledgerToBudgetCodes.forEach((budget) => {
+				_budgetMap.set(budget.ledger10, budget);
+			});
+		}
+		return _budgetMap.get(ledger.substring(0, 10)) ?? null;
+	}
+	let _budgetDscrMap = null;
+	function getBudgetDscr(budget) {
+		if (!_budgetDscrMap) {
+			_budgetDscrMap = /* @__PURE__ */ new Map();
+			budgetDscrs.forEach((budget) => {
+				_budgetDscrMap.set(budget[0], budget[1]);
+			});
+		}
+		return _budgetDscrMap.get(budget) ?? null;
+	}
 	async function getExtendedRequests(infoBlock) {
 		let reqs = (await fetchRequestListAndDetails(infoBlock)).filter((pr) => pr != null).filter((pr) => pr.status != "sdfsdf");
 		let extendedReqs = [];
