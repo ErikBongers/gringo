@@ -1052,6 +1052,9 @@
 	function getPrItemAsset(prItem) {
 		return getAccountingField(prItem, "pAtHAsset");
 	}
+	function getPrItemGrant(prItem) {
+		return getAccountingField(prItem, "cus_Grant");
+	}
 	let globalTagsMap = null;
 	async function getGlobalTags() {
 		let globalSettings = await getGlobalSettingsCached();
@@ -1513,6 +1516,7 @@
 			let tags = meta.tags.join(",");
 			let title = pr.pr.title.value;
 			let budget = item.budget?.budget ?? "";
+			let grant = item.grant?.code ?? "";
 			jsonPrData.items.push({
 				prId,
 				status,
@@ -1522,7 +1526,8 @@
 				project,
 				tags,
 				title,
-				budget
+				budget,
+				grant
 			});
 		}
 		return jsonPrData;
@@ -1621,6 +1626,7 @@
 			let tarif = null;
 			let tarifs = await getBtwTarifsCachedInSession();
 			let commodity = getPrItemCommodity(item);
+			let grant = getPrItemGrant(item);
 			let ledger = getPrItemLedger(item);
 			if (!ledger) ledger = getPrItemAsset(item);
 			let budget = null;
@@ -1631,7 +1637,8 @@
 				item,
 				tarif,
 				ledger,
-				budget
+				budget,
+				grant
 			});
 		}
 		return {

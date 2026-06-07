@@ -3,7 +3,7 @@ import {getAndSetDecorated, gringo} from "../globals";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
-import {AccountingField, Btw, ExpandedPr, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
+import {AccountingField, Btw, ExpandedPr, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
 import {getBudgetCode, LedgerToBudgetCode} from "../aanvragen/aggregate";
 
 class AanvraagObserver extends PartialUrlObserver {
@@ -105,6 +105,7 @@ export interface ExpandedPrItem {
     tarif: Btw | null;
     ledger: AccountingField | null;
     budget: LedgerToBudgetCode | null;
+    grant: AccountingField | null;
 }
 
 export function calcBrutoLinePrice(item: SapLineItem, tarif: number) {
@@ -122,6 +123,7 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
             let tarif: Btw | null = null;
             let tarifs = await getBtwTarifsCachedInSession();
             let commodity = getPrItemCommodity(item);
+            let grant = getPrItemGrant(item);
             let ledger = getPrItemLedger(item);
             if (!ledger)
                 ledger = getPrItemAsset(item);
@@ -129,7 +131,7 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
             if(ledger)
                 budget = getBudgetCode(ledger.code);
             tarif = tarifs.get(commodity?.code ?? '') ?? null;
-            items.push({pr, item, tarif, ledger, budget} satisfies ExpandedPrItem);
+            items.push({pr, item, tarif, ledger, budget, grant} satisfies ExpandedPrItem);
         }
     }
     return {pr, items} satisfies ExpandedPr;

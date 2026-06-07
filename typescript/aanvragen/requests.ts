@@ -194,6 +194,10 @@ export function getPrItemAsset(prItem: SapLineItem) {
     return getAccountingField(prItem, "pAtHAsset");
 }
 
+export function getPrItemGrant(prItem: SapLineItem) {
+    return getAccountingField(prItem, "cus_Grant");
+}
+
 export interface TagDef {
     name: string,
     description: string,

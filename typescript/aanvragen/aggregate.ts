@@ -234,6 +234,7 @@ export interface JsonPrItem {
     tags: string;
     title: string;
     budget: string;
+    grant: string;
 }
 
 export interface JsonPrData {
@@ -262,6 +263,7 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
             let tags = meta.tags.join(",");
             let title = pr.pr.title.value;
             let budget = item.budget?.budget??"";
+            let grant = item.grant?.code??"";
             jsonPrData.items.push({
                 prId,
                 status,
@@ -271,7 +273,8 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
                 project,
                 tags,
                 title,
-                budget
+                budget,
+                grant,
             });
         }
     }
