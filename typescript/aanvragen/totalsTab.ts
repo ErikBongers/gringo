@@ -111,24 +111,9 @@ function displayGroupedBlock(requests: JsonPrItem[], container: HTMLDivElement, 
                         span.price{${formatPrice(total)}}
                     )
         `).first as HTMLDetailsElement;
+    requests.sort((a,b) => a.prId.localeCompare(b.prId));
     for (let item of requests) {
-        let row = emmet.appendChild(details, `
-                div.item.flexRow.w100>(
-                    (
-                        span>(
-                            span.lvl{${item.budget}}+
-                            (button.goto.naked>i.fa.fa-home)+
-                            span.descr{${item.title}}
-                        )
-                    )+
-                    span.price{${formatPrice(item.bruto)}}
-                )
-            `).first as HTMLDivElement;
-        let button = row.querySelector("button.goto") as HTMLButtonElement;
-        button.title = item.prId + "\n" + item.tags;
-        button.onclick = () => {
-            window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
-        }
+        displayItem(details, item);
     }
 
     let summaries = container.querySelectorAll(".summary") as NodeListOf<HTMLElement>;
@@ -137,4 +122,33 @@ function displayGroupedBlock(requests: JsonPrItem[], container: HTMLDivElement, 
             s.parentElement!.classList.toggle("open");
         };
     })
+}
+
+function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
+    let itemId = item.prId + "_" + item.itemNo;
+    let row = emmet.appendChild(details, `
+        div.item.flexRow.w100>(
+            (
+                span>(
+                    (
+                        button.naked.midBlueText[popovertarget="popover${itemId}" style="anchor-name: --anchor${itemId};"]{${item.prId}}
+                    )+
+                    span.descr{${item.title}}
+                )
+            )+
+            span.price{${formatPrice(item.bruto)}}
+        )+
+        div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]>(
+            div.content>(
+                button.naked.goto{${item.prId}}+
+                div{budget:${item.budget}}+
+                div{tags: ${item.tags}}+
+                div{etc...}
+            )
+        )
+    `).first as HTMLDivElement;
+    let button = row.querySelector("button.goto") as HTMLButtonElement;
+    button.onclick = () => {
+        window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
+    }
 }

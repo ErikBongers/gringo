@@ -1,6 +1,4 @@
-*
-* Add Subsidie to jpr data and totals
-  > allow splitting budget lines per subsidie.
+* Totals: add project selector and tagger to popover
 
 * Add investments, revenue to list.
 

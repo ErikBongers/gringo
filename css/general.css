@@ -371,4 +371,18 @@ request-info-item.hidden {
     & .midBlue {
         background-color: var(--mid-blue);
     }
+    & .midBlueText {
+        color: var(--mid-blue);
+    }
+
+    .gringoPopover { /* .popover is already used by ng with display=block !!*/
+        padding: 1ch;
+        position: absolute;
+        margin: 0;
+        top: anchor(top);
+        left: calc(anchor(left) + 10px);
+        border: none;
+        border-radius: 2ch;
+        box-shadow: 0.5ch 0.5ch 0.5ch 0 rgba(0, 0, 0, 0.1);
+        background-color: var(--very-light-blue);   }
 }
