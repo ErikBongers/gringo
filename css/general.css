@@ -384,5 +384,6 @@ request-info-item.hidden {
         border: none;
         border-radius: 2ch;
         box-shadow: 0.5ch 0.5ch 0.5ch 0 rgba(0, 0, 0, 0.1);
-        background-color: var(--very-light-blue);   }
+        background-color: var(--very-light-blue);
+    }
 }

@@ -2130,7 +2130,29 @@
 		expenses.sort((a, b) => a.budget.localeCompare(b.budget));
 		infoBlock.info.innerHTML = "";
 		await displayPerProject(tabPerProject, expenses);
-		displayPerBudget(tabPerBudget, expenses);
+		await displayPerBudget(tabPerBudget, expenses);
+		let popoversContainer = emmet.appendChild(totalsTab, "div.popoversContainer").first;
+		await createPopovers(popoversContainer, expenses);
+	}
+	async function createPopovers(popoversContainer, expenses) {
+		for (let item of expenses) {
+			let meta = await fetchMetaCached(item.prId);
+			let itemId = item.prId + "_" + item.itemNo;
+			let popover = emmet.appendChild(popoversContainer, `
+            div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]>(
+                div.content>(
+                    button.naked.goto{${item.prId}}+
+                    div{budget:${item.budget}}+
+                    div.tagsContainer+
+                    div.metaFieldsContainer
+                )
+            )
+        `).first;
+			await displayMetaFields(popover.querySelector(".metaFieldsContainer"), meta, async (meta) => {
+				await updateRelatedItemPopover(item.prId, meta);
+			});
+			await updateMetaFields(popover, meta);
+		}
 	}
 	async function displayPerProject(wrapper, expenses) {
 		emmet.appendChild(wrapper, `h2{Per project}`);
@@ -2175,8 +2197,8 @@
 	}
 	async function displayItem(details, item) {
 		let itemId = item.prId + "_" + item.itemNo;
-		let meta = await fetchMetaCached(item.prId);
-		let row = emmet.appendChild(details, `
+		await fetchMetaCached(item.prId);
+		let button = emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (
                 span>(
@@ -2187,24 +2209,11 @@
                 )
             )+
             span.price{${formatPrice(item.bruto)}}
-        )+
-        div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]>(
-            div.content>(
-                button.naked.goto{${item.prId}}+
-                div{budget:${item.budget}}+
-                div.tagsContainer+
-                div.metaFieldsContainer
-            )
         )
-    `).first;
-		let button = row.querySelector("button.goto");
+    `).first.querySelector("button.goto");
 		button.onclick = () => {
 			window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
 		};
-		await displayMetaFields(row.querySelector(".metaFieldsContainer"), meta, async (meta) => {
-			await updateRelatedItemPopover(item.prId, meta);
-		});
-		await updateMetaFields(document.getElementById("popover" + itemId), meta);
 	}
 	async function updatePopover(popover, meta) {
 		await displayTags(popover.querySelector(".tagsContainer"), meta);

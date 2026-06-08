@@ -75,7 +75,31 @@ export async function fillTotalsTab() {
 
     infoBlock.info.innerHTML = "";
     await displayPerProject(tabPerProject, expenses);
-    displayPerBudget(tabPerBudget, expenses);
+    await displayPerBudget(tabPerBudget, expenses);
+    let popoversContainer = emmet.appendChild(totalsTab, "div.popoversContainer").first as HTMLDivElement;
+    await createPopovers(popoversContainer, expenses);
+}
+
+async function createPopovers(popoversContainer: HTMLDivElement, expenses: JsonPrItem[]) {
+    for(let item of expenses) {
+        let meta = await fetchMetaCached(item.prId);
+        let itemId = item.prId + "_" + item.itemNo;
+        let popover = emmet.appendChild(popoversContainer, `
+            div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]>(
+                div.content>(
+                    button.naked.goto{${item.prId}}+
+                    div{budget:${item.budget}}+
+                    div.tagsContainer+
+                    div.metaFieldsContainer
+                )
+            )
+        `).first as HTMLDivElement;
+        let metaFieldsContainer = popover.querySelector(".metaFieldsContainer") as HTMLDivElement;
+        await displayMetaFields(metaFieldsContainer, meta, async (meta) => {
+            await updateRelatedItemPopover(item.prId, meta);
+        });
+        await updateMetaFields(popover, meta);
+    }
 }
 
 async function displayPerProject(wrapper: HTMLElement, expenses: JsonPrItem[]) {
@@ -145,26 +169,12 @@ async function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
                 )
             )+
             span.price{${formatPrice(item.bruto)}}
-        )+
-        div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]>(
-            div.content>(
-                button.naked.goto{${item.prId}}+
-                div{budget:${item.budget}}+
-                div.tagsContainer+
-                div.metaFieldsContainer
-            )
         )
     `).first as HTMLDivElement;
     let button = row.querySelector("button.goto") as HTMLButtonElement;
     button.onclick = () => {
         window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
     }
-    let metaFieldsContainer = row.querySelector(".metaFieldsContainer") as HTMLDivElement;
-    await displayMetaFields(metaFieldsContainer, meta, async (meta) => {
-        await updateRelatedItemPopover(item.prId, meta);
-    });
-    let popover = document.getElementById("popover"+itemId) as HTMLDivElement;
-    await updateMetaFields(popover, meta);
 }
 
 async function updatePopover(popover: any, meta: PrMeta) {

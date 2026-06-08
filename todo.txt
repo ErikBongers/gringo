@@ -1,7 +1,3 @@
-* Totals: add project selector and tagger to popover
-
-* Add investments, revenue to list.
-
 * Save totals on cloud
   > can then be read by excel script.
 
