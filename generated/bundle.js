@@ -296,6 +296,7 @@
 	const GLOBAL_SETTINGS_FILENAME = "gringo/gringo_global_settings.json";
 	const KEY_LAST_FETCHED_METAS = "gringo.lastFetchedMetas";
 	const KEY_CLOUD_METAS_FOLDER = "gringo/pr/meta/";
+	const KEY_CLOUD_GRINGO_FOLDER = "gringo/";
 	const BTW_TARIFS_FILENAME = "gringo/btwTarifs.json";
 	//#endregion
 	//#region typescript/cloud.ts
@@ -2129,8 +2130,40 @@
 		});
 		expenses.sort((a, b) => a.budget.localeCompare(b.budget));
 		infoBlock.info.innerHTML = "";
-		await displayPerProject(tabPerProject, expenses);
-		await displayPerBudget(tabPerBudget, expenses);
+		await displayPerProject(tabPerProject, [...(await getRequestsPerGroup(expenses, async (item) => {
+			return (await fetchMetaCached(item.prId)).project ?? "";
+		}, (await getGlobalSettingsCached()).projects)).entries()].map((mappedItem) => {
+			let groupId = mappedItem[0];
+			let items = mappedItem[1];
+			let dscr = groupId;
+			let total = items.map((i) => i.bruto).reduce((a, b) => a + b, 0);
+			return {
+				groupId,
+				items,
+				dscr: groupId == "" ? "--nog geen project--" : dscr,
+				total
+			};
+		}));
+		let perBudget = await getRequestsPerGroup(expenses, async (item) => {
+			return item.budget;
+		}, []);
+		let cloudBudgets = {
+			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+			perBudget
+		};
+		await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
+		await displayPerBudget(tabPerBudget, [...perBudget.entries()].map((mappedItem) => {
+			let groupId = mappedItem[0];
+			let items = mappedItem[1];
+			let dscr = groupId + " " + (getBudgetDscr(groupId) ?? "--geen omschrijving--");
+			let total = items.map((i) => i.bruto).reduce((a, b) => a + b, 0);
+			return {
+				groupId,
+				items,
+				dscr: groupId == "" ? "--nog geen budget--" : dscr,
+				total
+			};
+		}));
 		let popoversContainer = emmet.appendChild(totalsTab, "div.popoversContainer").first;
 		await createPopovers(popoversContainer, expenses);
 	}
@@ -2148,47 +2181,41 @@
                 )
             )
         `).first;
+			let button = popover.querySelector("button.goto");
+			button.onclick = () => {
+				window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
+			};
 			await displayMetaFields(popover.querySelector(".metaFieldsContainer"), meta, async (meta) => {
 				await updateRelatedItemPopover(item.prId, meta);
 			});
 			await updateMetaFields(popover, meta);
 		}
 	}
-	async function displayPerProject(wrapper, expenses) {
+	async function displayPerProject(wrapper, perProject) {
 		emmet.appendChild(wrapper, `h2{Per project}`);
-		let perProject = await getRequestsPerGroup(expenses, async (item) => {
-			return (await fetchMetaCached(item.prId)).project ?? "";
-		}, (await getGlobalSettingsCached()).projects);
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
-		for (let [project, requests] of perProject) displayGroupedBlock(requests, container, project == "" ? "--nog geen project--" : project);
+		for (let project of perProject) await displayGroupedBlock(project, container);
 	}
-	async function displayPerBudget(wrapper, expenses) {
+	async function displayPerBudget(wrapper, perBudget) {
 		emmet.appendChild(wrapper, `h2{Per Budget}`);
-		let perBudget = await getRequestsPerGroup(expenses, async (item) => {
-			return item.budget;
-		}, []);
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
-		for (let [budget, requests] of perBudget) {
-			let budgetDscr = budget + " " + (getBudgetDscr(budget) ?? "--geen omschrijving--");
-			displayGroupedBlock(requests, container, budget == "" ? "--nog geen budget--" : budgetDscr);
-		}
+		for (let itemGroup of perBudget) await displayGroupedBlock(itemGroup, container);
 	}
-	function displayGroupedBlock(requests, container, groupTitle) {
-		let total = requests.map((i) => i.bruto).reduce((a, b) => a + b, 0);
+	async function displayGroupedBlock(itemGroup, container) {
 		let details = emmet.appendChild(container, `
             div.details.midBlue>
                 div.summary>
                     div.group.flexInline>(
                         (
                             span>(
-                                span.dscr{${groupTitle}}
+                                span.dscr{${itemGroup.dscr}}
                             )
                         )+
-                        span.price{${formatPrice(total)}}
+                        span.price{${formatPrice(itemGroup.total)}}
                     )
         `).first;
-		requests.sort((a, b) => a.prId.localeCompare(b.prId));
-		for (let item of requests) displayItem(details, item);
+		itemGroup.items.sort((a, b) => a.prId.localeCompare(b.prId));
+		for (let item of itemGroup.items) await displayItem(details, item);
 		container.querySelectorAll(".summary").forEach((s) => {
 			s.onclick = () => {
 				s.parentElement.classList.toggle("open");
@@ -2198,7 +2225,7 @@
 	async function displayItem(details, item) {
 		let itemId = item.prId + "_" + item.itemNo;
 		await fetchMetaCached(item.prId);
-		let button = emmet.appendChild(details, `
+		emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (
                 span>(
@@ -2210,10 +2237,7 @@
             )+
             span.price{${formatPrice(item.bruto)}}
         )
-    `).first.querySelector("button.goto");
-		button.onclick = () => {
-			window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
-		};
+    `).first;
 	}
 	async function updatePopover(popover, meta) {
 		await displayTags(popover.querySelector(".tagsContainer"), meta);
