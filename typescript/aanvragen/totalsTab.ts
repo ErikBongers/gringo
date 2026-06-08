@@ -100,11 +100,6 @@ export async function fillTotalsTab() {
     let perBudget = await getRequestsPerGroup(expenses, async (item) => {
         return item.budget;
     }, []);
-    let cloudBudgets = {
-        timestamp: (new Date()).toISOString(),
-        perBudget,
-    };
-    await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
     let budgetItemGroups: PrItemGroup[] = [...perBudget.entries()].map((mappedItem) => {
         let groupId = mappedItem[0];
         let  items = mappedItem[1];
@@ -122,6 +117,28 @@ export async function fillTotalsTab() {
     await displayPerBudget(tabPerBudget, budgetItemGroups);
     let popoversContainer = emmet.appendChild(totalsTab, "div.popoversContainer").first as HTMLDivElement;
     await createPopovers(popoversContainer, expenses);
+    let cloudBudgets: CloudBudgets = {
+        timestamp: (new Date()).toISOString(),
+        perBudget: budgetItemGroups.map(group => {
+            return {
+                budget: group.groupId,
+                grant: "todo!!!", //todo.
+                total: group.total
+            }
+        }),
+    };
+    await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
+}
+
+export interface BudgetLine {
+    budget: string,
+    grant: string,
+    total: number,
+}
+
+export interface CloudBudgets {
+    timestamp: string,
+    perBudget: BudgetLine[]
 }
 
 async function createPopovers(popoversContainer: HTMLDivElement, expenses: JsonPrItem[]) {

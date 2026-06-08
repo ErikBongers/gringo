@@ -2144,15 +2144,9 @@
 				total
 			};
 		}));
-		let perBudget = await getRequestsPerGroup(expenses, async (item) => {
+		let budgetItemGroups = [...(await getRequestsPerGroup(expenses, async (item) => {
 			return item.budget;
-		}, []);
-		let cloudBudgets = {
-			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-			perBudget
-		};
-		await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
-		await displayPerBudget(tabPerBudget, [...perBudget.entries()].map((mappedItem) => {
+		}, [])).entries()].map((mappedItem) => {
 			let groupId = mappedItem[0];
 			let items = mappedItem[1];
 			let dscr = groupId + " " + (getBudgetDscr(groupId) ?? "--geen omschrijving--");
@@ -2163,9 +2157,21 @@
 				dscr: groupId == "" ? "--nog geen budget--" : dscr,
 				total
 			};
-		}));
+		});
+		await displayPerBudget(tabPerBudget, budgetItemGroups);
 		let popoversContainer = emmet.appendChild(totalsTab, "div.popoversContainer").first;
 		await createPopovers(popoversContainer, expenses);
+		let cloudBudgets = {
+			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+			perBudget: budgetItemGroups.map((group) => {
+				return {
+					budget: group.groupId,
+					grant: "todo!!!",
+					total: group.total
+				};
+			})
+		};
+		await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
 	}
 	async function createPopovers(popoversContainer, expenses) {
 		for (let item of expenses) {
