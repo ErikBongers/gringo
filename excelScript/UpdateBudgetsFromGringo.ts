@@ -16,8 +16,13 @@ export interface CloudBudgets {
 
 async function main(workbook: ExcelScript.Workbook) {
     let statusField = workbook.getNamedItem("SendStatus")!.getRange(); //! let this crash...
+    let errors = workbook.getNamedItem("Errors")?.getRange()?.getValue() as string;
     let academie = workbook.getNamedItem("Academie")?.getRange()?.getValue() as string;
     let year = workbook.getNamedItem("Jaar")?.getRange()?.getValue() as string;
+    if (errors === undefined) {
+        setError(workbook, `Veld "Errors" niet gevonden. Geef een cell de naam "Errors".`);
+        return;
+    }
     if (academie === undefined) {
         setError(workbook, `Veld "Academie" niet gevonden. Vul de academie naam in een cel en geeft dit de naam "Academie".`);
         return;
@@ -66,7 +71,7 @@ function updateBudgets(workbook: ExcelScript.Workbook, cloudBudgets: CloudBudget
     for(let budgetLine of cloudBudgets.perBudget) {
         let budgetPos = budgetColumn.find(budgetLine.budget, {completeMatch: true}) as ExcelScript.Range | undefined;
         if(!budgetPos) {
-            setError(workbook, `Budget ${budgetLine.budget} niet gevonden.`); //todo: create and addError() func.
+            addError(workbook, `Budget ${budgetLine.budget} niet gevonden.`);
             continue;
         }
         let budgetCell = range.getCell(budgetPos.getRowIndex(), brutoColumnPos.getColumnIndex());
@@ -87,6 +92,14 @@ function setError(workbook: ExcelScript.Workbook, msg: string) {
     statusField.getFormat().getFill().setColor("FF8888");
     statusField.getFormat().getFont().setColor("000000");
     _setMessage(workbook, msg, MessageType.Error);
+}
+
+function addError(workbook: ExcelScript.Workbook, msg: string) {
+    let errorField = workbook.getNamedItem("Errors")!.getRange(); //! already checked.
+    errorField.getFormat().getFill().setColor("FF8888");
+    errorField.getFormat().getFont().setColor("000000");
+    let value = errorField.getValue() as string;
+    errorField.setValue(value + "\n" + msg);
 }
 
 function setInfo(workbook: ExcelScript.Workbook, msg: string) {
