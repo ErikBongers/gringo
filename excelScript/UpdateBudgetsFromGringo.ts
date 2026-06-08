@@ -96,8 +96,7 @@ function setError(workbook: ExcelScript.Workbook, msg: string) {
 
 function addError(workbook: ExcelScript.Workbook, msg: string) {
     let errorField = workbook.getNamedItem("Errors")!.getRange(); //! already checked.
-    errorField.getFormat().getFill().setColor("FF8888");
-    errorField.getFormat().getFont().setColor("000000");
+    errorField.getFormat().getFont().setColor("FF8888");
     let value = errorField.getValue() as string;
     errorField.setValue(value + "\n" + msg);
 }
