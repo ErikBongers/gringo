@@ -493,214 +493,6 @@
 		}
 	}
 	//#endregion
-	//#region typescript/tokenScanner.ts
-	var ScannerElse = class {
-		constructor(scannerIf) {
-			this.scannerIf = scannerIf;
-		}
-		not(callback) {
-			if (!this.scannerIf.yes) callback?.(this.scannerIf.scanner);
-			return this.scannerIf.scanner;
-		}
-	};
-	var ScannerIf = class {
-		constructor(yes, scanner) {
-			this.yes = yes;
-			this.scanner = scanner;
-		}
-		then(callback) {
-			if (this.yes) callback(this.scanner);
-			return new ScannerElse(this);
-		}
-	};
-	var TokenScanner = class TokenScanner {
-		constructor(text) {
-			this.valid = true;
-			this.source = text;
-			this.cursor = text;
-		}
-		static create(text) {
-			return new TokenScanner(text);
-		}
-		result() {
-			if (this.valid) return this.cursor;
-		}
-		find(...tokens) {
-			return this.#find("", tokens);
-		}
-		match(...tokens) {
-			return this.#find("^\\s*", tokens);
-		}
-		#find(prefix, tokens) {
-			if (!this.valid) return this;
-			let rxString = prefix + tokens.map((token) => escapeRegexChars(token) + "\\s*").join("");
-			let match = RegExp(rxString).exec(this.cursor);
-			if (match) {
-				this.cursor = this.cursor.substring(match.index + match[0].length);
-				return this;
-			}
-			this.valid = false;
-			return this;
-		}
-		ifMatch(...tokens) {
-			if (!this.valid) return new ScannerIf(true, this);
-			this.match(...tokens);
-			if (this.valid) return new ScannerIf(true, this);
-			else {
-				this.valid = true;
-				return new ScannerIf(false, this);
-			}
-		}
-		clip(len) {
-			if (!this.valid) return this;
-			this.cursor = this.cursor.substring(0, len);
-			return this;
-		}
-		clipTo(end) {
-			if (!this.valid) return this;
-			let found = this.cursor.indexOf(end);
-			if (found < 0) {
-				this.valid = false;
-				return this;
-			}
-			this.cursor = this.cursor.substring(0, found);
-			return this;
-		}
-		clone() {
-			let newScanner = new TokenScanner(this.cursor);
-			newScanner.valid = this.valid;
-			return newScanner;
-		}
-		clipString() {
-			let isString = false;
-			this.ifMatch("'").then((result) => {
-				isString = true;
-				return result.clipTo("'");
-			}).not().ifMatch("\"").then((result) => {
-				isString = true;
-				return result.clipTo("\"");
-			}).not();
-			this.valid = this.valid && isString;
-			return this;
-		}
-		captureString(callback) {
-			let result = this.clone().clipString().result();
-			if (result) {
-				callback(result);
-				this.ifMatch("'").then((result) => result.find("'")).not().ifMatch("\"").then((result) => result.find("\"")).not();
-			}
-			return this;
-		}
-		getString() {
-			return this.clipString().result();
-		}
-	};
-	//#endregion
-	//#region typescript/fetchChain.ts
-	var FetchChain = class {
-		constructor() {
-			this.lastText = "";
-		}
-		get() {
-			return this.lastText;
-		}
-		getJson() {
-			if (this.lastText === void 0) return null;
-			return JSON.parse(this.lastText);
-		}
-		set(text) {
-			this.lastText = text;
-		}
-		async fetch(url) {
-			this.lastText = await fetchText(url ?? this.lastText ?? "--null--");
-			return this.lastText;
-		}
-		async post(url, body) {
-			this.lastText = await fetchTextPost(url, body);
-			return this.lastText;
-		}
-		findDocReadyLoadUrl() {
-			this.lastText = getDocReadyLoadUrl(this.lastText ?? "--null--");
-			return this.lastText;
-		}
-		findDocReadyLoadScript() {
-			this.lastText = getDocReadyLoadScript(this.lastText ?? "--null--")?.result();
-			return this.lastText;
-		}
-		find(...args) {
-			this.lastText = new TokenScanner(this.lastText ?? "--null--").find(...args).result();
-			return this.lastText;
-		}
-		getQuotedString() {
-			let daString = "";
-			this.lastText = new TokenScanner(this.lastText ?? "--null--").captureString(((res) => daString = res)).result();
-			return daString;
-		}
-		clipTo(end) {
-			this.lastText = new TokenScanner(this.lastText ?? "--null--").clipTo(end).result();
-		}
-		div() {
-			let el = document.createElement("div");
-			el.innerHTML = this.lastText ?? "";
-			return el;
-		}
-		includes(text) {
-			return this.lastText?.includes(text) ?? false;
-		}
-	};
-	function findDocReady(scanner) {
-		return scanner.find("$", "(", "document", ")", ".", "ready", "(");
-	}
-	function getDocReadyLoadUrl(text) {
-		let scanner = new TokenScanner(text);
-		while (true) {
-			let docReady = findDocReady(scanner);
-			if (!docReady.valid) return void 0;
-			let url = docReady.clone().clipTo("<\/script>").find(".", "load", "(").clipString().result();
-			if (url) return url;
-			scanner = docReady;
-		}
-	}
-	function getDocReadyLoadScript(text) {
-		let scanner = new TokenScanner(text);
-		while (true) {
-			let docReady = findDocReady(scanner);
-			if (!docReady.valid) return void 0;
-			let script = docReady.clone().clipTo("<\/script>");
-			if (script.clone().find(".", "load", "(").valid) return script;
-			scanner = docReady;
-		}
-	}
-	async function fetchText(url) {
-		return (await fetch(url)).text();
-	}
-	async function fetchTextPost(url, body) {
-		let bodyText;
-		let headers;
-		if (typeof body == "string") {
-			bodyText = body;
-			headers = { "Content-Type": "text/plain" };
-		} else {
-			bodyText = JSON.stringify(body);
-			headers = { "Content-Type": "application/json" };
-		}
-		return (await fetch(url, {
-			method: "POST",
-			body: bodyText,
-			headers
-		})).text();
-	}
-	//#endregion
-	//#region typescript/sap/api.ts
-	async function fetchPr(prId) {
-		let chain = new FetchChain();
-		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
-		let userInfo = chain.getJson();
-		if (!userInfo) console.error("gringo: could not get userInfo.");
-		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
-		return chain.getJson();
-	}
-	//#endregion
 	//#region node_modules/idb/build/index.js
 	const instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
 	let idbProxyableTypes;
@@ -943,6 +735,214 @@
 	}
 	async function saveMetasLocal(prMetas) {
 		return setAll(prMetas);
+	}
+	//#endregion
+	//#region typescript/tokenScanner.ts
+	var ScannerElse = class {
+		constructor(scannerIf) {
+			this.scannerIf = scannerIf;
+		}
+		not(callback) {
+			if (!this.scannerIf.yes) callback?.(this.scannerIf.scanner);
+			return this.scannerIf.scanner;
+		}
+	};
+	var ScannerIf = class {
+		constructor(yes, scanner) {
+			this.yes = yes;
+			this.scanner = scanner;
+		}
+		then(callback) {
+			if (this.yes) callback(this.scanner);
+			return new ScannerElse(this);
+		}
+	};
+	var TokenScanner = class TokenScanner {
+		constructor(text) {
+			this.valid = true;
+			this.source = text;
+			this.cursor = text;
+		}
+		static create(text) {
+			return new TokenScanner(text);
+		}
+		result() {
+			if (this.valid) return this.cursor;
+		}
+		find(...tokens) {
+			return this.#find("", tokens);
+		}
+		match(...tokens) {
+			return this.#find("^\\s*", tokens);
+		}
+		#find(prefix, tokens) {
+			if (!this.valid) return this;
+			let rxString = prefix + tokens.map((token) => escapeRegexChars(token) + "\\s*").join("");
+			let match = RegExp(rxString).exec(this.cursor);
+			if (match) {
+				this.cursor = this.cursor.substring(match.index + match[0].length);
+				return this;
+			}
+			this.valid = false;
+			return this;
+		}
+		ifMatch(...tokens) {
+			if (!this.valid) return new ScannerIf(true, this);
+			this.match(...tokens);
+			if (this.valid) return new ScannerIf(true, this);
+			else {
+				this.valid = true;
+				return new ScannerIf(false, this);
+			}
+		}
+		clip(len) {
+			if (!this.valid) return this;
+			this.cursor = this.cursor.substring(0, len);
+			return this;
+		}
+		clipTo(end) {
+			if (!this.valid) return this;
+			let found = this.cursor.indexOf(end);
+			if (found < 0) {
+				this.valid = false;
+				return this;
+			}
+			this.cursor = this.cursor.substring(0, found);
+			return this;
+		}
+		clone() {
+			let newScanner = new TokenScanner(this.cursor);
+			newScanner.valid = this.valid;
+			return newScanner;
+		}
+		clipString() {
+			let isString = false;
+			this.ifMatch("'").then((result) => {
+				isString = true;
+				return result.clipTo("'");
+			}).not().ifMatch("\"").then((result) => {
+				isString = true;
+				return result.clipTo("\"");
+			}).not();
+			this.valid = this.valid && isString;
+			return this;
+		}
+		captureString(callback) {
+			let result = this.clone().clipString().result();
+			if (result) {
+				callback(result);
+				this.ifMatch("'").then((result) => result.find("'")).not().ifMatch("\"").then((result) => result.find("\"")).not();
+			}
+			return this;
+		}
+		getString() {
+			return this.clipString().result();
+		}
+	};
+	//#endregion
+	//#region typescript/fetchChain.ts
+	var FetchChain = class {
+		constructor() {
+			this.lastText = "";
+		}
+		get() {
+			return this.lastText;
+		}
+		getJson() {
+			if (this.lastText === void 0) return null;
+			return JSON.parse(this.lastText);
+		}
+		set(text) {
+			this.lastText = text;
+		}
+		async fetch(url) {
+			this.lastText = await fetchText(url ?? this.lastText ?? "--null--");
+			return this.lastText;
+		}
+		async post(url, body) {
+			this.lastText = await fetchTextPost(url, body);
+			return this.lastText;
+		}
+		findDocReadyLoadUrl() {
+			this.lastText = getDocReadyLoadUrl(this.lastText ?? "--null--");
+			return this.lastText;
+		}
+		findDocReadyLoadScript() {
+			this.lastText = getDocReadyLoadScript(this.lastText ?? "--null--")?.result();
+			return this.lastText;
+		}
+		find(...args) {
+			this.lastText = new TokenScanner(this.lastText ?? "--null--").find(...args).result();
+			return this.lastText;
+		}
+		getQuotedString() {
+			let daString = "";
+			this.lastText = new TokenScanner(this.lastText ?? "--null--").captureString(((res) => daString = res)).result();
+			return daString;
+		}
+		clipTo(end) {
+			this.lastText = new TokenScanner(this.lastText ?? "--null--").clipTo(end).result();
+		}
+		div() {
+			let el = document.createElement("div");
+			el.innerHTML = this.lastText ?? "";
+			return el;
+		}
+		includes(text) {
+			return this.lastText?.includes(text) ?? false;
+		}
+	};
+	function findDocReady(scanner) {
+		return scanner.find("$", "(", "document", ")", ".", "ready", "(");
+	}
+	function getDocReadyLoadUrl(text) {
+		let scanner = new TokenScanner(text);
+		while (true) {
+			let docReady = findDocReady(scanner);
+			if (!docReady.valid) return void 0;
+			let url = docReady.clone().clipTo("<\/script>").find(".", "load", "(").clipString().result();
+			if (url) return url;
+			scanner = docReady;
+		}
+	}
+	function getDocReadyLoadScript(text) {
+		let scanner = new TokenScanner(text);
+		while (true) {
+			let docReady = findDocReady(scanner);
+			if (!docReady.valid) return void 0;
+			let script = docReady.clone().clipTo("<\/script>");
+			if (script.clone().find(".", "load", "(").valid) return script;
+			scanner = docReady;
+		}
+	}
+	async function fetchText(url) {
+		return (await fetch(url)).text();
+	}
+	async function fetchTextPost(url, body) {
+		let bodyText;
+		let headers;
+		if (typeof body == "string") {
+			bodyText = body;
+			headers = { "Content-Type": "text/plain" };
+		} else {
+			bodyText = JSON.stringify(body);
+			headers = { "Content-Type": "application/json" };
+		}
+		return (await fetch(url, {
+			method: "POST",
+			body: bodyText,
+			headers
+		})).text();
+	}
+	//#endregion
+	//#region typescript/sap/api.ts
+	async function fetchPr(prId) {
+		let chain = new FetchChain();
+		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
+		let userInfo = chain.getJson();
+		if (!userInfo) console.error("gringo: could not get userInfo.");
+		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
+		return chain.getJson();
 	}
 	//#endregion
 	//#region typescript/aanvragen/requests.ts
@@ -1841,21 +1841,21 @@
 	//#region typescript/aanvraag/observer.ts
 	var AanvraagObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("viewRequisition", onMutation$1, false, onPageRefreshed$2);
+			super("viewRequisition", onMutation$2, false, onPageRefreshed$3);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded$1();
+			return isPageProbablyLoaded$2();
 		}
 	};
-	var observer_default = new AanvraagObserver();
-	function onPageRefreshed$2() {
+	var observer_default$1 = new AanvraagObserver();
+	function onPageRefreshed$3() {
 		gringo("page Aanvraag refreshed.");
 		decoratePage();
 	}
-	function isPageProbablyLoaded$1() {
+	function isPageProbablyLoaded$2() {
 		return true;
 	}
-	function onMutation$1(mutation) {
+	function onMutation$2(mutation) {
 		decoratePage().then(() => {});
 		return false;
 	}
@@ -2256,10 +2256,10 @@
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("request-info-list/requisition", onMutation, false, onPageRefreshed$1);
+			super("request-info-list/requisition", onMutation$1, false, onPageRefreshed$2);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded();
+			return isPageProbablyLoaded$1();
 		}
 	};
 	var RecentRequestsObserver = class extends PartialUrlObserver {
@@ -2267,25 +2267,25 @@
 			super("request-info-list/recentrequests", onRecentRequestMutation, false, onRecentRequestPageRefreshed);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded();
+			return isPageProbablyLoaded$1();
 		}
 	};
 	let requestObservers = {
 		aanvragenObserver: new AanvragenObserver(),
 		recentRequestsObsverver: new RecentRequestsObserver()
 	};
-	function onPageRefreshed$1() {
+	function onPageRefreshed$2() {
 		gringo("page Aanvragen refreshed xxx.");
-		checkDecorations();
+		checkDecorations$1();
 	}
 	function onRecentRequestPageRefreshed() {
 		checkRecentRequestsDecorations();
 	}
-	function isPageProbablyLoaded() {
+	function isPageProbablyLoaded$1() {
 		return !!getPagination();
 	}
-	function onMutation(mutation) {
-		checkDecorations();
+	function onMutation$1(mutation) {
+		checkDecorations$1();
 		return false;
 	}
 	function onRecentRequestMutation(mutation) {
@@ -2298,7 +2298,7 @@
 		el.dataset.gringoCurrentPage = input.value;
 		return isDecorated;
 	}
-	function checkDecorations() {
+	function checkDecorations$1() {
 		checkAndSetDecoration(document.querySelector("body"), decorateBody);
 		checkAndSetDecoration(document.querySelector("main"), decorateMain);
 		checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
@@ -2695,6 +2695,53 @@
 		helpPopup.style.display = "none";
 	}
 	//#endregion
+	//#region typescript/reqForm/observer.ts
+	var ReqFormObserver = class extends PartialUrlObserver {
+		constructor() {
+			super("reqform", onMutation, false, onPageRefreshed$1);
+		}
+		isPageReallyLoaded() {
+			return isPageProbablyLoaded();
+		}
+	};
+	var observer_default = new ReqFormObserver();
+	function onPageRefreshed$1() {
+		gringo("Reqform page refreshed!");
+		checkDecorations();
+	}
+	function isPageProbablyLoaded() {
+		return true;
+	}
+	function onMutation(mutation) {
+		checkDecorations();
+		return false;
+	}
+	function checkDecorations() {
+		checkAndSetDecoration(document.querySelector("div.req-form-panel"), decoratePanel);
+	}
+	function decoratePanel(el) {
+		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
+		let input = emmet.appendChild(ul, `
+    li.adhoc-form-input-section.gringo.blueBlock>
+        div>
+            div.input-wrap>
+                div.form-group>(
+                    label.editable-field-label{Bruto}+
+                    div.field-wrapper>
+                        input.form-control[type="text"]                                                    
+                )
+    `).first.querySelector("input");
+		let aantal = el.querySelector("div.field-quantity input");
+		input.onkeyup = () => {
+			aantal.value = input.value;
+			aantal.dispatchEvent(new Event("change"));
+			aantal.dispatchEvent(new Event("input"));
+			aantal.dispatchEvent(new Event("blur"));
+			aantal.dispatchEvent(new Event("keyup"));
+			aantal.dispatchEvent(new Event("mouseout"));
+		};
+	}
+	//#endregion
 	//#region typescript/main.ts
 	init();
 	function init() {
@@ -2709,6 +2756,7 @@
 			});
 			registerObserver(requestObservers.aanvragenObserver);
 			registerObserver(requestObservers.recentRequestsObsverver);
+			registerObserver(observer_default$1);
 			registerObserver(observer_default);
 			onPageChanged();
 			if (document.readyState == "complete") {

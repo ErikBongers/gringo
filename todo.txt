@@ -1,5 +1,10 @@
-* Save totals on cloud
-  > can then be read by excel script.
+Calculator
+===========
+  - a bruto field
+    > allows for input without having to click first
+  - A percentage selector
+    > pre-set if commodity code is known.
+      > if not, just add percentage radio buttons.
 
 Excel reqs
 ===========

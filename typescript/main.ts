@@ -1,8 +1,7 @@
-import {equals, getOptions, observers, registerObserver, settingsObservers} from "./globals";
-import {fetchGlobalSettings, setGlobalSetting} from "./plugin_options/options";
-import aanvragenObserver from "./aanvragen/observer";
-import aanvraagObserver from "./aanvraag/observer";
+import {getOptions, observers, registerObserver, settingsObservers} from "./globals";
 import requestObservers from "./aanvragen/observer";
+import aanvraagObserver from "./aanvraag/observer";
+import reqFormObserver from "./reqForm/observer";
 
 init();
 
@@ -28,6 +27,7 @@ function init() {
         registerObserver(requestObservers.aanvragenObserver);
         registerObserver(requestObservers.recentRequestsObsverver);
         registerObserver(aanvraagObserver);
+        registerObserver(reqFormObserver);
 
         onPageChanged();
         if(document.readyState == "complete") {
