@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, test} from 'node:test';
-import {Cursor} from "./cursor.ts";
+import {Cursor} from "./cursor";
+import {getText, Token, Tokenizer} from "./tokenizer";
 
 describe('Testing tokenizer', () => {
     test('test cursor', () => {
@@ -14,4 +15,25 @@ describe('Testing tokenizer', () => {
         c = cursor.next();
         assert.equal(c, "");
     });
+
+    test('test Tokenizer', () => {
+        let tok = new Tokenizer("(123.4+2,3/3.4*4.5)+9.8,7.6-1*.01");
+        let token: Token | null;
+        token = tok.next(); assert.equal(getText(token!), "(");
+        token = tok.next(); assert.equal(getText(token!), "123.4");
+        token = tok.next(); assert.equal(getText(token!), "+");
+        token = tok.next(); assert.equal(getText(token!), "2,3");
+        token = tok.next(); assert.equal(getText(token!), "/");
+        token = tok.next(); assert.equal(getText(token!), "3.4");
+        token = tok.next(); assert.equal(getText(token!), "*");
+        token = tok.next(); assert.equal(getText(token!), "4.5");
+        token = tok.next(); assert.equal(getText(token!), ")");
+        token = tok.next(); assert.equal(getText(token!), "+");
+        token = tok.next(); assert.equal(getText(token!), "9.8,7.6");
+        token = tok.next(); assert.equal(getText(token!), "-");
+        token = tok.next(); assert.equal(getText(token!), "1");
+        token = tok.next(); assert.equal(getText(token!), "*");
+        token = tok.next(); assert.equal(getText(token!), ".01");
+    })
+
 });

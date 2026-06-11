@@ -3,7 +3,7 @@ import {Cursor} from "./cursor";
 // Tokenizes only arithmetic expressions.
 // Allows both comma and dot as decimal points. When both are used, only the most right one is considered.
 
-type TokenType = "UNKNOWN" | "NUMBER" | "(" | ")" | "." | "," | "EURO" | "DOLLAR";
+type TokenType = "UNKNOWN" | "NUMBER" | "(" | ")" | "." | "," | "EURO" | "DOLLAR" | "/" | "*" | "+" | "-";
 
 export interface Token {
     type: TokenType;
@@ -12,26 +12,42 @@ export interface Token {
     length: number;
 }
 
+export function getText(token: Token) {
+    return token.cursor.getText(token.pos, token.length);
+}
+
 export class Tokenizer {
-    private readonly cursor: Cursor;
+    private cursor: Cursor;
 
     constructor(text: string) {
         this.cursor = new Cursor(text);
     }
 
-    next() {
-        switch (this.cursor.peek()) {
+    public setCursor(cursor: Cursor) {
+        this.cursor = cursor;
+    }
+
+    public getCursor() {
+        return this.cursor;
+    }
+
+    next(): Token | null {
+        let char = this.cursor.next();
+        switch (char) {
             case "":
                 return null;
             case "(":
             case ")":
+            case "+":
+            case "-":
+            case "*":
+            case "/":
                 let token: Token = {
-                    type: this.cursor.peek() as TokenType,
+                    type: char as TokenType,
                     cursor: this.cursor,
                     pos: this.cursor.pos,
                     length: 1,
                 };
-                this.cursor.next();
                 return token;
             case ".":
             case ",":
@@ -45,7 +61,7 @@ export class Tokenizer {
             case "7":
             case "8":
             case "9":
-                return this.parseNumber();
+                return this.getNumberToken();
             default:
                 return {
                     type: "UNKNOWN",
@@ -56,18 +72,25 @@ export class Tokenizer {
         }
     }
 
-    private parseNumber() {
+    private getNumberToken() {
         let token: Token = {
             type: "NUMBER",
             cursor: this.cursor,
             pos: this.cursor.pos,
             length: 0,
         };
-        while(this.cursor.current.match(/[0-9.,]/)) {
-            token.length++;
+        let start = this.cursor.pos;
+        while(this.cursor.peek().match(/[0-9.,]/)) {
             this.cursor.next();
         }
+        token.length = this.cursor.pos - start + 1;
         return token;
+    }
+
+    private skipWhitespace() {
+        while(this.cursor.current.match(/\s/)) {
+            this.cursor.next();
+        }
     }
 
 }

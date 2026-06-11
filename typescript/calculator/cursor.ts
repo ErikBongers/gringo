@@ -9,6 +9,12 @@ export class Cursor {
         this.currentPos = -1;
     }
 
+    static copy(cursor: Cursor) {
+        let newCursor = new Cursor(cursor.text);
+        newCursor.currentPos = cursor.currentPos;
+        return newCursor;
+    }
+
     eat(char: string) {
         if(this.currentPos >= this.length)
             return false;
@@ -40,6 +46,10 @@ export class Cursor {
         if((this.currentPos+1) >= this.length)
             return "";
         return this.text[this.currentPos+1];
+    }
+
+    getText(pos: number, length: number) {
+        return this.text.substring(pos, pos+length);
     }
 
 }
