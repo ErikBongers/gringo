@@ -55,7 +55,8 @@ describe('Testing tokenizer', () => {
         token = tok.next(); assert.equal(getText(token!), "1");
         token = tok.next(); assert.equal(getText(token!), "+");
         token = tok.next(); assert.equal(getText(token!), "2");
-        tok = new PeekingTokenizer(" 1 + 2 ");
+        tok = new PeekingTokenizer(` 1   +  
+          2 `);
         token = tok.next(); assert.equal(getText(token!), "1");
         token = tok.next(); assert.equal(getText(token!), "+");
         token = tok.next(); assert.equal(getText(token!), "2");
