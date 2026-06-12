@@ -69,6 +69,8 @@ describe('Testing tokenizer', () => {
         res = parser.parse(); assert.equal(res.result, 123); //todo: also check for errors: create a separate assertResult() function.
         parser = new Parser("€123");
         res = parser.parse(); assert.equal(res.result, 123);
+        parser = new Parser("€ 123");
+        res = parser.parse(); assert.equal(res.result, 123);
         //point as decimal:
         parser = new Parser("123.4");
         res = parser.parse(); assert.equal(res.result, 123.4);
