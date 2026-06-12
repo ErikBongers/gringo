@@ -32,6 +32,7 @@ export class Tokenizer {
     }
 
     next(): Token | null {
+        this.skipWhitespace();
         let char = this.cursor.next();
         switch (char) {
             case "":
@@ -88,7 +89,7 @@ export class Tokenizer {
     }
 
     private skipWhitespace() {
-        while(this.cursor.current.match(/\s/)) {
+        while(this.cursor.peek().match(/\s/)) {
             this.cursor.next();
         }
     }

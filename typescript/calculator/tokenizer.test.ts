@@ -1,3 +1,5 @@
+// noinspection DuplicatedCode
+
 import assert from 'node:assert/strict';
 import {describe, test} from 'node:test';
 import {Cursor} from "./cursor";
@@ -45,6 +47,18 @@ describe('Testing tokenizer', () => {
         token = tok.peek(); assert.equal(getText(token!), "+");
         token = tok.peek(); assert.equal(getText(token!), "+");
         token = tok.next(); assert.equal(getText(token!), "+");
-    })
+    });
+
+    test('white space', () => {
+        let tok = new PeekingTokenizer("1 + 2");
+        let token: Token | null;
+        token = tok.next(); assert.equal(getText(token!), "1");
+        token = tok.next(); assert.equal(getText(token!), "+");
+        token = tok.next(); assert.equal(getText(token!), "2");
+        tok = new PeekingTokenizer(" 1 + 2 ");
+        token = tok.next(); assert.equal(getText(token!), "1");
+        token = tok.next(); assert.equal(getText(token!), "+");
+        token = tok.next(); assert.equal(getText(token!), "2");
+    });
 
 });
