@@ -3,7 +3,7 @@ import {Cursor} from "./cursor";
 // Tokenizes only arithmetic expressions.
 // Allows both comma and dot as decimal points. When both are used, only the most right one is considered.
 
-type TokenType = "UNKNOWN" | "NUMBER" | "(" | ")" | "." | "," | "€" | "$" | "/" | "*" | "+" | "-";
+export type TokenType = "UNKNOWN" | "NUMBER" | "(" | ")" | "." | "," | "€" | "$" | "/" | "*" | "+" | "-";
 
 export interface Token {
     type: TokenType;
@@ -95,5 +95,4 @@ export class Tokenizer {
             this.cursor.next();
         }
     }
-
 }

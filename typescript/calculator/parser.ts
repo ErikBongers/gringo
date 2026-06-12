@@ -1,10 +1,16 @@
 import {PeekingTokenizer} from "./peekingTokenizer";
-import {getText, Token} from "./tokenizer";
+import {getText} from "./tokenizer";
 
 export interface ParseResult {
     result: number;
-    errors: string[];
+    errors: ParserError[];
 }
+
+export interface ParserError {
+    error_type: "E" | "W",
+    message: string
+}
+export const ERR_EXPECTED_CLOSE_PAREN: ParserError = {error_type: "E", message: "expected ')'"};
 
 export class Parser {
     private readonly peekingTokenizer: PeekingTokenizer;
@@ -35,7 +41,17 @@ export class Parser {
         return this.parseFactor();
     }
 
-    parseFactor() {
+    parseFactor(): ParseResult {
+        if(this.peekingTokenizer.match("(")) {
+            let res = this.parseExpression();
+            let peeked = this.peekingTokenizer.peek();
+            if(peeked?.type == ")")
+                this.peekingTokenizer.next();
+            else if(peeked != null)
+                res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
+            //else: EOT is not an error (yet)
+            return res;
+        }
         return this.parseCurrency();
     }
 

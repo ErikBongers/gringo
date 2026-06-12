@@ -5,7 +5,7 @@ import {describe, test} from 'node:test';
 import {Cursor} from "./cursor";
 import {getText, Token, Tokenizer} from "./tokenizer";
 import {PeekingTokenizer} from "./peekingTokenizer";
-import {Parser, ParseResult} from "./parser";
+import {ERR_EXPECTED_CLOSE_PAREN, Parser, ParserError, ParseResult} from "./parser";
 
 describe('Testing tokenizer', () => {
     test('test cursor', () => {
@@ -63,32 +63,48 @@ describe('Testing tokenizer', () => {
         token = tok.next(); assert.equal(getText(token!), "2");
     });
 
-    test('Parser', () => {
+});
+
+describe('Testing Parser', () => {
+    test('numbers', () => {
         let parser = new Parser("123");
         let res: ParseResult;
-        res = parser.parse(); assert.equal(res.result, 123); //todo: also check for errors: create a separate assertResult() function.
+        res = parser.parse(); assertResult(res, 123, []);
         parser = new Parser("€123");
-        res = parser.parse(); assert.equal(res.result, 123);
+        res = parser.parse(); assertResult(res, 123, []);
         parser = new Parser("€ 123");
-        res = parser.parse(); assert.equal(res.result, 123);
+        res = parser.parse(); assertResult(res, 123, []);
         //point as decimal:
         parser = new Parser("123.4");
-        res = parser.parse(); assert.equal(res.result, 123.4);
+        res = parser.parse(); assertResult(res, 123.4, []);
         parser = new Parser("1.23.4"); //todo: should give warning of multiple decimal separators
-        res = parser.parse(); assert.equal(res.result, 123.4);
+        res = parser.parse(); assertResult(res, 123.4, []);
         parser = new Parser("1,23.4");
-        res = parser.parse(); assert.equal(res.result, 123.4);
+        res = parser.parse(); assertResult(res, 123.4, []);
         parser = new Parser("1,2,3.4");
-        res = parser.parse(); assert.equal(res.result, 123.4);
+        res = parser.parse(); assertResult(res, 123.4, []);
         // comma as decimal:
         parser = new Parser("123,4");
-        res = parser.parse(); assert.equal(res.result, 123.4);
+        res = parser.parse(); assertResult(res, 123.4, []);
         parser = new Parser("1,23,4"); //todo: should give warning of multiple decimal separators
-        res = parser.parse(); assert.equal(res.result, 123.4);
+        res = parser.parse(); assertResult(res, 123.4, []);
         parser = new Parser("1.23,4");
-        res = parser.parse(); assert.equal(res.result, 123.4);
+        res = parser.parse(); assertResult(res, 123.4, []);
         parser = new Parser("1.2.3,4");
-        res = parser.parse(); assert.equal(res.result, 123.4);
+        res = parser.parse(); assertResult(res, 123.4, []);
     });
 
+    test('numbers', () => {
+        let parser = new Parser("(123)");
+        let res: ParseResult;
+        res = parser.parse(); assertResult(res, 123, []);
+        parser = new Parser("(123 1)");
+        res = parser.parse(); assertResult(res, 123, [ERR_EXPECTED_CLOSE_PAREN]);
+    });
 });
+
+function assertResult(res: ParseResult, expected: number, errors: ParserError[]) {
+    assert.equal(res.result, expected);
+    if(errors.length != res.errors.length)
+        assert.fail("Errors do not match.");
+}

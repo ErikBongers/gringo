@@ -1,4 +1,4 @@
-import {Token, Tokenizer} from "./tokenizer";
+import {Token, Tokenizer, TokenType} from "./tokenizer";
 
 export class PeekingTokenizer {
     private tokenizer: Tokenizer;
@@ -26,4 +26,14 @@ export class PeekingTokenizer {
     getCursor() {
         return this.tokenizer.cloneCursor();
     }
+
+    public match(tokenType: TokenType) {
+        let token = this.peek();
+        if(token?.type == tokenType) {
+            this.next();
+            return token;
+        }
+        return null;
+    }
+
 }
