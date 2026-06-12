@@ -94,12 +94,30 @@ describe('Testing Parser', () => {
         res = parser.parse(); assertResult(res, 123.4, []);
     });
 
-    test('numbers', () => {
+    test('parens', () => {
         let parser = new Parser("(123)");
         let res: ParseResult;
         res = parser.parse(); assertResult(res, 123, []);
         parser = new Parser("(123 1)");
         res = parser.parse(); assertResult(res, 123, [ERR_EXPECTED_CLOSE_PAREN]);
+    });
+
+    test('terms', () => {
+        let parser = new Parser("12*3");
+        let res: ParseResult;
+        res = parser.parse(); assertResult(res, 36, []);
+        parser = new Parser("(12)*(3)");
+        res = parser.parse(); assertResult(res, 36, []);
+    });
+
+    test('expr', () => {
+        let parser = new Parser("12+3");
+        let res: ParseResult;
+        res = parser.parse(); assertResult(res, 15, []);
+        parser = new Parser("(12)-(3)");
+        res = parser.parse(); assertResult(res, 9, []);
+        parser = new Parser("1-3*2+4");
+        res = parser.parse(); assertResult(res, -1, []);
     });
 });
 

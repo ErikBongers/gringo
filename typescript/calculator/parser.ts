@@ -33,12 +33,38 @@ export class Parser {
         return this.parseExpression();
     }
 
-    parseExpression() {
-        return this.parseTerm();
+    parseExpression(): ParseResult {
+        let term1 = this.parseTerm();
+        while(true) {
+            let operator = this.peekingTokenizer.peek();
+            if (!operator)
+                return term1;
+            if (operator.type != "+" && operator.type != "-")
+                return term1;
+            this.peekingTokenizer.next(); //eat operator
+            let term2 = this.parseTerm();
+            if (operator.type == "+")
+                term1 = {result: term1.result + term2.result, errors: term1.errors.concat(term2.errors)};
+            else
+                term1 = {result: term1.result - term2.result, errors: term1.errors.concat(term2.errors)};
+        }
     }
 
-    parseTerm() {
-        return this.parseFactor();
+    parseTerm(): ParseResult {
+        let factor1= this.parseFactor();
+        while (true) {
+            let operator = this.peekingTokenizer.peek();
+            if (!operator)
+                return factor1;
+            if (operator.type != "*" && operator.type != "/")
+                return factor1;
+            this.peekingTokenizer.next(); //eat operator
+            let factor2 = this.parseFactor();
+            if (operator.type == "*")
+                factor1 = {result: factor1.result * factor2.result, errors: factor1.errors.concat(factor2.errors)};
+            else
+                factor1 = {result: factor1.result / factor2.result, errors: factor1.errors.concat(factor2.errors)};
+        }
     }
 
     parseFactor(): ParseResult {
