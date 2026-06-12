@@ -27,8 +27,8 @@ export class Tokenizer {
         this.cursor = cursor;
     }
 
-    public getCursor() {
-        return this.cursor;
+    public cloneCursor() {
+        return Cursor.copy(this.cursor);
     }
 
     next(): Token | null {

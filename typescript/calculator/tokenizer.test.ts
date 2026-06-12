@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, test} from 'node:test';
 import {Cursor} from "./cursor";
 import {getText, Token, Tokenizer} from "./tokenizer";
+import {PeekingTokenizer} from "./peekingTokenizer";
 
 describe('Testing tokenizer', () => {
     test('test cursor', () => {
@@ -34,6 +35,16 @@ describe('Testing tokenizer', () => {
         token = tok.next(); assert.equal(getText(token!), "1");
         token = tok.next(); assert.equal(getText(token!), "*");
         token = tok.next(); assert.equal(getText(token!), ".01");
+    });
+
+    test('test PeekingTokenizer', () => {
+        let tok = new PeekingTokenizer("1+2+3");
+        let token: Token | null;
+        token = tok.peek(); assert.equal(getText(token!), "1");
+        token = tok.next(); assert.equal(getText(token!), "1");
+        token = tok.peek(); assert.equal(getText(token!), "+");
+        token = tok.peek(); assert.equal(getText(token!), "+");
+        token = tok.next(); assert.equal(getText(token!), "+");
     })
 
 });
