@@ -2763,9 +2763,40 @@
 			anchorPerEenheid.dispatchEvent(new Event("click", { bubbles: true }));
 			anchorPerEenheid.dispatchEvent(new Event("mouseup", { bubbles: true }));
 			ulUnitOfMeasure.style.display = "";
+			document.body.dataset.gringoEenheidSet = "true";
 			return;
 		}
 		setTimeout(() => scanAndSelectPerEenheid(ulUnitOfMeasure), 100);
+	}
+	function scanAndSetRadionButtons(el) {
+		let radioButtons = el.querySelectorAll(`af-radio-button-group input[type="radio"]`);
+		if (radioButtons.length == 3) {
+			radioButtons[0].dispatchEvent(new Event("mousedown", { bubbles: true }));
+			radioButtons[0].dispatchEvent(new Event("click", { bubbles: true }));
+			radioButtons[0].dispatchEvent(new Event("change", { bubbles: true }));
+			radioButtons[0].dispatchEvent(new Event("mouseup", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("mousedown", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("click", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("change", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("mouseup", { bubbles: true }));
+			document.body.dataset.gringoRadioButtonsSet = "true";
+			return;
+		}
+		setTimeout(() => scanAndSetRadionButtons(el), 100);
+	}
+	function scanAndSetFirstFieldFocus(el, btnUnitOfMeasure) {
+		if (document.body.dataset.gringoEenheidSet == "true" && document.body.dataset.gringoRadioButtonsSet == "true") {
+			if (btnUnitOfMeasure.textContent.includes("Per eenheid")) {
+				let fieldProductNameInput = el.querySelector("div.adhoc-form-name input");
+				setTimeout(() => {
+					fieldProductNameInput.focus();
+					gringo("focus set.");
+				}, 100);
+				return;
+			}
+		}
+		gringo("waiting to set focus...");
+		setTimeout(() => scanAndSetFirstFieldFocus(el, btnUnitOfMeasure), 100);
 	}
 	async function decoratePanel(el) {
 		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
@@ -2786,22 +2817,13 @@
 		ulUnitOfMeasure.style.display = "none";
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
-		let radioButtons = el.querySelectorAll(`af-radio-button-group input[type="radio"]`);
-		if (radioButtons.length == 3) {
-			radioButtons[0].dispatchEvent(new Event("mousedown", { bubbles: true }));
-			radioButtons[0].dispatchEvent(new Event("click", { bubbles: true }));
-			radioButtons[0].dispatchEvent(new Event("change", { bubbles: true }));
-			radioButtons[0].dispatchEvent(new Event("mouseup", { bubbles: true }));
-			radioButtons[2].dispatchEvent(new Event("mousedown", { bubbles: true }));
-			radioButtons[2].dispatchEvent(new Event("click", { bubbles: true }));
-			radioButtons[2].dispatchEvent(new Event("change", { bubbles: true }));
-			radioButtons[2].dispatchEvent(new Event("mouseup", { bubbles: true }));
-		}
+		scanAndSetRadionButtons(el);
 		fillBrutoContainer(li, fieldQuantityInput, tarif);
 		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");
 		fieldMoney.value = "1";
 		triggerFieldChanged(fieldMoney);
+		scanAndSetFirstFieldFocus(el, btnUnitOfMeasure);
 	}
 	function decorateFieldQuantity(fieldQuantity) {
 		fieldQuantity.querySelector("input");
