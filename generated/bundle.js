@@ -2740,6 +2740,9 @@
                 )
     `).first.querySelector("input");
 		decorateFieldQuantity(el.querySelector("div.field-quantity"), input);
+		let fieldMoney = el.querySelector("div.field-money input");
+		fieldMoney.value = "1";
+		triggerFieldChanged(fieldMoney);
 		let userInfo = await getUserInfo();
 		let userId = userInfo.hashedUser;
 		let tenant = userInfo.tenant;
@@ -2747,15 +2750,18 @@
 		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
 		gringo("Tarif: ", await getBtwTarif((await (await fetch(daUrl)).json()).commodityCode));
 	}
+	function triggerFieldChanged(input) {
+		input.dispatchEvent(new Event("change"));
+		input.dispatchEvent(new Event("input"));
+		input.dispatchEvent(new Event("blur"));
+		input.dispatchEvent(new Event("keyup"));
+		input.dispatchEvent(new Event("mouseout"));
+	}
 	function decorateFieldQuantity(fieldQuantity, brutoField) {
 		let input = fieldQuantity.querySelector("input");
 		input.onkeyup = () => {
 			input.value = brutoField.value;
-			input.dispatchEvent(new Event("change"));
-			input.dispatchEvent(new Event("input"));
-			input.dispatchEvent(new Event("blur"));
-			input.dispatchEvent(new Event("keyup"));
-			input.dispatchEvent(new Event("mouseout"));
+			triggerFieldChanged(input);
 		};
 		fieldQuantity.classList.add("hidePlusMinButtons");
 	}

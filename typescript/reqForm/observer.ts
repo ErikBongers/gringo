@@ -49,7 +49,9 @@ async function decoratePanel(el: HTMLElement) {
     let input = li.querySelector("input")!;
     let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
     decorateFieldQuantity(fieldQuantity, input);
-
+    let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;
+    fieldMoney.value = "1";
+    triggerFieldChanged(fieldMoney);
 
     let userInfo = await getUserInfo();
     let userId = userInfo.hashedUser;
@@ -64,15 +66,19 @@ async function decoratePanel(el: HTMLElement) {
     gringo("Tarif: ", tarif);
 }
 
+function triggerFieldChanged(input: HTMLInputElement) {
+    input.dispatchEvent(new Event('change')); //todo: reduce these events (the last 2 are probably needed).
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('blur'));
+    input.dispatchEvent(new Event('keyup'));
+    input.dispatchEvent(new Event('mouseout'));
+}
+
 function decorateFieldQuantity(fieldQuantity: HTMLElement, brutoField: HTMLInputElement) {
     let input = fieldQuantity.querySelector("input") as HTMLInputElement;
     input.onkeyup = () => {
         input.value = brutoField.value;
-        input.dispatchEvent(new Event('change')); //todo: reduce these events (the last 2 are probably needed).
-        input.dispatchEvent(new Event('input'));
-        input.dispatchEvent(new Event('blur'));
-        input.dispatchEvent(new Event('keyup'));
-        input.dispatchEvent(new Event('mouseout'));
+        triggerFieldChanged(input);
     };
     fieldQuantity.classList.add("hidePlusMinButtons");
 }
