@@ -2729,7 +2729,7 @@
 	}
 	async function decoratePanel(el) {
 		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
-		let input = emmet.appendChild(ul, `
+		let brutoInput = emmet.appendChild(ul, `
     li.adhoc-form-input-section.gringo.blueBlock>
         div>
             div.input-wrap>
@@ -2739,16 +2739,27 @@
                         input.form-control[type="text"]                                                    
                 )
     `).first.querySelector("input");
-		decorateFieldQuantity(el.querySelector("div.field-quantity"), input);
+		let fieldQuantity = el.querySelector("div.field-quantity");
+		let fieldQuantityInput = fieldQuantity.querySelector("input");
+		decorateFieldQuantity(fieldQuantity, brutoInput);
 		let fieldMoney = el.querySelector("div.field-money input");
 		fieldMoney.value = "1";
 		triggerFieldChanged(fieldMoney);
+		brutoInput.addEventListener("keyup", (ev) => {
+			gringo("keyup new value:" + brutoInput.value);
+			fieldQuantityInput.value = brutoInput.value;
+			triggerFieldChanged(fieldQuantityInput);
+		});
 		let userInfo = await getUserInfo();
 		let userId = userInfo.hashedUser;
 		let tenant = userInfo.tenant;
 		let resourceId = new URLSearchParams(location.search).get("fromresourceid");
 		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
-		gringo("Tarif: ", await getBtwTarif((await (await fetch(daUrl)).json()).commodityCode));
+		let tarif = await getBtwTarif((await (await fetch(daUrl)).json()).commodityCode);
+		let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group");
+		emmet.appendChild(fieldQuantityInputGroup, `
+        span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
+    `);
 	}
 	function triggerFieldChanged(input) {
 		input.dispatchEvent(new Event("change"));
@@ -2758,11 +2769,7 @@
 		input.dispatchEvent(new Event("mouseout"));
 	}
 	function decorateFieldQuantity(fieldQuantity, brutoField) {
-		let input = fieldQuantity.querySelector("input");
-		input.onkeyup = () => {
-			input.value = brutoField.value;
-			triggerFieldChanged(input);
-		};
+		fieldQuantity.querySelector("input");
 		fieldQuantity.classList.add("hidePlusMinButtons");
 	}
 	//#endregion

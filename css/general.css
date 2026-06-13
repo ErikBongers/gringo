@@ -393,3 +393,11 @@ request-info-item.hidden {
         display: none;
     }
 }
+
+.percentSpan {
+    position: relative;
+    display: table-cell;
+    width: 1%;
+    align-content: center;
+    padding-inline-start: 1ch;
+}

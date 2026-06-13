@@ -46,12 +46,18 @@ async function decoratePanel(el: HTMLElement) {
                         input.form-control[type="text"]                                                    
                 )
     `).first as HTMLLIElement;
-    let input = li.querySelector("input")!;
+    let brutoInput = li.querySelector("input")!;
     let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
-    decorateFieldQuantity(fieldQuantity, input);
+    let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
+    decorateFieldQuantity(fieldQuantity, brutoInput);
     let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;
     fieldMoney.value = "1";
     triggerFieldChanged(fieldMoney);
+    brutoInput.addEventListener("keyup", (ev) => {
+        gringo("keyup new value:" + brutoInput.value);
+        fieldQuantityInput.value = brutoInput.value;
+        triggerFieldChanged(fieldQuantityInput);
+    });
 
     let userInfo = await getUserInfo();
     let userId = userInfo.hashedUser;
@@ -63,7 +69,11 @@ async function decoratePanel(el: HTMLElement) {
     let res = await fetch(daUrl);
     let prForm = await res.json() as ProcurementForm;
     let tarif =  await getBtwTarif(prForm.commodityCode);
-    gringo("Tarif: ", tarif);
+    let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group") as HTMLDivElement;
+    emmet.appendChild(fieldQuantityInputGroup, `
+        span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
+    `);
+
 }
 
 function triggerFieldChanged(input: HTMLInputElement) {
@@ -76,9 +86,5 @@ function triggerFieldChanged(input: HTMLInputElement) {
 
 function decorateFieldQuantity(fieldQuantity: HTMLElement, brutoField: HTMLInputElement) {
     let input = fieldQuantity.querySelector("input") as HTMLInputElement;
-    input.onkeyup = () => {
-        input.value = brutoField.value;
-        triggerFieldChanged(input);
-    };
     fieldQuantity.classList.add("hidePlusMinButtons");
 }
