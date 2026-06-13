@@ -2739,21 +2739,25 @@
                         input.form-control[type="text"]                                                    
                 )
     `).first.querySelector("input");
-		let aantal = el.querySelector("div.field-quantity input");
-		input.onkeyup = () => {
-			aantal.value = input.value;
-			aantal.dispatchEvent(new Event("change"));
-			aantal.dispatchEvent(new Event("input"));
-			aantal.dispatchEvent(new Event("blur"));
-			aantal.dispatchEvent(new Event("keyup"));
-			aantal.dispatchEvent(new Event("mouseout"));
-		};
+		decorateFieldQuantity(el.querySelector("div.field-quantity"), input);
 		let userInfo = await getUserInfo();
 		let userId = userInfo.hashedUser;
 		let tenant = userInfo.tenant;
 		let resourceId = new URLSearchParams(location.search).get("fromresourceid");
 		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
 		gringo("Tarif: ", await getBtwTarif((await (await fetch(daUrl)).json()).commodityCode));
+	}
+	function decorateFieldQuantity(fieldQuantity, brutoField) {
+		let input = fieldQuantity.querySelector("input");
+		input.onkeyup = () => {
+			input.value = brutoField.value;
+			input.dispatchEvent(new Event("change"));
+			input.dispatchEvent(new Event("input"));
+			input.dispatchEvent(new Event("blur"));
+			input.dispatchEvent(new Event("keyup"));
+			input.dispatchEvent(new Event("mouseout"));
+		};
+		fieldQuantity.classList.add("hidePlusMinButtons");
 	}
 	//#endregion
 	//#region typescript/main.ts

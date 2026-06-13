@@ -387,3 +387,9 @@ request-info-item.hidden {
         background-color: var(--very-light-blue);
     }
 }
+
+.hidePlusMinButtons {
+    & span.input-group-btn {
+        display: none;
+    }
+}
