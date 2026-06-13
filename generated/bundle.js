@@ -2759,14 +2759,12 @@
 	function scanAndSelectPerEenheid(ulUnitOfMeasure) {
 		let anchorPerEenheid = [...ulUnitOfMeasure.querySelectorAll("a")].find((a) => a.innerText.includes("Per eenheid"));
 		if (anchorPerEenheid) {
-			gringo("found Per eenheid anchor");
 			anchorPerEenheid.dispatchEvent(new Event("mousedown", { bubbles: true }));
 			anchorPerEenheid.dispatchEvent(new Event("click", { bubbles: true }));
 			anchorPerEenheid.dispatchEvent(new Event("mouseup", { bubbles: true }));
 			ulUnitOfMeasure.style.display = "";
 			return;
 		}
-		gringo("still scanning...");
 		setTimeout(() => scanAndSelectPerEenheid(ulUnitOfMeasure), 100);
 	}
 	async function decoratePanel(el) {
@@ -2788,6 +2786,17 @@
 		ulUnitOfMeasure.style.display = "none";
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
+		let radioButtons = el.querySelectorAll(`af-radio-button-group input[type="radio"]`);
+		if (radioButtons.length == 3) {
+			radioButtons[0].dispatchEvent(new Event("mousedown", { bubbles: true }));
+			radioButtons[0].dispatchEvent(new Event("click", { bubbles: true }));
+			radioButtons[0].dispatchEvent(new Event("change", { bubbles: true }));
+			radioButtons[0].dispatchEvent(new Event("mouseup", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("mousedown", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("click", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("change", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("mouseup", { bubbles: true }));
+		}
 		fillBrutoContainer(li, fieldQuantityInput, tarif);
 		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");

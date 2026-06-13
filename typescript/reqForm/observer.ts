@@ -77,6 +77,18 @@ async function decoratePanel(el: HTMLElement) {
     btnUnitOfMeasure.dispatchEvent(new Event('click'));
     scanAndSelectPerEenheid(ulUnitOfMeasure);
 
+    let radioButtons = el.querySelectorAll(`af-radio-button-group input[type="radio"]`) as NodeListOf<HTMLInputElement>;
+    if(radioButtons.length == 3) {
+        radioButtons[0].dispatchEvent(new Event("mousedown", {bubbles: true}));
+        radioButtons[0].dispatchEvent(new Event("click", {bubbles: true}));
+        radioButtons[0].dispatchEvent(new Event("change", {bubbles: true}));
+        radioButtons[0].dispatchEvent(new Event("mouseup", {bubbles: true}));
+        radioButtons[2].dispatchEvent(new Event("mousedown", {bubbles: true}));
+        radioButtons[2].dispatchEvent(new Event("click", {bubbles: true}));
+        radioButtons[2].dispatchEvent(new Event("change", {bubbles: true}));
+        radioButtons[2].dispatchEvent(new Event("mouseup", {bubbles: true}));
+    }
+
     fillBrutoContainer(li, fieldQuantityInput, tarif);
     decorateFieldQuantity(fieldQuantity);
     let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;
