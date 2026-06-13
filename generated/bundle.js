@@ -2703,6 +2703,31 @@
 		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
 	}
 	//#endregion
+	//#region typescript/brutoNettoFields.ts
+	function fillBrutoContainer(container, fieldQuantityInput) {
+		emmet.appendChild(container, `
+        div>
+            div.input-wrap>
+                div.form-group>(
+                    label.editable-field-label{Bruto}+
+                    div.field-wrapper>
+                        input.form-control[type="text"]                                                    
+                )
+    `);
+		let brutoInput = container.querySelector("input");
+		brutoInput.addEventListener("keyup", (ev) => {
+			fieldQuantityInput.value = brutoInput.value;
+			triggerFieldChanged(fieldQuantityInput);
+		});
+	}
+	function triggerFieldChanged(input) {
+		input.dispatchEvent(new Event("change"));
+		input.dispatchEvent(new Event("input"));
+		input.dispatchEvent(new Event("blur"));
+		input.dispatchEvent(new Event("keyup"));
+		input.dispatchEvent(new Event("mouseout"));
+	}
+	//#endregion
 	//#region typescript/reqForm/observer.ts
 	var ReqFormObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -2729,27 +2754,17 @@
 	}
 	async function decoratePanel(el) {
 		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
-		let brutoInput = emmet.appendChild(ul, `
-    li.adhoc-form-input-section.gringo.blueBlock>
-        div>
-            div.input-wrap>
-                div.form-group>(
-                    label.editable-field-label{Bruto}+
-                    div.field-wrapper>
-                        input.form-control[type="text"]                                                    
-                )
-    `).first.querySelector("input");
+		let li = emmet.appendChild(ul, `
+        li.adhoc-form-input-section.gringo.blueBlock
+    `).first;
 		let fieldQuantity = el.querySelector("div.field-quantity");
 		let fieldQuantityInput = fieldQuantity.querySelector("input");
-		decorateFieldQuantity(fieldQuantity, brutoInput);
+		fieldQuantityInput.value = "1";
+		fillBrutoContainer(li, fieldQuantityInput);
+		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");
 		fieldMoney.value = "1";
 		triggerFieldChanged(fieldMoney);
-		brutoInput.addEventListener("keyup", (ev) => {
-			gringo("keyup new value:" + brutoInput.value);
-			fieldQuantityInput.value = brutoInput.value;
-			triggerFieldChanged(fieldQuantityInput);
-		});
 		let userInfo = await getUserInfo();
 		let userId = userInfo.hashedUser;
 		let tenant = userInfo.tenant;
@@ -2761,14 +2776,7 @@
         span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
     `);
 	}
-	function triggerFieldChanged(input) {
-		input.dispatchEvent(new Event("change"));
-		input.dispatchEvent(new Event("input"));
-		input.dispatchEvent(new Event("blur"));
-		input.dispatchEvent(new Event("keyup"));
-		input.dispatchEvent(new Event("mouseout"));
-	}
-	function decorateFieldQuantity(fieldQuantity, brutoField) {
+	function decorateFieldQuantity(fieldQuantity) {
 		fieldQuantity.querySelector("input");
 		fieldQuantity.classList.add("hidePlusMinButtons");
 	}

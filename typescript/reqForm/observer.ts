@@ -4,6 +4,7 @@ import {emmet} from "../../libs/Emmeter/html";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {getBtwTarif, getBtwTarifsCachedInSession} from "../aanvragen/requests";
+import {fillBrutoContainer, triggerFieldChanged} from "../brutoNettoFields";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -37,27 +38,16 @@ function checkDecorations() {
 async function decoratePanel(el: HTMLElement) {
     let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container") as HTMLDivElement;
     let li = emmet.appendChild(ul, `
-    li.adhoc-form-input-section.gringo.blueBlock>
-        div>
-            div.input-wrap>
-                div.form-group>(
-                    label.editable-field-label{Bruto}+
-                    div.field-wrapper>
-                        input.form-control[type="text"]                                                    
-                )
+        li.adhoc-form-input-section.gringo.blueBlock
     `).first as HTMLLIElement;
-    let brutoInput = li.querySelector("input")!;
     let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
-    decorateFieldQuantity(fieldQuantity, brutoInput);
+    fieldQuantityInput.value = "1";
+    fillBrutoContainer(li, fieldQuantityInput);
+    decorateFieldQuantity(fieldQuantity);
     let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;
     fieldMoney.value = "1";
     triggerFieldChanged(fieldMoney);
-    brutoInput.addEventListener("keyup", (ev) => {
-        gringo("keyup new value:" + brutoInput.value);
-        fieldQuantityInput.value = brutoInput.value;
-        triggerFieldChanged(fieldQuantityInput);
-    });
 
     let userInfo = await getUserInfo();
     let userId = userInfo.hashedUser;
@@ -76,15 +66,7 @@ async function decoratePanel(el: HTMLElement) {
 
 }
 
-function triggerFieldChanged(input: HTMLInputElement) {
-    input.dispatchEvent(new Event('change')); //todo: reduce these events (the last 2 are probably needed).
-    input.dispatchEvent(new Event('input'));
-    input.dispatchEvent(new Event('blur'));
-    input.dispatchEvent(new Event('keyup'));
-    input.dispatchEvent(new Event('mouseout'));
-}
-
-function decorateFieldQuantity(fieldQuantity: HTMLElement, brutoField: HTMLInputElement) {
+function decorateFieldQuantity(fieldQuantity: HTMLElement) {
     let input = fieldQuantity.querySelector("input") as HTMLInputElement;
     fieldQuantity.classList.add("hidePlusMinButtons");
 }
