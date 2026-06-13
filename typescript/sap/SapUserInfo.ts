@@ -21,3 +21,8 @@ export interface UserInfo {
     "street": string,
     ///...etc...
 }
+
+export async function getUserInfo() {
+    return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false")
+        .then(res => res.json()) as Promise<UserInfo>;
+}

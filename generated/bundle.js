@@ -1032,6 +1032,9 @@
 		await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
 		globalBtwTarifs = tarifsMap;
 	}
+	async function getBtwTarif(commodityCode) {
+		return (await getBtwTarifsCachedInSession()).get(commodityCode) ?? null;
+	}
 	let globalBtwTarifs = null;
 	function getAccountingField(prItem, idIncludes) {
 		let field = prItem.accounting.fields?.find((f) => f.id.endsWith(idIncludes));
@@ -2695,6 +2698,11 @@
 		helpPopup.style.display = "none";
 	}
 	//#endregion
+	//#region typescript/sap/SapUserInfo.ts
+	async function getUserInfo() {
+		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
+	}
+	//#endregion
 	//#region typescript/reqForm/observer.ts
 	var ReqFormObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -2719,7 +2727,7 @@
 	function checkDecorations() {
 		checkAndSetDecoration(document.querySelector("div.req-form-panel"), decoratePanel);
 	}
-	function decoratePanel(el) {
+	async function decoratePanel(el) {
 		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
 		let input = emmet.appendChild(ul, `
     li.adhoc-form-input-section.gringo.blueBlock>
@@ -2740,6 +2748,12 @@
 			aantal.dispatchEvent(new Event("keyup"));
 			aantal.dispatchEvent(new Event("mouseout"));
 		};
+		let userInfo = await getUserInfo();
+		let userId = userInfo.hashedUser;
+		let tenant = userInfo.tenant;
+		let resourceId = new URLSearchParams(location.search).get("fromresourceid");
+		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
+		gringo("Tarif: ", await getBtwTarif((await (await fetch(daUrl)).json()).commodityCode));
 	}
 	//#endregion
 	//#region typescript/main.ts

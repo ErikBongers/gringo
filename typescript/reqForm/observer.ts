@@ -1,6 +1,9 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
-import {getAndSetDecorated, gringo} from "../globals";
+import {gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter/html";
+import {getUserInfo} from "../sap/SapUserInfo";
+import {ProcurementForm} from "../sap/ProcurementForm";
+import {getBtwTarif, getBtwTarifsCachedInSession} from "../aanvragen/requests";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -31,7 +34,7 @@ function checkDecorations() {
     checkAndSetDecoration(document.querySelector("div.req-form-panel"), decoratePanel);
 }
 
-function decoratePanel(el: HTMLElement) {
+async function decoratePanel(el: HTMLElement) {
     let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container") as HTMLDivElement;
     let li = emmet.appendChild(ul, `
     li.adhoc-form-input-section.gringo.blueBlock>
@@ -53,4 +56,18 @@ function decoratePanel(el: HTMLElement) {
         aantal.dispatchEvent(new Event('keyup'));
         aantal.dispatchEvent(new Event('mouseout'));
     };
+
+
+
+    let userInfo = await getUserInfo();
+    let userId = userInfo.hashedUser;
+    let tenant = userInfo.tenant;
+    let params = new URLSearchParams(location.search);
+    let resourceId = params.get("fromresourceid");
+    let formId = location.pathname.split("/").pop();
+    let daUrl =  `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${formId}?resourceId=${resourceId}`;
+    let res = await fetch(daUrl);
+    let prForm = await res.json() as ProcurementForm;
+    let tarif =  await getBtwTarif(prForm.commodityCode);
+    gringo("Tarif: ", tarif);
 }

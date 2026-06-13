@@ -11,10 +11,12 @@ import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {emmet} from "../../libs/Emmeter/html";
 import {RequestBasicInfo} from "./observer";
 import {getGlobalSettingsCached} from "../plugin_options/options";
+import {LedgerToBudgetCode} from "./budgetCodes";
+import {getBudgetCode} from "./aggregate";
 
 export async function fetchRequestList() {
     let chain = new FetchChain();
-    await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: load once.
+    await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: replace with getUserInfo()
     let userInfo = chain.getJson() as UserInfo | null;
     if (!userInfo) {
         console.error("gringo: could not get userInfo.");
@@ -147,6 +149,11 @@ export async function uploadBtwTarifs(tarifsMap: Map<string, Btw>) {
     let tarifs: BtwTarifs = {tarifs: [...tarifsMap.values()]};
     await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
     globalBtwTarifs = tarifsMap;
+}
+
+export async function getBtwTarif(commodityCode: string) {
+    let tarifs = await getBtwTarifsCachedInSession();
+    return tarifs.get(commodityCode) ?? null;
 }
 
 export interface BtwTarifs {
