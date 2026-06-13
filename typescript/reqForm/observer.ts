@@ -1,10 +1,11 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
-import {gringo} from "../globals";
+import {formatPrice, gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter/html";
-import {getUserInfo, UserInfo} from "../sap/SapUserInfo";
+import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {getBtwTarif} from "../aanvragen/requests";
 import {fillBrutoContainer, triggerFieldChanged} from "../brutoNettoFields";
+import {Parser} from "../calculator/parser";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -114,8 +115,19 @@ async function decoratePanel(el: HTMLElement) {
 }
 
 function decorateFieldQuantity(fieldQuantity: HTMLElement) {
-    let input = fieldQuantity.querySelector("input") as HTMLInputElement;
     fieldQuantity.classList.add("hidePlusMinButtons");
+    let input = fieldQuantity.querySelector("input") as HTMLInputElement;
+    input.addEventListener("paste", (ev) => {
+        let data = ev.clipboardData?.getData("text/plain");
+        if(data) {
+            let parser = new Parser(data);
+            let res = parser.parse();
+            input.value = formatPrice(res.result, "", "");
+            triggerFieldChanged(input);
+            ev.preventDefault();
+        }
+    });
+    //€1,2,3,4.5
 }
 
 async function fetchReqFormInfo() {

@@ -2732,6 +2732,245 @@
 		input.dispatchEvent(new Event("mouseout"));
 	}
 	//#endregion
+	//#region typescript/calculator/cursor.ts
+	var Cursor = class Cursor {
+		constructor(text) {
+			this.text = text;
+			this.length = this.text.length;
+			this.currentPos = -1;
+		}
+		static copy(cursor) {
+			let newCursor = new Cursor(cursor.text);
+			newCursor.currentPos = cursor.currentPos;
+			return newCursor;
+		}
+		eat(char) {
+			if (this.currentPos >= this.length) return false;
+			if (this.text[this.currentPos] == char) {
+				this.currentPos++;
+				return true;
+			}
+			return false;
+		}
+		get pos() {
+			return this.currentPos;
+		}
+		get current() {
+			if (this.currentPos >= this.length) return "";
+			return this.text[this.currentPos];
+		}
+		next() {
+			if (this.currentPos >= this.length) return "";
+			this.currentPos++;
+			return this.current;
+		}
+		peek() {
+			if (this.currentPos + 1 >= this.length) return "";
+			return this.text[this.currentPos + 1];
+		}
+		getText(pos, length) {
+			return this.text.substring(pos, pos + length);
+		}
+	};
+	//#endregion
+	//#region typescript/calculator/tokenizer.ts
+	function getText(token) {
+		return token.cursor.getText(token.pos, token.length);
+	}
+	var Tokenizer = class {
+		constructor(text) {
+			this.cursor = new Cursor(text);
+		}
+		setCursor(cursor) {
+			this.cursor = cursor;
+		}
+		cloneCursor() {
+			return Cursor.copy(this.cursor);
+		}
+		next() {
+			this.skipWhitespace();
+			let char = this.cursor.next();
+			switch (char) {
+				case "": return null;
+				case "€":
+				case "$":
+				case "(":
+				case ")":
+				case "+":
+				case "-":
+				case "*":
+				case "/": return {
+					type: char,
+					cursor: this.cursor,
+					pos: this.cursor.pos,
+					length: 1
+				};
+				case ".":
+				case ",":
+				case "0":
+				case "1":
+				case "2":
+				case "3":
+				case "4":
+				case "5":
+				case "6":
+				case "7":
+				case "8":
+				case "9": return this.getNumberToken();
+				default: return {
+					type: "UNKNOWN",
+					cursor: this.cursor,
+					pos: this.cursor.pos,
+					length: 1
+				};
+			}
+		}
+		getNumberToken() {
+			let token = {
+				type: "NUMBER",
+				cursor: this.cursor,
+				pos: this.cursor.pos,
+				length: 0
+			};
+			let start = this.cursor.pos;
+			while (this.cursor.peek().match(/[0-9.,]/)) this.cursor.next();
+			token.length = this.cursor.pos - start + 1;
+			return token;
+		}
+		skipWhitespace() {
+			while (this.cursor.peek().match(/\s/)) this.cursor.next();
+		}
+	};
+	//#endregion
+	//#region typescript/calculator/peekingTokenizer.ts
+	var PeekingTokenizer = class {
+		constructor(text) {
+			this.peekedToken = null;
+			this.tokenizer = new Tokenizer(text);
+		}
+		peek() {
+			if (this.peekedToken) return this.peekedToken;
+			let cursor = this.tokenizer.cloneCursor();
+			this.peekedToken = this.tokenizer.next();
+			this.tokenizer.setCursor(cursor);
+			return this.peekedToken;
+		}
+		next() {
+			this.peekedToken = null;
+			return this.tokenizer.next();
+		}
+		getCursor() {
+			return this.tokenizer.cloneCursor();
+		}
+		match(tokenType) {
+			let token = this.peek();
+			if (token?.type == tokenType) {
+				this.next();
+				return token;
+			}
+			return null;
+		}
+	};
+	//#endregion
+	//#region typescript/calculator/parser.ts
+	const ERR_EXPECTED_CLOSE_PAREN = {
+		error_type: "E",
+		message: "expected ')'"
+	};
+	var Parser = class {
+		constructor(text) {
+			this.peekingTokenizer = new PeekingTokenizer(text);
+		}
+		parse() {
+			return this.parseExpression();
+		}
+		parseExpression() {
+			let term1 = this.parseTerm();
+			while (true) {
+				let operator = this.peekingTokenizer.peek();
+				if (!operator) return term1;
+				if (operator.type != "+" && operator.type != "-") return term1;
+				this.peekingTokenizer.next();
+				let term2 = this.parseTerm();
+				if (operator.type == "+") term1 = {
+					result: term1.result + term2.result,
+					errors: term1.errors.concat(term2.errors)
+				};
+				else term1 = {
+					result: term1.result - term2.result,
+					errors: term1.errors.concat(term2.errors)
+				};
+			}
+		}
+		parseTerm() {
+			let factor1 = this.parseFactor();
+			while (true) {
+				let operator = this.peekingTokenizer.peek();
+				if (!operator) return factor1;
+				if (operator.type != "*" && operator.type != "/") return factor1;
+				this.peekingTokenizer.next();
+				let factor2 = this.parseFactor();
+				if (operator.type == "*") factor1 = {
+					result: factor1.result * factor2.result,
+					errors: factor1.errors.concat(factor2.errors)
+				};
+				else factor1 = {
+					result: factor1.result / factor2.result,
+					errors: factor1.errors.concat(factor2.errors)
+				};
+			}
+		}
+		parseFactor() {
+			if (this.peekingTokenizer.match("(")) {
+				let res = this.parseExpression();
+				let peeked = this.peekingTokenizer.peek();
+				if (peeked?.type == ")") this.peekingTokenizer.next();
+				else if (peeked != null) res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
+				return res;
+			}
+			return this.parseCurrency();
+		}
+		parseCurrency() {
+			let peeked = this.peekingTokenizer.peek();
+			if (!peeked) return {
+				result: 0,
+				errors: []
+			};
+			if (peeked.type == "€") this.peekingTokenizer.next();
+			return this.parseNumber();
+		}
+		parseNumber() {
+			let token = this.peekingTokenizer.next();
+			if (!token) return {
+				result: 0,
+				errors: []
+			};
+			let text = getText(token);
+			text = text.trim();
+			if (text.startsWith("€")) text = text.substring(1);
+			let decimalPoint;
+			let thousandSeparator;
+			let lastCommaIndex = text.lastIndexOf(",");
+			if (text.lastIndexOf(".") > lastCommaIndex) {
+				decimalPoint = ".";
+				thousandSeparator = ",";
+			} else {
+				decimalPoint = ",";
+				thousandSeparator = ".";
+			}
+			text = text.replaceAll(thousandSeparator, "");
+			let slices = text.split(decimalPoint);
+			if (slices.length > 1) {
+				let decimals = slices.pop();
+				text = slices.join("") + "." + decimals;
+			}
+			return {
+				result: parseFloat(text),
+				errors: []
+			};
+		}
+	};
+	//#endregion
 	//#region typescript/reqForm/observer.ts
 	var ReqFormObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -2826,8 +3065,16 @@
 		scanAndSetFirstFieldFocus(el, btnUnitOfMeasure);
 	}
 	function decorateFieldQuantity(fieldQuantity) {
-		fieldQuantity.querySelector("input");
 		fieldQuantity.classList.add("hidePlusMinButtons");
+		let input = fieldQuantity.querySelector("input");
+		input.addEventListener("paste", (ev) => {
+			let data = ev.clipboardData?.getData("text/plain");
+			if (data) {
+				input.value = formatPrice(new Parser(data).parse().result, "", "");
+				triggerFieldChanged(input);
+				ev.preventDefault();
+			}
+		});
 	}
 	async function fetchReqFormInfo() {
 		let userInfo = await getUserInfo();
