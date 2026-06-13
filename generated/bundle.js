@@ -2756,6 +2756,19 @@
 	function checkDecorations() {
 		checkAndSetDecoration(document.querySelector("div.req-form-panel"), decoratePanel);
 	}
+	function scanAndSelectPerEenheid(ulUnitOfMeasure) {
+		let anchorPerEenheid = [...ulUnitOfMeasure.querySelectorAll("a")].find((a) => a.innerText.includes("Per eenheid"));
+		if (anchorPerEenheid) {
+			gringo("found Per eenheid anchor");
+			anchorPerEenheid.dispatchEvent(new Event("mousedown", { bubbles: true }));
+			anchorPerEenheid.dispatchEvent(new Event("click", { bubbles: true }));
+			anchorPerEenheid.dispatchEvent(new Event("mouseup", { bubbles: true }));
+			ulUnitOfMeasure.style.display = "";
+			return;
+		}
+		gringo("still scanning...");
+		setTimeout(() => scanAndSelectPerEenheid(ulUnitOfMeasure), 100);
+	}
 	async function decoratePanel(el) {
 		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
 		let li = emmet.appendChild(ul, `
@@ -2764,16 +2777,17 @@
 		let fieldQuantity = el.querySelector("div.field-quantity");
 		let fieldQuantityInput = fieldQuantity.querySelector("input");
 		fieldQuantityInput.value = "1";
-		let userInfo = await getUserInfo();
-		let userId = userInfo.hashedUser;
-		let tenant = userInfo.tenant;
-		let resourceId = new URLSearchParams(location.search).get("fromresourceid");
-		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
-		let tarif = await getBtwTarif((await (await fetch(daUrl)).json()).commodityCode);
+		let tarif = await getBtwTarif((await fetchReqFormInfo()).commodityCode);
 		let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group");
 		emmet.appendChild(fieldQuantityInputGroup, `
         span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
     `);
+		let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`);
+		let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`);
+		let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul");
+		ulUnitOfMeasure.style.display = "none";
+		btnUnitOfMeasure.dispatchEvent(new Event("click"));
+		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		fillBrutoContainer(li, fieldQuantityInput, tarif);
 		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");
@@ -2783,6 +2797,14 @@
 	function decorateFieldQuantity(fieldQuantity) {
 		fieldQuantity.querySelector("input");
 		fieldQuantity.classList.add("hidePlusMinButtons");
+	}
+	async function fetchReqFormInfo() {
+		let userInfo = await getUserInfo();
+		let userId = userInfo.hashedUser;
+		let tenant = userInfo.tenant;
+		let resourceId = new URLSearchParams(location.search).get("fromresourceid");
+		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
+		return await (await fetch(daUrl)).json();
 	}
 	//#endregion
 	//#region typescript/main.ts
