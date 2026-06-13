@@ -1,6 +1,14 @@
 import {emmet} from "../libs/Emmeter/html";
+import {Btw} from "./aanvragen/requests";
+import {formatPrice} from "./globals";
 
-export function fillBrutoContainer(container: HTMLElement, fieldQuantityInput: HTMLInputElement) {
+function calcNettoPrice(value: string, tarif: Btw | null) {
+    let btw = tarif?.tarif ?? 0;
+    let bruto = parseFloat(value);
+    return bruto / (1 + btw / 100);
+}
+
+export function fillBrutoContainer(container: HTMLElement, fieldQuantityInput: HTMLInputElement, tarif: Btw | null) {
     emmet.appendChild(container, `
         div>
             div.input-wrap>
@@ -12,7 +20,8 @@ export function fillBrutoContainer(container: HTMLElement, fieldQuantityInput: H
     `);
     let brutoInput = container.querySelector("input")!;
     brutoInput.addEventListener("keyup", (ev) => {
-        fieldQuantityInput.value = brutoInput.value;
+        let netto = calcNettoPrice(brutoInput.value, tarif);
+        fieldQuantityInput.value = formatPrice(netto, "", "").trim();
         triggerFieldChanged(fieldQuantityInput);
     });
 }

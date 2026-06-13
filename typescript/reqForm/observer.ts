@@ -43,11 +43,6 @@ async function decoratePanel(el: HTMLElement) {
     let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
     fieldQuantityInput.value = "1";
-    fillBrutoContainer(li, fieldQuantityInput);
-    decorateFieldQuantity(fieldQuantity);
-    let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;
-    fieldMoney.value = "1";
-    triggerFieldChanged(fieldMoney);
 
     let userInfo = await getUserInfo();
     let userId = userInfo.hashedUser;
@@ -63,6 +58,12 @@ async function decoratePanel(el: HTMLElement) {
     emmet.appendChild(fieldQuantityInputGroup, `
         span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
     `);
+
+    fillBrutoContainer(li, fieldQuantityInput, tarif);
+    decorateFieldQuantity(fieldQuantity);
+    let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;
+    fieldMoney.value = "1";
+    triggerFieldChanged(fieldMoney);
 
 }
 

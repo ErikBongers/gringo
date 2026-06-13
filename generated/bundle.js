@@ -2704,7 +2704,11 @@
 	}
 	//#endregion
 	//#region typescript/brutoNettoFields.ts
-	function fillBrutoContainer(container, fieldQuantityInput) {
+	function calcNettoPrice(value, tarif) {
+		let btw = tarif?.tarif ?? 0;
+		return parseFloat(value) / (1 + btw / 100);
+	}
+	function fillBrutoContainer(container, fieldQuantityInput, tarif) {
 		emmet.appendChild(container, `
         div>
             div.input-wrap>
@@ -2716,7 +2720,7 @@
     `);
 		let brutoInput = container.querySelector("input");
 		brutoInput.addEventListener("keyup", (ev) => {
-			fieldQuantityInput.value = brutoInput.value;
+			fieldQuantityInput.value = formatPrice(calcNettoPrice(brutoInput.value, tarif), "", "").trim();
 			triggerFieldChanged(fieldQuantityInput);
 		});
 	}
@@ -2760,11 +2764,6 @@
 		let fieldQuantity = el.querySelector("div.field-quantity");
 		let fieldQuantityInput = fieldQuantity.querySelector("input");
 		fieldQuantityInput.value = "1";
-		fillBrutoContainer(li, fieldQuantityInput);
-		decorateFieldQuantity(fieldQuantity);
-		let fieldMoney = el.querySelector("div.field-money input");
-		fieldMoney.value = "1";
-		triggerFieldChanged(fieldMoney);
 		let userInfo = await getUserInfo();
 		let userId = userInfo.hashedUser;
 		let tenant = userInfo.tenant;
@@ -2775,6 +2774,11 @@
 		emmet.appendChild(fieldQuantityInputGroup, `
         span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
     `);
+		fillBrutoContainer(li, fieldQuantityInput, tarif);
+		decorateFieldQuantity(fieldQuantity);
+		let fieldMoney = el.querySelector("div.field-money input");
+		fieldMoney.value = "1";
+		triggerFieldChanged(fieldMoney);
 	}
 	function decorateFieldQuantity(fieldQuantity) {
 		fieldQuantity.querySelector("input");
