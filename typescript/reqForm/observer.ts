@@ -4,7 +4,7 @@ import {emmet} from "../../libs/Emmeter/html";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {Btw, getBtwTarif} from "../aanvragen/requests";
-import {CalcField, createCalcField} from "../brutoNettoFields";
+import {CalcField, createCalcField} from "../calcField";
 import {Parser} from "../calculator/parser";
 
 class ReqFormObserver extends PartialUrlObserver {

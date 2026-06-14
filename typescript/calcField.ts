@@ -1,5 +1,4 @@
 import {emmet} from "../libs/Emmeter/html";
-import {Btw} from "./aanvragen/requests";
 import {Parser, ParseResult} from "./calculator/parser";
 import {formatPrice} from "./globals";
 
