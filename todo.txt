@@ -1,35 +1,6 @@
+* Add CalcFields everywhere.
+
 * Test case undefined BTW tarif: > Eten > luxe visproducten.
-
-* Entangled fields: allow for n fields.
-  > if one changes, the others get an updateCallback.
-    > They get a ctx that has some data (like a bruto or netto value from the source)
-
-* Create a netto field next to bruto field and update eachother.
-  > or use/replace the existing quantity field?
-    > Nope: this field will get confused
-  > but what if user enters value in quantity field?
-    > netto and bruto field get updated? Ok...
-
-Calculator
-===========
-  > An expression field needs a results field...how?
-    Bruto field has 2 modes, based on typed/pasted content.
-      - plain mode for plain number
-      - long mode when you type a non-numeric value > and expression
-        > long mode also shows result (below?)
-      > VAT buttons are visible next to the netto field!
-        > much more intuitive.
-    The MASTER field is the last field you typed in.
-      > before switching, ask if other field can be overwritten.
-      > The master field can be recognized because....
-        > The slave field is
-          > uneditable? Too restrictive
-          > Other color? Italic? Round borders? Faded?
-  - a bruto field
-    > allows for input without having to click first
-  - A percentage selector
-    > pre-set if commodity code is known.
-      > if not, just add percentage radio buttons.
 
 Excel reqs
 ===========
