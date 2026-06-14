@@ -160,7 +160,10 @@ async function decoratePanel(el: HTMLElement) {
     });
 
     entangledFields.add(fieldQuantityInput, (ctx: PriceData) => {
-        updateQuantityFromNewBrutoValue(tarif, ctx, fieldQuantityInput);
+        if(!ctx.netto)
+            return;
+        fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
+        triggerFieldChanged(fieldQuantityInput);
     });
 
     entangledFields.add(nettoCalcField.input, (ctx: PriceData) => {
@@ -211,11 +214,4 @@ function triggerFieldChanged(input: HTMLInputElement) {
     input.dispatchEvent(new Event('blur'));
     input.dispatchEvent(new Event('keyup'));
     input.dispatchEvent(new Event('mouseout'));
-}
-
-function updateQuantityFromNewBrutoValue(tarif: Btw | null, priceData: PriceData, fieldQuantityInput: HTMLInputElement) {
-    if(!priceData.netto)
-        return;
-    fieldQuantityInput.value = formatPrice(priceData.netto, "", "").trim();
-    triggerFieldChanged(fieldQuantityInput);
 }

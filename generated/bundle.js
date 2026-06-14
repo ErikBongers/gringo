@@ -3135,7 +3135,9 @@
 			brutoCalcField.reCalc();
 		});
 		entangledFields.add(fieldQuantityInput, (ctx) => {
-			updateQuantityFromNewBrutoValue(tarif, ctx, fieldQuantityInput);
+			if (!ctx.netto) return;
+			fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
+			triggerFieldChanged(fieldQuantityInput);
 		});
 		entangledFields.add(nettoCalcField.input, (ctx) => {
 			if (!ctx.netto) return;
@@ -3174,11 +3176,6 @@
 		input.dispatchEvent(new Event("blur"));
 		input.dispatchEvent(new Event("keyup"));
 		input.dispatchEvent(new Event("mouseout"));
-	}
-	function updateQuantityFromNewBrutoValue(tarif, priceData, fieldQuantityInput) {
-		if (!priceData.netto) return;
-		fieldQuantityInput.value = formatPrice(priceData.netto, "", "").trim();
-		triggerFieldChanged(fieldQuantityInput);
 	}
 	//#endregion
 	//#region typescript/main.ts
