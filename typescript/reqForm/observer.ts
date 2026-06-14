@@ -146,6 +146,9 @@ async function decoratePanel(el: HTMLElement) {
         entangledFields.updateOtherFields();
     });
     let nettoCalcField = new CalcField(li, "Netto", (field) => {
+        if(!field.result)
+            return;
+        entangledFields.context.netto = field.result.result;
         entangledFields.updateOtherFields();
     });
 
