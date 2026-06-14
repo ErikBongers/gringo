@@ -1,16 +1,17 @@
 import {emmet} from "../libs/Emmeter/html";
 import {Btw} from "./aanvragen/requests";
+import {Parser, ParseResult} from "./calculator/parser";
 import {formatPrice} from "./globals";
-import {Parser} from "./calculator/parser";
 
-interface CalcFieldContainer {
+export interface CalcField {
     input: HTMLInputElement;
     resultDiv: HTMLDivElement;
     resultLabel: HTMLElement;
     resultErrorImage: HTMLElement;
+    result: ParseResult | null;
 }
 
-export function createBrutoField(container: HTMLElement, fieldQuantityInput: HTMLInputElement, tarif: Btw | null) {
+export function createCalcField(container: HTMLElement, onRecalc: (field: CalcField) => void): CalcField {
     emmet.appendChild(container, `
         div>
             div.input-wrap>
@@ -29,39 +30,30 @@ export function createBrutoField(container: HTMLElement, fieldQuantityInput: HTM
     let calcResultDiv = container.querySelector("div.calcResult") as HTMLDivElement;
     let calcResultLabel = calcResultDiv.querySelector("label") as HTMLElement;
     let calcResultErrorImage = container.querySelector("i.fa") as HTMLElement;
-    let calcFieldContainer: CalcFieldContainer = {
+    let calcFieldContainer: CalcField = {
         input,
         resultDiv: calcResultDiv,
         resultLabel: calcResultLabel,
-        resultErrorImage: calcResultErrorImage
+        resultErrorImage: calcResultErrorImage,
+        result: null
     };
     input.addEventListener("keyup", (ev) => {
-        updateFromNewBrutoValue(tarif, calcFieldContainer, fieldQuantityInput);
+        reCalc(calcFieldContainer);
+        onRecalc(calcFieldContainer);
     });
     return calcFieldContainer;
 }
 
-export function triggerFieldChanged(input: HTMLInputElement) {
-    input.dispatchEvent(new Event('change')); //todo: reduce these events (the last 2 are probably needed).
-    input.dispatchEvent(new Event('input'));
-    input.dispatchEvent(new Event('blur'));
-    input.dispatchEvent(new Event('keyup'));
-    input.dispatchEvent(new Event('mouseout'));
-}
-
-function updateFromNewBrutoValue(tarif: Btw | null, brutoField: CalcFieldContainer, fieldQuantityInput: HTMLInputElement) {
-    if(brutoField.input.value == "") {
-        brutoField.resultLabel.textContent = "";
-        brutoField.resultDiv.classList.toggle("error", false);
+function reCalc(sourceField: CalcField) {
+    if(sourceField.input.value == "") {
+        sourceField.result = null;
+        sourceField.resultLabel.textContent = "";
+        sourceField.resultDiv.classList.toggle("error", false);
         return;
     }
-    let btw = tarif?.tarif ?? 0;
-    let parser = new Parser(brutoField.input.value);
-    let res = parser.parse();
-    let netto = res.result / (1 + btw / 100);
-    brutoField.resultLabel.textContent = formatPrice(res.result);
-    brutoField.resultDiv.classList.toggle("error", res.errors.length > 0);
-    brutoField.resultErrorImage.title = res.errors.map(e => e.message).join("\n");
-    fieldQuantityInput.value = formatPrice(netto, "", "").trim();
-    triggerFieldChanged(fieldQuantityInput);
+    let parser = new Parser(sourceField.input.value);
+    sourceField.result = parser.parse();
+    sourceField.resultLabel.textContent = formatPrice(sourceField.result.result);
+    sourceField.resultDiv.classList.toggle("error", sourceField.result.errors.length > 0);
+    sourceField.resultErrorImage.title = sourceField.result.errors.map(e => e.message).join("\n");
 }

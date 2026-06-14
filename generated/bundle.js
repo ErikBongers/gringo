@@ -2944,7 +2944,7 @@
 	};
 	//#endregion
 	//#region typescript/brutoNettoFields.ts
-	function createBrutoField(container, fieldQuantityInput, tarif) {
+	function createCalcField(container, onRecalc) {
 		emmet.appendChild(container, `
         div>
             div.input-wrap>
@@ -2965,34 +2965,26 @@
 			input,
 			resultDiv: calcResultDiv,
 			resultLabel: calcResultDiv.querySelector("label"),
-			resultErrorImage: container.querySelector("i.fa")
+			resultErrorImage: container.querySelector("i.fa"),
+			result: null
 		};
 		input.addEventListener("keyup", (ev) => {
-			updateFromNewBrutoValue(tarif, calcFieldContainer, fieldQuantityInput);
+			reCalc(calcFieldContainer);
+			onRecalc(calcFieldContainer);
 		});
 		return calcFieldContainer;
 	}
-	function triggerFieldChanged(input) {
-		input.dispatchEvent(new Event("change"));
-		input.dispatchEvent(new Event("input"));
-		input.dispatchEvent(new Event("blur"));
-		input.dispatchEvent(new Event("keyup"));
-		input.dispatchEvent(new Event("mouseout"));
-	}
-	function updateFromNewBrutoValue(tarif, brutoField, fieldQuantityInput) {
-		if (brutoField.input.value == "") {
-			brutoField.resultLabel.textContent = "";
-			brutoField.resultDiv.classList.toggle("error", false);
+	function reCalc(sourceField) {
+		if (sourceField.input.value == "") {
+			sourceField.result = null;
+			sourceField.resultLabel.textContent = "";
+			sourceField.resultDiv.classList.toggle("error", false);
 			return;
 		}
-		let btw = tarif?.tarif ?? 0;
-		let res = new Parser(brutoField.input.value).parse();
-		let netto = res.result / (1 + btw / 100);
-		brutoField.resultLabel.textContent = formatPrice(res.result);
-		brutoField.resultDiv.classList.toggle("error", res.errors.length > 0);
-		brutoField.resultErrorImage.title = res.errors.map((e) => e.message).join("\n");
-		fieldQuantityInput.value = formatPrice(netto, "", "").trim();
-		triggerFieldChanged(fieldQuantityInput);
+		sourceField.result = new Parser(sourceField.input.value).parse();
+		sourceField.resultLabel.textContent = formatPrice(sourceField.result.result);
+		sourceField.resultDiv.classList.toggle("error", sourceField.result.errors.length > 0);
+		sourceField.resultErrorImage.title = sourceField.result.errors.map((e) => e.message).join("\n");
 	}
 	//#endregion
 	//#region typescript/reqForm/observer.ts
@@ -3081,7 +3073,9 @@
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
-		createBrutoField(li, fieldQuantityInput, tarif);
+		createCalcField(li, (field) => {
+			updateQuantityFromNewBrutoValue(tarif, field, fieldQuantityInput);
+		});
 		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");
 		fieldMoney.value = "1";
@@ -3107,6 +3101,19 @@
 		let resourceId = new URLSearchParams(location.search).get("fromresourceid");
 		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
 		return await (await fetch(daUrl)).json();
+	}
+	function triggerFieldChanged(input) {
+		input.dispatchEvent(new Event("change"));
+		input.dispatchEvent(new Event("input"));
+		input.dispatchEvent(new Event("blur"));
+		input.dispatchEvent(new Event("keyup"));
+		input.dispatchEvent(new Event("mouseout"));
+	}
+	function updateQuantityFromNewBrutoValue(tarif, sourceField, fieldQuantityInput) {
+		if (!sourceField.result) return;
+		let btw = tarif?.tarif ?? 0;
+		fieldQuantityInput.value = formatPrice(sourceField.result.result / (1 + btw / 100), "", "").trim();
+		triggerFieldChanged(fieldQuantityInput);
 	}
 	//#endregion
 	//#region typescript/main.ts

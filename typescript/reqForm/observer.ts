@@ -3,8 +3,8 @@ import {formatPrice, gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter/html";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {getBtwTarif} from "../aanvragen/requests";
-import {createBrutoField, triggerFieldChanged} from "../brutoNettoFields";
+import {Btw, getBtwTarif} from "../aanvragen/requests";
+import {CalcField, createCalcField} from "../brutoNettoFields";
 import {Parser} from "../calculator/parser";
 
 class ReqFormObserver extends PartialUrlObserver {
@@ -106,7 +106,10 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSelectPerEenheid(ulUnitOfMeasure);
     scanAndSetRadionButtons(el);
 
-    createBrutoField(li, fieldQuantityInput, tarif);
+    let brutoCalcField = createCalcField(li, (field) => {
+        updateQuantityFromNewBrutoValue(tarif, field, fieldQuantityInput);
+    });
+
     decorateFieldQuantity(fieldQuantity);
     let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;
     fieldMoney.value = "1";
@@ -140,4 +143,21 @@ async function fetchReqFormInfo() {
     let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${formId}?resourceId=${resourceId}`;
     let res = await fetch(daUrl);
     return await res.json() as ProcurementForm;
+}
+
+function triggerFieldChanged(input: HTMLInputElement) {
+    input.dispatchEvent(new Event('change')); //todo: reduce these events (the last 2 are probably needed).
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('blur'));
+    input.dispatchEvent(new Event('keyup'));
+    input.dispatchEvent(new Event('mouseout'));
+}
+
+function updateQuantityFromNewBrutoValue(tarif: Btw | null, sourceField: CalcField, fieldQuantityInput: HTMLInputElement) {
+    if(!sourceField.result)
+        return;
+    let btw = tarif?.tarif ?? 0;
+    let netto = sourceField.result.result / (1 + btw / 100);
+    fieldQuantityInput.value = formatPrice(netto, "", "").trim();
+    triggerFieldChanged(fieldQuantityInput);
 }
