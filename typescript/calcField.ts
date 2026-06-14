@@ -10,12 +10,12 @@ export interface CalcField {
     result: ParseResult | null;
 }
 
-export function createCalcField(container: HTMLElement, onRecalc: (field: CalcField) => void): CalcField {
-    emmet.appendChild(container, `
+export function createCalcField(container: HTMLElement, label: string, onRecalc: (field: CalcField) => void): CalcField {
+    let fieldDiv = emmet.appendChild(container, `
         div>
             div.input-wrap>
                 div.form-group>(
-                    label.editable-field-label{Bruto}+
+                    label.editable-field-label{${label}}+
                     div.field-wrapper>(
                         input.form-control[type="text"]+
                         div.flexRow.calcResult>(
@@ -24,11 +24,11 @@ export function createCalcField(container: HTMLElement, onRecalc: (field: CalcFi
                         )
                     )                                                    
                 )
-    `);
+    `).first as HTMLDivElement;
     let input = container.querySelector("input")!;
-    let calcResultDiv = container.querySelector("div.calcResult") as HTMLDivElement;
+    let calcResultDiv = fieldDiv.querySelector("div.calcResult") as HTMLDivElement;
     let calcResultLabel = calcResultDiv.querySelector("label") as HTMLElement;
-    let calcResultErrorImage = container.querySelector("i.fa") as HTMLElement;
+    let calcResultErrorImage = fieldDiv.querySelector("i.fa") as HTMLElement;
     let calcFieldContainer: CalcField = {
         input,
         resultDiv: calcResultDiv,

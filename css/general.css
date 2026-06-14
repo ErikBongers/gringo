@@ -403,6 +403,9 @@ request-info-item.hidden {
 }
 
 .gringo {
+    &.calcFieldContainer {
+        gap: 2ch;
+    }
     .form-group .calcResult, /* for specificity */
     .calcResult {
         i {

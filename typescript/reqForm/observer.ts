@@ -85,7 +85,7 @@ function scanAndSetFirstFieldFocus(el: HTMLElement, btnUnitOfMeasure: HTMLButton
 async function decoratePanel(el: HTMLElement) {
     let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container") as HTMLDivElement;
     let li = emmet.appendChild(ul, `
-        li.adhoc-form-input-section.gringo.blueBlock
+        li.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
     `).first as HTMLLIElement;
     let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
@@ -106,8 +106,13 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSelectPerEenheid(ulUnitOfMeasure);
     scanAndSetRadionButtons(el);
 
-    let brutoCalcField = createCalcField(li, (field) => {
+    li.classList.add("flexRow");
+    let brutoCalcField = createCalcField(li, "Bruto", (field) => {
         updateQuantityFromNewBrutoValue(tarif, field, fieldQuantityInput);
+    });
+
+    let nettoCalcField = createCalcField(li, "Netto", (field) => {
+        //todo
     });
 
     decorateFieldQuantity(fieldQuantity);

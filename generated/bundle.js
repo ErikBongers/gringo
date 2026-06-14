@@ -2943,13 +2943,13 @@
 		}
 	};
 	//#endregion
-	//#region typescript/brutoNettoFields.ts
-	function createCalcField(container, onRecalc) {
-		emmet.appendChild(container, `
+	//#region typescript/calcField.ts
+	function createCalcField(container, label, onRecalc) {
+		let fieldDiv = emmet.appendChild(container, `
         div>
             div.input-wrap>
                 div.form-group>(
-                    label.editable-field-label{Bruto}+
+                    label.editable-field-label{${label}}+
                     div.field-wrapper>(
                         input.form-control[type="text"]+
                         div.flexRow.calcResult>(
@@ -2958,14 +2958,14 @@
                         )
                     )                                                    
                 )
-    `);
+    `).first;
 		let input = container.querySelector("input");
-		let calcResultDiv = container.querySelector("div.calcResult");
+		let calcResultDiv = fieldDiv.querySelector("div.calcResult");
 		let calcFieldContainer = {
 			input,
 			resultDiv: calcResultDiv,
 			resultLabel: calcResultDiv.querySelector("label"),
-			resultErrorImage: container.querySelector("i.fa"),
+			resultErrorImage: fieldDiv.querySelector("i.fa"),
 			result: null
 		};
 		input.addEventListener("keyup", (ev) => {
@@ -3056,7 +3056,7 @@
 	async function decoratePanel(el) {
 		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
 		let li = emmet.appendChild(ul, `
-        li.adhoc-form-input-section.gringo.blueBlock
+        li.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
     `).first;
 		let fieldQuantity = el.querySelector("div.field-quantity");
 		let fieldQuantityInput = fieldQuantity.querySelector("input");
@@ -3073,9 +3073,11 @@
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
-		createCalcField(li, (field) => {
+		li.classList.add("flexRow");
+		createCalcField(li, "Bruto", (field) => {
 			updateQuantityFromNewBrutoValue(tarif, field, fieldQuantityInput);
 		});
+		createCalcField(li, "Netto", (field) => {});
 		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");
 		fieldMoney.value = "1";
