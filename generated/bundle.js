@@ -2703,35 +2703,6 @@
 		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
 	}
 	//#endregion
-	//#region typescript/brutoNettoFields.ts
-	function calcNettoPrice(value, tarif) {
-		let btw = tarif?.tarif ?? 0;
-		return parseFloat(value) / (1 + btw / 100);
-	}
-	function fillBrutoContainer(container, fieldQuantityInput, tarif) {
-		emmet.appendChild(container, `
-        div>
-            div.input-wrap>
-                div.form-group>(
-                    label.editable-field-label{Bruto}+
-                    div.field-wrapper>
-                        input.form-control[type="text"]                                                    
-                )
-    `);
-		let brutoInput = container.querySelector("input");
-		brutoInput.addEventListener("keyup", (ev) => {
-			fieldQuantityInput.value = formatPrice(calcNettoPrice(brutoInput.value, tarif), "", "").trim();
-			triggerFieldChanged(fieldQuantityInput);
-		});
-	}
-	function triggerFieldChanged(input) {
-		input.dispatchEvent(new Event("change"));
-		input.dispatchEvent(new Event("input"));
-		input.dispatchEvent(new Event("blur"));
-		input.dispatchEvent(new Event("keyup"));
-		input.dispatchEvent(new Event("mouseout"));
-	}
-	//#endregion
 	//#region typescript/calculator/cursor.ts
 	var Cursor = class Cursor {
 		constructor(text) {
@@ -2970,6 +2941,39 @@
 			};
 		}
 	};
+	//#endregion
+	//#region typescript/brutoNettoFields.ts
+	function fillBrutoContainer(container, fieldQuantityInput, tarif) {
+		emmet.appendChild(container, `
+        div>
+            div.input-wrap>
+                div.form-group>(
+                    label.editable-field-label{Bruto}+
+                    div.field-wrapper>(
+                        input.form-control[type="text"]+
+                        label.calcResult
+                    )                                                    
+                )
+    `);
+		let brutoInput = container.querySelector("input");
+		let calcResultLabel = container.querySelector("label.calcResult");
+		brutoInput.addEventListener("keyup", (ev) => {
+			let btw = tarif?.tarif ?? 0;
+			let res = new Parser(brutoInput.value).parse();
+			let netto = res.result / (1 + btw / 100);
+			calcResultLabel.textContent = formatPrice(res.result);
+			calcResultLabel.classList.toggle("error", res.errors.length > 0);
+			fieldQuantityInput.value = formatPrice(netto, "", "").trim();
+			triggerFieldChanged(fieldQuantityInput);
+		});
+	}
+	function triggerFieldChanged(input) {
+		input.dispatchEvent(new Event("change"));
+		input.dispatchEvent(new Event("input"));
+		input.dispatchEvent(new Event("blur"));
+		input.dispatchEvent(new Event("keyup"));
+		input.dispatchEvent(new Event("mouseout"));
+	}
 	//#endregion
 	//#region typescript/reqForm/observer.ts
 	var ReqFormObserver = class extends PartialUrlObserver {

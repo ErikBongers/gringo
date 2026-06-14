@@ -1,4 +1,4 @@
-* Can we know the commodityCode in the reqForm?
+* Add calculation result below bruto field.
 
 Calculator
 ===========

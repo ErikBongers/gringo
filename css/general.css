@@ -401,3 +401,10 @@ request-info-item.hidden {
     align-content: center;
     padding-inline-start: 1ch;
 }
+
+.calcResult {
+    .error {
+        color: red;
+        font-style: italic;
+    }
+}
