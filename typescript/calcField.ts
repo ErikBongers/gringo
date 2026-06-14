@@ -23,9 +23,11 @@ export class CalcField {
                     div.form-group>(
                         label.editable-field-label{${label}}+
                         div.field-wrapper>(
-                            div.flexRow>(
-                                input.form-control[type="text"]
-                                ${postFieldEmmet}
+                                (
+                                div.flexRow>(
+                                    input.form-control[type="text"]
+                                    ${postFieldEmmet}
+                                )
                             )+
                             div.flexRow.calcResult>(
                                 label+
