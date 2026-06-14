@@ -2944,48 +2944,73 @@
 	};
 	//#endregion
 	//#region typescript/calcField.ts
-	function createCalcField(container, label, onRecalc) {
-		let fieldDiv = emmet.appendChild(container, `
-        div>
-            div.input-wrap>
-                div.form-group>(
-                    label.editable-field-label{${label}}+
-                    div.field-wrapper>(
-                        input.form-control[type="text"]+
-                        div.flexRow.calcResult>(
-                            label+
-                            i.fa.fa-triangle-exclamation
-                        )
-                    )                                                    
-                )
-    `).first;
-		let input = container.querySelector("input");
-		let calcResultDiv = fieldDiv.querySelector("div.calcResult");
-		let calcFieldContainer = {
-			input,
-			resultDiv: calcResultDiv,
-			resultLabel: calcResultDiv.querySelector("label"),
-			resultErrorImage: fieldDiv.querySelector("i.fa"),
-			result: null
-		};
-		input.addEventListener("keyup", (ev) => {
-			reCalc(calcFieldContainer);
-			onRecalc(calcFieldContainer);
-		});
-		return calcFieldContainer;
-	}
-	function reCalc(sourceField) {
-		if (sourceField.input.value == "") {
-			sourceField.result = null;
-			sourceField.resultLabel.textContent = "";
-			sourceField.resultDiv.classList.toggle("error", false);
-			return;
+	var CalcField = class {
+		constructor(container, label, onRecalculated) {
+			this.result = null;
+			let fieldDiv = emmet.appendChild(container, `
+            div>
+                div.input-wrap>
+                    div.form-group>(
+                        label.editable-field-label{${label}}+
+                        div.field-wrapper>(
+                            input.form-control[type="text"]+
+                            div.flexRow.calcResult>(
+                                label+
+                                i.fa.fa-triangle-exclamation
+                            )
+                        )                                                    
+                    )
+        `).first;
+			this.input = fieldDiv.querySelector("input");
+			this.resultDiv = fieldDiv.querySelector("div.calcResult");
+			this.resultLabel = this.resultDiv.querySelector("label");
+			this.resultErrorImage = fieldDiv.querySelector("i.fa");
+			this.input.addEventListener("keyup", (ev) => {
+				this.reCalc();
+				onRecalculated(this);
+			});
 		}
-		sourceField.result = new Parser(sourceField.input.value).parse();
-		sourceField.resultLabel.textContent = formatPrice(sourceField.result.result);
-		sourceField.resultDiv.classList.toggle("error", sourceField.result.errors.length > 0);
-		sourceField.resultErrorImage.title = sourceField.result.errors.map((e) => e.message).join("\n");
-	}
+		reCalc() {
+			if (this.input.value == "") {
+				this.result = null;
+				this.resultLabel.textContent = "";
+				this.resultDiv.classList.toggle("error", false);
+				return;
+			}
+			this.result = new Parser(this.input.value).parse();
+			this.resultLabel.textContent = formatPrice(this.result.result);
+			this.resultDiv.classList.toggle("error", this.result.errors.length > 0);
+			this.resultErrorImage.title = this.result.errors.map((e) => e.message).join("\n");
+		}
+	};
+	//#endregion
+	//#region typescript/entangledFields.ts
+	var EntangledFields = class {
+		constructor(context) {
+			this.fields = [];
+			this.context = context;
+			this.currentSourceField = null;
+			this.isTransfering = false;
+		}
+		add(field, updateCallback1) {
+			this.fields.push({
+				field,
+				callback: updateCallback1
+			});
+			field.addEventListener("focus", () => {
+				if (!this.isTransfering) this.currentSourceField = field;
+			});
+		}
+		setCurrentSource(field) {
+			this.currentSourceField = field;
+		}
+		updateOtherFields() {
+			if (this.isTransfering) return;
+			this.isTransfering = true;
+			this.fields.filter((f) => f.field != this.currentSourceField).forEach((f) => f.callback(this.context));
+			this.isTransfering = false;
+		}
+	};
 	//#endregion
 	//#region typescript/reqForm/observer.ts
 	var ReqFormObserver = class extends PartialUrlObserver {
@@ -3053,6 +3078,25 @@
 		gringo("waiting to set focus...");
 		setTimeout(() => scanAndSetFirstFieldFocus(el, btnUnitOfMeasure), 100);
 	}
+	var PriceData = class {
+		get netto() {
+			return this._netto;
+		}
+		set netto(value) {
+			this._netto = value;
+			if (this._netto) this._bruto = this._netto * (1 + this.btw / 100);
+		}
+		get bruto() {
+			return this._bruto;
+		}
+		set bruto(value) {
+			this._bruto = value;
+			if (this._bruto) this._netto = this._bruto / (1 + this.btw / 100);
+		}
+		constructor(btw) {
+			this.btw = btw;
+		}
+	};
 	async function decoratePanel(el) {
 		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
 		let li = emmet.appendChild(ul, `
@@ -3074,10 +3118,28 @@
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
 		li.classList.add("flexRow");
-		createCalcField(li, "Bruto", (field) => {
-			updateQuantityFromNewBrutoValue(tarif, field, fieldQuantityInput);
+		let entangledFields = new EntangledFields(new PriceData(tarif?.tarif ?? 0));
+		let brutoCalcField = new CalcField(li, "Bruto", (field) => {
+			if (!field.result) return;
+			entangledFields.context.bruto = field.result.result;
+			entangledFields.updateOtherFields();
 		});
-		createCalcField(li, "Netto", (field) => {});
+		let nettoCalcField = new CalcField(li, "Netto", (field) => {
+			entangledFields.updateOtherFields();
+		});
+		entangledFields.add(brutoCalcField.input, (ctx) => {
+			if (!ctx.bruto) return;
+			brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
+			brutoCalcField.reCalc();
+		});
+		entangledFields.add(fieldQuantityInput, (ctx) => {
+			updateQuantityFromNewBrutoValue(tarif, ctx, fieldQuantityInput);
+		});
+		entangledFields.add(nettoCalcField.input, (ctx) => {
+			if (!ctx.netto) return;
+			nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
+			nettoCalcField.reCalc();
+		});
 		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");
 		fieldMoney.value = "1";
@@ -3111,10 +3173,9 @@
 		input.dispatchEvent(new Event("keyup"));
 		input.dispatchEvent(new Event("mouseout"));
 	}
-	function updateQuantityFromNewBrutoValue(tarif, sourceField, fieldQuantityInput) {
-		if (!sourceField.result) return;
-		let btw = tarif?.tarif ?? 0;
-		fieldQuantityInput.value = formatPrice(sourceField.result.result / (1 + btw / 100), "", "").trim();
+	function updateQuantityFromNewBrutoValue(tarif, priceData, fieldQuantityInput) {
+		if (!priceData.netto) return;
+		fieldQuantityInput.value = formatPrice(priceData.netto, "", "").trim();
 		triggerFieldChanged(fieldQuantityInput);
 	}
 	//#endregion

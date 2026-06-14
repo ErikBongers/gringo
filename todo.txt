@@ -1,10 +1,8 @@
-* 2 fields fight for dominance...
-  > kiss: the otehr field is just overwritten, no questions asked.
-    > but only if the USER is the source of the change!
-      > a user changes forces an 'keyup' event in the target field.
-        > let the target field itself how to handle a change from a source.
-        > testing focus/blur is not good enough as an update may dispatch click events and such
-        > use a ctx to determine if a transfer is happening.
+* Test case undefined BTW tarif: > Eten > luxe visproducten.
+
+* Entangled fields: allow for n fields.
+  > if one changes, the others get an updateCallback.
+    > They get a ctx that has some data (like a bruto or netto value from the source)
 
 * Create a netto field next to bruto field and update eachother.
   > or use/replace the existing quantity field?

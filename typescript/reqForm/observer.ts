@@ -4,8 +4,9 @@ import {emmet} from "../../libs/Emmeter/html";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {Btw, getBtwTarif} from "../aanvragen/requests";
-import {CalcField, createCalcField} from "../calcField";
+import {CalcField} from "../calcField";
 import {Parser} from "../calculator/parser";
+import {EntangledFields} from "../entangledFields";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -82,6 +83,34 @@ function scanAndSetFirstFieldFocus(el: HTMLElement, btnUnitOfMeasure: HTMLButton
     setTimeout(() => scanAndSetFirstFieldFocus(el, btnUnitOfMeasure), 100);
 }
 
+export class PriceData {
+    get netto(): number | null {
+        return this._netto;
+    }
+
+    set netto(value: number | null) {
+        this._netto = value;
+        if(this._netto)
+            this._bruto = this._netto * (1 + this.btw / 100);
+    }
+    get bruto(): number | null {
+        return this._bruto;
+    }
+
+    set bruto(value: number | null) {
+        this._bruto = value;
+        if(this._bruto)
+            this._netto = this._bruto / (1 + this.btw / 100);
+    }
+    private _bruto: number | null;
+    private _netto: number | null;
+    private readonly btw: number;
+
+    constructor(btw: number) {
+        this.btw = btw;
+    }
+}
+
 async function decoratePanel(el: HTMLElement) {
     let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container") as HTMLDivElement;
     let li = emmet.appendChild(ul, `
@@ -107,12 +136,35 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSetRadionButtons(el);
 
     li.classList.add("flexRow");
-    let brutoCalcField = createCalcField(li, "Bruto", (field) => {
-        updateQuantityFromNewBrutoValue(tarif, field, fieldQuantityInput);
+
+    let entangledFields = new EntangledFields<PriceData>(new PriceData(tarif?.tarif ?? 0));
+
+    let brutoCalcField = new CalcField(li, "Bruto", (field) => {
+        if(!field.result)
+            return;
+        entangledFields.context.bruto = field.result.result;
+        entangledFields.updateOtherFields();
+    });
+    let nettoCalcField = new CalcField(li, "Netto", (field) => {
+        entangledFields.updateOtherFields();
     });
 
-    let nettoCalcField = createCalcField(li, "Netto", (field) => {
-        //todo
+    entangledFields.add(brutoCalcField.input, (ctx: PriceData) => {
+        if(!ctx.bruto)
+            return;
+        brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
+        brutoCalcField.reCalc();
+    });
+
+    entangledFields.add(fieldQuantityInput, (ctx: PriceData) => {
+        updateQuantityFromNewBrutoValue(tarif, ctx, fieldQuantityInput);
+    });
+
+    entangledFields.add(nettoCalcField.input, (ctx: PriceData) => {
+        if(!ctx.netto)
+            return;
+        nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
+        nettoCalcField.reCalc();
     });
 
     decorateFieldQuantity(fieldQuantity);
@@ -158,11 +210,9 @@ function triggerFieldChanged(input: HTMLInputElement) {
     input.dispatchEvent(new Event('mouseout'));
 }
 
-function updateQuantityFromNewBrutoValue(tarif: Btw | null, sourceField: CalcField, fieldQuantityInput: HTMLInputElement) {
-    if(!sourceField.result)
+function updateQuantityFromNewBrutoValue(tarif: Btw | null, priceData: PriceData, fieldQuantityInput: HTMLInputElement) {
+    if(!priceData.netto)
         return;
-    let btw = tarif?.tarif ?? 0;
-    let netto = sourceField.result.result / (1 + btw / 100);
-    fieldQuantityInput.value = formatPrice(netto, "", "").trim();
+    fieldQuantityInput.value = formatPrice(priceData.netto, "", "").trim();
     triggerFieldChanged(fieldQuantityInput);
 }

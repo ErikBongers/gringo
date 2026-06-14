@@ -1,40 +1,43 @@
-interface FieldDef {
+import {CalcField} from "./calcField";
+
+interface FieldDef<Ctx> {
     field: HTMLElement;
-    callback: (source: HTMLElement) => void;
+    callback: (ctx: Ctx) => void;
 }
 
-class EntangledFields {
-    fields: FieldDef[]; //should only be 2.
-    currentSourceField: number;
+//Really, it's just an observed data object, that tries to avoid deadlooping updates.
+export class EntangledFields<Ctx> {
+    fields: FieldDef<Ctx>[];
+    currentSourceField: HTMLElement | null;
     isTransfering: boolean;
+    context: Ctx;
 
-    constructor(field1: HTMLElement, field2: HTMLElement, updateCallback1: (source: HTMLElement) => void, updateCallback2: (source: HTMLElement) => void) {
-        this.fields = [
-            {field: field1, callback: updateCallback1},
-            {field: field2, callback: updateCallback2}
-        ];
-        this.currentSourceField = -1;
+    constructor(context: Ctx) {
+        this.fields = [];
+        this.context = context;
+        this.currentSourceField = null;
         this.isTransfering = false;
-        field1.addEventListener("focus", () => {
+    }
+
+    add(field: HTMLElement, updateCallback1: (ctx: Ctx) => void) {
+        this.fields.push({field, callback: updateCallback1});
+        field.addEventListener("focus", () => {
             if(!this.isTransfering)
-                this.currentSourceField = 0;
-        });
-        field2.addEventListener("focus", () => {
-            if(!this.isTransfering)
-                this.currentSourceField = 1;
+                this.currentSourceField = field;
         });
     }
 
     setCurrentSource(field: HTMLElement) {
-        this.currentSourceField = this.fields.indexOf(this.fields.find(fd => fd.field == field)!);
+        this.currentSourceField = field;
     }
 
-    updateTarget() {
+    updateOtherFields() {
         if(this.isTransfering)
             return;
-        let targetIndex = this.currentSourceField == 0 ? 1 : 0;
         this.isTransfering = true;
-        this.fields[targetIndex].callback(this.fields[this.currentSourceField].field);
+        this.fields
+            .filter(f => f.field != this.currentSourceField)
+            .forEach(f => f.callback(this.context))
         this.isTransfering = false;
     }
 

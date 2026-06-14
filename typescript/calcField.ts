@@ -2,57 +2,49 @@ import {emmet} from "../libs/Emmeter/html";
 import {Parser, ParseResult} from "./calculator/parser";
 import {formatPrice} from "./globals";
 
-export interface CalcField {
+export class CalcField {
     input: HTMLInputElement;
     resultDiv: HTMLDivElement;
     resultLabel: HTMLElement;
     resultErrorImage: HTMLElement;
-    result: ParseResult | null;
-}
+    result: ParseResult | null = null;
 
-export function createCalcField(container: HTMLElement, label: string, onRecalc: (field: CalcField) => void): CalcField {
-    let fieldDiv = emmet.appendChild(container, `
-        div>
-            div.input-wrap>
-                div.form-group>(
-                    label.editable-field-label{${label}}+
-                    div.field-wrapper>(
-                        input.form-control[type="text"]+
-                        div.flexRow.calcResult>(
-                            label+
-                            i.fa.fa-triangle-exclamation
-                        )
-                    )                                                    
-                )
-    `).first as HTMLDivElement;
-    let input = container.querySelector("input")!;
-    let calcResultDiv = fieldDiv.querySelector("div.calcResult") as HTMLDivElement;
-    let calcResultLabel = calcResultDiv.querySelector("label") as HTMLElement;
-    let calcResultErrorImage = fieldDiv.querySelector("i.fa") as HTMLElement;
-    let calcFieldContainer: CalcField = {
-        input,
-        resultDiv: calcResultDiv,
-        resultLabel: calcResultLabel,
-        resultErrorImage: calcResultErrorImage,
-        result: null
-    };
-    input.addEventListener("keyup", (ev) => {
-        reCalc(calcFieldContainer);
-        onRecalc(calcFieldContainer);
-    });
-    return calcFieldContainer;
-}
-
-function reCalc(sourceField: CalcField) {
-    if(sourceField.input.value == "") {
-        sourceField.result = null;
-        sourceField.resultLabel.textContent = "";
-        sourceField.resultDiv.classList.toggle("error", false);
-        return;
+    constructor(container: HTMLElement, label: string, onRecalculated: (field: CalcField) => void) {
+        let fieldDiv = emmet.appendChild(container, `
+            div>
+                div.input-wrap>
+                    div.form-group>(
+                        label.editable-field-label{${label}}+
+                        div.field-wrapper>(
+                            input.form-control[type="text"]+
+                            div.flexRow.calcResult>(
+                                label+
+                                i.fa.fa-triangle-exclamation
+                            )
+                        )                                                    
+                    )
+        `).first as HTMLDivElement;
+        this.input = fieldDiv.querySelector("input")!;
+        this.resultDiv = fieldDiv.querySelector("div.calcResult") as HTMLDivElement;
+        this.resultLabel = this.resultDiv.querySelector("label") as HTMLElement;
+        this.resultErrorImage = fieldDiv.querySelector("i.fa") as HTMLElement;
+        this.input.addEventListener("keyup", (ev) => {
+            this.reCalc();
+            onRecalculated(this);
+        });
     }
-    let parser = new Parser(sourceField.input.value);
-    sourceField.result = parser.parse();
-    sourceField.resultLabel.textContent = formatPrice(sourceField.result.result);
-    sourceField.resultDiv.classList.toggle("error", sourceField.result.errors.length > 0);
-    sourceField.resultErrorImage.title = sourceField.result.errors.map(e => e.message).join("\n");
+
+    reCalc() {
+        if (this.input.value == "") {
+            this.result = null;
+            this.resultLabel.textContent = "";
+            this.resultDiv.classList.toggle("error", false);
+            return;
+        }
+        let parser = new Parser(this.input.value);
+        this.result = parser.parse();
+        this.resultLabel.textContent = formatPrice(this.result.result);
+        this.resultDiv.classList.toggle("error", this.result.errors.length > 0);
+        this.resultErrorImage.title = this.result.errors.map(e => e.message).join("\n");
+    }
 }
