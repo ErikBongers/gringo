@@ -2897,6 +2897,7 @@
 				let peeked = this.peekingTokenizer.peek();
 				if (peeked?.type == ")") this.peekingTokenizer.next();
 				else if (peeked != null) res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
+				else res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
 				return res;
 			}
 			return this.parseCurrency();
@@ -2943,7 +2944,7 @@
 	};
 	//#endregion
 	//#region typescript/brutoNettoFields.ts
-	function fillBrutoContainer(container, fieldQuantityInput, tarif) {
+	function createBrutoField(container, fieldQuantityInput, tarif) {
 		emmet.appendChild(container, `
         div>
             div.input-wrap>
@@ -2951,21 +2952,25 @@
                     label.editable-field-label{Bruto}+
                     div.field-wrapper>(
                         input.form-control[type="text"]+
-                        label.calcResult
+                        div.flexRow.calcResult>(
+                            label+
+                            i.fa.fa-triangle-exclamation
+                        )
                     )                                                    
                 )
     `);
-		let brutoInput = container.querySelector("input");
-		let calcResultLabel = container.querySelector("label.calcResult");
-		brutoInput.addEventListener("keyup", (ev) => {
-			let btw = tarif?.tarif ?? 0;
-			let res = new Parser(brutoInput.value).parse();
-			let netto = res.result / (1 + btw / 100);
-			calcResultLabel.textContent = formatPrice(res.result);
-			calcResultLabel.classList.toggle("error", res.errors.length > 0);
-			fieldQuantityInput.value = formatPrice(netto, "", "").trim();
-			triggerFieldChanged(fieldQuantityInput);
+		let input = container.querySelector("input");
+		let calcResultDiv = container.querySelector("div.calcResult");
+		let calcFieldContainer = {
+			input,
+			resultDiv: calcResultDiv,
+			resultLabel: calcResultDiv.querySelector("label"),
+			resultErrorImage: container.querySelector("i.fa")
+		};
+		input.addEventListener("keyup", (ev) => {
+			updateFromNewBrutoValue(tarif, calcFieldContainer, fieldQuantityInput);
 		});
+		return calcFieldContainer;
 	}
 	function triggerFieldChanged(input) {
 		input.dispatchEvent(new Event("change"));
@@ -2973,6 +2978,21 @@
 		input.dispatchEvent(new Event("blur"));
 		input.dispatchEvent(new Event("keyup"));
 		input.dispatchEvent(new Event("mouseout"));
+	}
+	function updateFromNewBrutoValue(tarif, brutoField, fieldQuantityInput) {
+		if (brutoField.input.value == "") {
+			brutoField.resultLabel.textContent = "";
+			brutoField.resultDiv.classList.toggle("error", false);
+			return;
+		}
+		let btw = tarif?.tarif ?? 0;
+		let res = new Parser(brutoField.input.value).parse();
+		let netto = res.result / (1 + btw / 100);
+		brutoField.resultLabel.textContent = formatPrice(res.result);
+		brutoField.resultDiv.classList.toggle("error", res.errors.length > 0);
+		brutoField.resultErrorImage.title = res.errors.map((e) => e.message).join("\n");
+		fieldQuantityInput.value = formatPrice(netto, "", "").trim();
+		triggerFieldChanged(fieldQuantityInput);
 	}
 	//#endregion
 	//#region typescript/reqForm/observer.ts
@@ -3061,7 +3081,7 @@
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
-		fillBrutoContainer(li, fieldQuantityInput, tarif);
+		createBrutoField(li, fieldQuantityInput, tarif);
 		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");
 		fieldMoney.value = "1";

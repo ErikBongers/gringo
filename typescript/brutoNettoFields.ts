@@ -3,7 +3,14 @@ import {Btw} from "./aanvragen/requests";
 import {formatPrice} from "./globals";
 import {Parser} from "./calculator/parser";
 
-export function fillBrutoContainer(container: HTMLElement, fieldQuantityInput: HTMLInputElement, tarif: Btw | null) {
+interface CalcFieldContainer {
+    input: HTMLInputElement;
+    resultDiv: HTMLDivElement;
+    resultLabel: HTMLElement;
+    resultErrorImage: HTMLElement;
+}
+
+export function createBrutoField(container: HTMLElement, fieldQuantityInput: HTMLInputElement, tarif: Btw | null) {
     emmet.appendChild(container, `
         div>
             div.input-wrap>
@@ -11,22 +18,27 @@ export function fillBrutoContainer(container: HTMLElement, fieldQuantityInput: H
                     label.editable-field-label{Bruto}+
                     div.field-wrapper>(
                         input.form-control[type="text"]+
-                        label.calcResult
+                        div.flexRow.calcResult>(
+                            label+
+                            i.fa.fa-triangle-exclamation
+                        )
                     )                                                    
                 )
     `);
-    let brutoInput = container.querySelector("input")!;
-    let calcResultLabel = container.querySelector("label.calcResult") as HTMLElement;
-    brutoInput.addEventListener("keyup", (ev) => {
-        let btw = tarif?.tarif ?? 0;
-        let parser = new Parser(brutoInput.value);
-        let res = parser.parse();
-        let netto = res.result / (1 + btw / 100);
-        calcResultLabel.textContent = formatPrice(res.result);
-        calcResultLabel.classList.toggle("error", res.errors.length > 0);
-        fieldQuantityInput.value = formatPrice(netto, "", "").trim();
-        triggerFieldChanged(fieldQuantityInput);
+    let input = container.querySelector("input")!;
+    let calcResultDiv = container.querySelector("div.calcResult") as HTMLDivElement;
+    let calcResultLabel = calcResultDiv.querySelector("label") as HTMLElement;
+    let calcResultErrorImage = container.querySelector("i.fa") as HTMLElement;
+    let calcFieldContainer: CalcFieldContainer = {
+        input,
+        resultDiv: calcResultDiv,
+        resultLabel: calcResultLabel,
+        resultErrorImage: calcResultErrorImage
+    };
+    input.addEventListener("keyup", (ev) => {
+        updateFromNewBrutoValue(tarif, calcFieldContainer, fieldQuantityInput);
     });
+    return calcFieldContainer;
 }
 
 export function triggerFieldChanged(input: HTMLInputElement) {
@@ -35,4 +47,21 @@ export function triggerFieldChanged(input: HTMLInputElement) {
     input.dispatchEvent(new Event('blur'));
     input.dispatchEvent(new Event('keyup'));
     input.dispatchEvent(new Event('mouseout'));
+}
+
+function updateFromNewBrutoValue(tarif: Btw | null, brutoField: CalcFieldContainer, fieldQuantityInput: HTMLInputElement) {
+    if(brutoField.input.value == "") {
+        brutoField.resultLabel.textContent = "";
+        brutoField.resultDiv.classList.toggle("error", false);
+        return;
+    }
+    let btw = tarif?.tarif ?? 0;
+    let parser = new Parser(brutoField.input.value);
+    let res = parser.parse();
+    let netto = res.result / (1 + btw / 100);
+    brutoField.resultLabel.textContent = formatPrice(res.result);
+    brutoField.resultDiv.classList.toggle("error", res.errors.length > 0);
+    brutoField.resultErrorImage.title = res.errors.map(e => e.message).join("\n");
+    fieldQuantityInput.value = formatPrice(netto, "", "").trim();
+    triggerFieldChanged(fieldQuantityInput);
 }

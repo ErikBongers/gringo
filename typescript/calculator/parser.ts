@@ -75,7 +75,8 @@ export class Parser {
                 this.peekingTokenizer.next();
             else if(peeked != null)
                 res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
-            //else: EOT is not an error (yet)
+            else
+                res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
             return res;
         }
         return this.parseCurrency();

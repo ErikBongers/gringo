@@ -4,7 +4,7 @@ import {emmet} from "../../libs/Emmeter/html";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {getBtwTarif} from "../aanvragen/requests";
-import {fillBrutoContainer, triggerFieldChanged} from "../brutoNettoFields";
+import {createBrutoField, triggerFieldChanged} from "../brutoNettoFields";
 import {Parser} from "../calculator/parser";
 
 class ReqFormObserver extends PartialUrlObserver {
@@ -106,7 +106,7 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSelectPerEenheid(ulUnitOfMeasure);
     scanAndSetRadionButtons(el);
 
-    fillBrutoContainer(li, fieldQuantityInput, tarif);
+    createBrutoField(li, fieldQuantityInput, tarif);
     decorateFieldQuantity(fieldQuantity);
     let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;
     fieldMoney.value = "1";

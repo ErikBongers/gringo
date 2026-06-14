@@ -402,9 +402,21 @@ request-info-item.hidden {
     padding-inline-start: 1ch;
 }
 
-.calcResult {
-    .error {
-        color: red;
-        font-style: italic;
+.gringo {
+    .form-group .calcResult, /* for specificity */
+    .calcResult {
+        i {
+            display: none;
+        }
+        &.error {
+            label {
+                color: red;
+                font-style: italic;
+            }
+            i {
+                display: inline-block;
+            }
+        }
+        padding: .3ch;
     }
 }

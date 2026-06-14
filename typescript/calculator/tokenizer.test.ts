@@ -100,6 +100,8 @@ describe('Testing Parser', () => {
         res = parser.parse(); assertResult(res, 123, []);
         parser = new Parser("(123 1)");
         res = parser.parse(); assertResult(res, 123, [ERR_EXPECTED_CLOSE_PAREN]);
+        parser = new Parser("(123");
+        res = parser.parse(); assertResult(res, 123, [ERR_EXPECTED_CLOSE_PAREN]);
     });
 
     test('terms', () => {
