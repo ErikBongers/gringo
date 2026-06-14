@@ -137,15 +137,16 @@ async function decoratePanel(el: HTMLElement) {
 
     li.classList.add("flexRow");
 
-    let entangledFields = new EntangledFields<PriceData>(new PriceData(tarif?.tarif ?? 0));
+    let btw = tarif?.tarif ?? 0;
+    let entangledFields = new EntangledFields<PriceData>(new PriceData(btw));
 
-    let brutoCalcField = new CalcField(li, "Bruto", (field) => {
+    let brutoCalcField = new CalcField(li, "Bruto", btw.toString()+"%", ["gringo", "blueBlock"], (field) => {
         if(!field.result)
             return;
         entangledFields.context.bruto = field.result.result;
         entangledFields.updateOtherFields();
     });
-    let nettoCalcField = new CalcField(li, "Netto", (field) => {
+    let nettoCalcField = new CalcField(li, "Netto", "", [], (field) => {
         if(!field.result)
             return;
         entangledFields.context.netto = field.result.result;

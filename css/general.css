@@ -397,7 +397,15 @@ request-info-item.hidden {
 .percentSpan {
     position: relative;
     display: table-cell;
-    width: 1%;
+    width: fit-content;
+    align-content: center;
+    padding-inline-start: 1ch;
+}
+
+.postFieldLabel {
+    position: relative;
+    display: table-cell;
+    width: fit-content;
     align-content: center;
     padding-inline-start: 1ch;
 }

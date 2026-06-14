@@ -2945,15 +2945,23 @@
 	//#endregion
 	//#region typescript/calcField.ts
 	var CalcField = class {
-		constructor(container, label, onRecalculated) {
+		constructor(container, label, postFieldLabel, postFieldLabelClass, onRecalculated) {
 			this.result = null;
+			let postFieldEmmet = "";
+			if (postFieldLabel != "") postFieldEmmet = `+
+                div.postFieldLabel>
+                    div${postFieldLabelClass.join(".")}{${postFieldLabel}}
+            `;
 			let fieldDiv = emmet.appendChild(container, `
             div>
                 div.input-wrap>
                     div.form-group>(
                         label.editable-field-label{${label}}+
                         div.field-wrapper>(
-                            input.form-control[type="text"]+
+                            div.flexRow>(
+                                input.form-control[type="text"]
+                                ${postFieldEmmet}
+                            )+
                             div.flexRow.calcResult>(
                                 label+
                                 i.fa.fa-triangle-exclamation
@@ -3118,13 +3126,14 @@
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
 		li.classList.add("flexRow");
-		let entangledFields = new EntangledFields(new PriceData(tarif?.tarif ?? 0));
-		let brutoCalcField = new CalcField(li, "Bruto", (field) => {
+		let btw = tarif?.tarif ?? 0;
+		let entangledFields = new EntangledFields(new PriceData(btw));
+		let brutoCalcField = new CalcField(li, "Bruto", btw.toString() + "%", ["gringo", "blueBlock"], (field) => {
 			if (!field.result) return;
 			entangledFields.context.bruto = field.result.result;
 			entangledFields.updateOtherFields();
 		});
-		let nettoCalcField = new CalcField(li, "Netto", (field) => {
+		let nettoCalcField = new CalcField(li, "Netto", "", [], (field) => {
 			if (!field.result) return;
 			entangledFields.context.netto = field.result.result;
 			entangledFields.updateOtherFields();

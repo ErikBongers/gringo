@@ -9,14 +9,24 @@ export class CalcField {
     resultErrorImage: HTMLElement;
     result: ParseResult | null = null;
 
-    constructor(container: HTMLElement, label: string, onRecalculated: (field: CalcField) => void) {
+    constructor(container: HTMLElement, label: string, postFieldLabel: string, postFieldLabelClass: string[], onRecalculated: (field: CalcField) => void) {
+        let postFieldEmmet = "";
+        if(postFieldLabel != "") {
+            postFieldEmmet = `+
+                div.postFieldLabel>
+                    div${postFieldLabelClass.join(".")}{${postFieldLabel}}
+            `;
+        }
         let fieldDiv = emmet.appendChild(container, `
             div>
                 div.input-wrap>
                     div.form-group>(
                         label.editable-field-label{${label}}+
                         div.field-wrapper>(
-                            input.form-control[type="text"]+
+                            div.flexRow>(
+                                input.form-control[type="text"]
+                                ${postFieldEmmet}
+                            )+
                             div.flexRow.calcResult>(
                                 label+
                                 i.fa.fa-triangle-exclamation
