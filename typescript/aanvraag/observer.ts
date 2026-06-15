@@ -222,6 +222,9 @@ async function decoratePrItem(pr: ExpandedPr, lineEl: HTMLElement, index: number
             )
         )
     `);
+    let fieldQuantity = lineEl.querySelector("div.field-quantity") as HTMLDivElement;
+    fieldQuantity.classList.add("hidePlusMinButtons");
+
     updatePrItem(pr, lineEl, index);
 }
 

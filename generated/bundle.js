@@ -2027,6 +2027,7 @@
             )
         )
     `);
+		lineEl.querySelector("div.field-quantity").classList.add("hidePlusMinButtons");
 		updatePrItem(pr, lineEl, index);
 	}
 	function updatePrItemBrutoField(item, tarif, lineEl, index) {
