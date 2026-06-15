@@ -186,4 +186,4 @@ export interface RequisitionItem {
     enhancedLimitItem: boolean;
 }
 
-export type RequisitionItemsResponse = RequisitionItem[];
+export type RequisitionItems = RequisitionItem[];

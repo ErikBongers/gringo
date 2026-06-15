@@ -6,7 +6,7 @@ import {getOptions, gringo, InfoBlock} from "../globals";
 import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
-import {ExpandedPrItem} from "../aanvraag/observer";
+import {CompactRequisition, ExpandedCompactPrItem, ExpandedPrItem} from "../aanvraag/observer";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {emmet} from "../../libs/Emmeter/html";
 import {RequestBasicInfo} from "./observer";
@@ -79,6 +79,11 @@ export interface PrMeta {
 export interface ExpandedPr {
     pr: PurchaseRequisition,
     items: ExpandedPrItem[];
+}
+
+export interface ExpandedCompactPr {
+    pr: CompactRequisition,
+    items: ExpandedCompactPrItem[];
 }
 
 export async function fetchChangedMetas() {

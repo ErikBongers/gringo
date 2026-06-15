@@ -1,11 +1,12 @@
 import {PartialUrlObserver} from "../pageObserver";
 import {getAndSetDecorated, gringo} from "../globals";
-import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
-import {fetchPr, fetchReqContext} from "../sap/api";
+import {PurchaseRequisition, SapLineItem} from "../sap/SapPrInfo";
+import {fetchPr, fetchReqContext, fetchShoppingCart} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
-import {AccountingField, Btw, ExpandedPr, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
+import {AccountingField, Btw, ExpandedCompactPr, ExpandedPr, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
 import {getBudgetCode} from "../aanvragen/aggregate";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
+import {RequisitionItem} from "../sap/ShoppingCart";
 
 class RequisitionObserver extends PartialUrlObserver {
     constructor() {
@@ -18,7 +19,7 @@ class RequisitionObserver extends PartialUrlObserver {
 
 class ViewReqObserver extends PartialUrlObserver {
     constructor() {
-        super( "viewRequisition", onMutation, false, onViewReqPageRefreshed );
+        super( "viewRequisition", onViewMutation, false, onViewReqPageRefreshed );
     }
     isPageReallyLoaded(): boolean {
         return isPageProbablyLoaded();
@@ -42,6 +43,11 @@ function isPageProbablyLoaded(): boolean {
 }
 
 function onMutation(mutation: MutationRecord) {
+    decorateReqPage().then(() => {});
+    return false;
+}
+
+function onViewMutation(mutation: MutationRecord) {
     decorateViewReqPage().then(() => {});
     return false;
 }
@@ -55,13 +61,27 @@ async function decorateViewReqPage() {
 
     if(getAndSetDecorated(sectionMain))
         return;
-    gringo("Decorating aanvraag page...");
+    gringo("Decorating view aanvraag page...");
 
     let pageName = location.pathname.includes("viewRequisition") ? "viewRequisition" : "requisition";
     let prId = location.pathname.replace(`/gb/${pageName}/`, "");
     pr = await fetchPr(prId);
     if(!pr)
         return;
+
+    let compactPr: CompactRequisition = { //todo: merge with code in decorateReqPage
+        prId: pr.reqId,
+        items: pr.lineItems.map(item => {
+            let commodityCode = getPrItemCommodity(item)?.code??"";
+            return {
+                commodityCode,
+                price: item.price.value.amount,
+                quantity: item.quantity.value,
+                currency: item.price.value.currency,
+                currencySymbol: item.price.value.currencySymbol
+            };
+        })
+    };
 
     let totalPriceDiv = document.querySelector("div.block-heading.total-price") as HTMLElement;
     totalPriceDiv.style.display = "none";
@@ -76,8 +96,37 @@ async function decorateViewReqPage() {
     `);
 
 
-    let expandedPr = await createExpandedPr(pr);
+    let expandedPr = await createExpandedCompactPr(compactPr);
     await updatePr(expandedPr);
+}
+
+export function createCompactReqItem(item: SapLineItem) {
+    return {
+        commodityCode: getPrItemCommodity(item)?.code ?? "",
+        price: item.price.value.amount,
+        quantity: item.quantity.value,
+        currency: item.price.value.currency,
+        currencySymbol: item.price.value.currencySymbol,
+    };
+}
+
+export function createCompactPr(pr: PurchaseRequisition) {
+    return {
+        prId: pr.reqId,
+        items: pr.lineItems.map(item => {
+            return createCompactReqItem(item);
+        })
+    };
+}
+
+export function createCompactReqItemFromCartItem(item: RequisitionItem) {
+    return {
+        commodityCode: item.itemCommodityCode,
+        price: item.unitPrice,
+        quantity: item.quantity,
+        currency: item.unitPriceMoney.currency,
+        currencySymbol: item.unitPriceMoney.currencySymbol,
+    };
 }
 
 async function decorateReqPage() {
@@ -89,18 +138,26 @@ async function decorateReqPage() {
         return;
     gringo("Decorating aanvraag page...");
 
-    //obo: with PRID:
-    // https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/33e8a2ba14be4e8457dfd4791f19487e1ac0f60ce8ad811e0506bf866c9d6e1d/requisition/obo
     let reqContext = await fetchReqContext();
     let prId = reqContext.requisitionId;
 
-    //shopping cart with commodity codes:
-    // //https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/33e8a2ba14be4e8457dfd4791f19487e1ac0f60ce8ad811e0506bf866c9d6e1d/shoppingCart
-
-    pr = await fetchPr(prId);
-    debugger;
-    if(!pr)
-        return;
+    let cart = await fetchShoppingCart();
+    let compactPr: CompactRequisition;
+    gringo("Cart length:");
+    gringo(cart.length);
+    if(cart.length == 0) { //we're opening an existing pr
+        pr = await fetchPr(prId);
+        if(!pr)
+            return;
+        compactPr = createCompactPr(pr);
+    } else {
+        compactPr = {
+            prId,
+            items: cart.map(item => {
+                return createCompactReqItemFromCartItem(item);
+            })
+        };
+    }
 
     let totalPriceDiv = document.querySelector("div.block-heading.total-price") as HTMLElement;
     totalPriceDiv.style.display = "none";
@@ -115,11 +172,11 @@ async function decorateReqPage() {
     `);
 
 
-    let expandedPr = await createExpandedPr(pr);
-    await updatePr(expandedPr);
+    let expandedCompactPr = await createExpandedCompactPr(compactPr);
+    await updatePr(expandedCompactPr);
 }
 
-export function calcPrTotal(pr: ExpandedPr) {
+export function calcPrTotal(pr: ExpandedCompactPr) {
     let total: number = 0;
     let currencySymbel = "€";
     let currency = "EUR";
@@ -128,18 +185,12 @@ export function calcPrTotal(pr: ExpandedPr) {
             total = 0;
             break;
         }
-        if (item.item.price.value.currency != currency) {
-            currency = item.item.price.value.currency + "?";
-            currencySymbel = "?";
-            total = 0;
-            break;
-        }
         total += calcBrutoLinePrice(item.item, item.tarif.tarif);
     }
     return {total, currencySymbel, currency};
 }
 
-async function updatePr(pr: ExpandedPr) {
+async function updatePr(pr: ExpandedCompactPr) {
     let newTotal = document.querySelector("div.newTotalBruto")!; //! should be present
     let {total, currencySymbel, currency} = calcPrTotal(pr);
 
@@ -163,14 +214,32 @@ export interface ExpandedPrItem {
     grant: AccountingField | null;
 }
 
-export function calcBrutoLinePrice(item: SapLineItem, tarif: number) {
+export interface ExpandedCompactPrItem {
+    item: CompactReqItem;
+    tarif: Btw | null;
+}
+
+export function calcBrutoLinePrice(item: CompactReqItem, tarif: number) {
     let bruto: number | null = null;
-    let price = item.price.value;
-    let quantity = item.quantity.value;
-    bruto = price.amount * quantity * (100 + tarif);
+    let price = item.price;
+    let quantity = item.quantity;
+    bruto = price * quantity * (100 + tarif);
     bruto = Math.round(bruto) / 100;
     return bruto;
 }
+
+export interface CompactReqItem {
+    commodityCode: string,
+    price: number;
+    quantity: number,
+    currency: string,
+    currencySymbol: string,
+}
+export interface CompactRequisition {
+    prId: string,
+    items: CompactReqItem[],
+}
+
 export async function createExpandedPr(pr: PurchaseRequisition) {
     let items: ExpandedPrItem[] = [];
     if(pr.lineItems != null) {
@@ -192,7 +261,18 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
     return {pr, items} satisfies ExpandedPr;
 }
 
-async function decoratePrItem(pr: ExpandedPr, lineEl: HTMLElement, index: number) {
+export async function createExpandedCompactPr(pr: CompactRequisition) {
+    let items: ExpandedCompactPrItem[] = [];
+    for (let item of pr.items) {
+        let tarif: Btw | null = null;
+        let tarifs = await getBtwTarifsCachedInSession();
+        tarif = tarifs.get(item.commodityCode) ?? null;
+        items.push({item, tarif} satisfies ExpandedCompactPrItem);
+    }
+    return {pr, items} satisfies ExpandedCompactPr as ExpandedCompactPr;
+}
+
+async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index: number) {
     let priceSection = lineEl.querySelector("div.price-section") as HTMLElement | null;
     if(!priceSection)
         return;
@@ -228,7 +308,7 @@ async function decoratePrItem(pr: ExpandedPr, lineEl: HTMLElement, index: number
     updatePrItem(pr, lineEl, index);
 }
 
-function updatePrItemBrutoField(item: SapLineItem, tarif: number, lineEl: HTMLElement, index: number) {
+function updatePrItemBrutoField(item: CompactReqItem, tarif: number, lineEl: HTMLElement, index: number) {
     let divBruto = lineEl.querySelector("div.newBruto div.bruto") as HTMLDivElement;
     if (isNaN(tarif)) {
         divBruto.textContent = `€---,-- EUR`;
@@ -236,11 +316,11 @@ function updatePrItemBrutoField(item: SapLineItem, tarif: number, lineEl: HTMLEl
     }
     let bruto = calcBrutoLinePrice(item, tarif)
     let brutoStr = priceFormatter.format(bruto);
-    let price = item.price.value;
-    divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
+    let price = item.price;
+    divBruto.textContent = `${item.currencySymbol}${brutoStr}  ${item.currency}`;
 }
 
-function updatePrItem(pr: ExpandedPr, lineEl: HTMLElement, index: number) {
+function updatePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index: number) {
     let btwDif = lineEl.querySelector("div.newBruto div.btw") as HTMLDivElement;
     if (pr.items[index].tarif) {
         btwDif.textContent = pr.items[index].tarif.tarif + "%";
@@ -269,27 +349,27 @@ function updatePrItem(pr: ExpandedPr, lineEl: HTMLElement, index: number) {
     }
 }
 
-function onBtwSelectChange(pr: ExpandedPr, index: number, lineEl: HTMLElement, tarif: number) {
+function onBtwSelectChange(pr: ExpandedCompactPr, index: number, lineEl: HTMLElement, tarif: number) {
     updatePrItemBrutoField(pr.items[index].item, tarif, lineEl, index);
 }
 
-async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: string, pr: ExpandedPr, index: number, lineEl: HTMLElement) {
+async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: string, pr: ExpandedCompactPr, index: number, lineEl: HTMLElement) {
     let selected = select.value;
     if (selected == txtSelecteer)
         return;
-    let commodity = getPrItemCommodity(pr.items[index].item);
-    if(!commodity) {
+    let commodity = pr.items[index].item.commodityCode;
+    if(commodity == "") {
         alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
         return;
     }
     let tarifs = await getBtwTarifsCachedInSession();
-    tarifs.set(commodity.code, {
-        commodityCode: commodity.code,
-        description: commodity.dscr,
+    tarifs.set(commodity, {
+        commodityCode: commodity,
+        description: "",
         tarif: parseInt(selected)
     });
     await uploadBtwTarifs(tarifs);
-    pr = await createExpandedPr(pr.pr);
+    pr = await createExpandedCompactPr(pr.pr);
     updatePrItem(pr, lineEl, index);
 }
 

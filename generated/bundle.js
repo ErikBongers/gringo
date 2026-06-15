@@ -737,6 +737,23 @@
 		return setAll(prMetas);
 	}
 	//#endregion
+	//#region typescript/sap/api.ts
+	async function fetchUserInfoCached() {
+		return await (await fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false")).json();
+	}
+	async function fetchPr(prId) {
+		let userInfo = await fetchUserInfoCached();
+		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`)).json();
+	}
+	async function fetchReqContext() {
+		let userInfo = await fetchUserInfoCached();
+		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/obo`)).json();
+	}
+	async function fetchShoppingCart() {
+		let userInfo = await fetchUserInfoCached();
+		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/shoppingCart`)).json();
+	}
+	//#endregion
 	//#region typescript/tokenScanner.ts
 	var ScannerElse = class {
 		constructor(scannerIf) {
@@ -933,24 +950,6 @@
 			body: bodyText,
 			headers
 		})).text();
-	}
-	//#endregion
-	//#region typescript/sap/api.ts
-	async function fetchPr(prId) {
-		let chain = new FetchChain();
-		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
-		let userInfo = chain.getJson();
-		if (!userInfo) console.error("gringo: could not get userInfo.");
-		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
-		return chain.getJson();
-	}
-	async function fetchReqContext() {
-		let chain = new FetchChain();
-		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
-		let userInfo = chain.getJson();
-		if (!userInfo) console.error("gringo: could not get userInfo.");
-		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/obo`);
-		return chain.getJson();
 	}
 	//#endregion
 	//#region typescript/aanvragen/requests.ts
@@ -1826,8 +1825,8 @@
 			let status = pr.pr.status;
 			let itemNo = index.toString();
 			let bruto = 0;
-			if (item.tarif) bruto = calcBrutoLinePrice(item.item, item.tarif.tarif);
-			else bruto = calcBrutoLinePrice(item.item, 0);
+			if (item.tarif) bruto = calcBrutoLinePrice(createCompactReqItem(item.item), item.tarif.tarif);
+			else bruto = calcBrutoLinePrice(createCompactReqItem(item.item), 0);
 			let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
 			let meta = await fetchMetaCached(pr.pr.reqId);
 			meta.project;
@@ -1860,7 +1859,7 @@
 	};
 	var ViewReqObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("viewRequisition", onMutation$2, false, onViewReqPageRefreshed);
+			super("viewRequisition", onViewMutation, false, onViewReqPageRefreshed);
 		}
 		isPageReallyLoaded() {
 			return isPageProbablyLoaded$2();
@@ -1882,6 +1881,10 @@
 		return true;
 	}
 	function onMutation$2(mutation) {
+		decorateReqPage().then(() => {});
+		return false;
+	}
+	function onViewMutation(mutation) {
 		decorateViewReqPage().then(() => {});
 		return false;
 	}
@@ -1890,10 +1893,22 @@
 		let sectionMain = document.querySelector(`section[role="main"]`);
 		if (!sectionMain) return;
 		if (getAndSetDecorated(sectionMain)) return;
-		gringo("Decorating aanvraag page...");
+		gringo("Decorating view aanvraag page...");
 		let pageName = location.pathname.includes("viewRequisition") ? "viewRequisition" : "requisition";
 		pr = await fetchPr(location.pathname.replace(`/gb/${pageName}/`, ""));
 		if (!pr) return;
+		let compactPr = {
+			prId: pr.reqId,
+			items: pr.lineItems.map((item) => {
+				return {
+					commodityCode: getPrItemCommodity(item)?.code ?? "",
+					price: item.price.value.amount,
+					quantity: item.quantity.value,
+					currency: item.price.value.currency,
+					currencySymbol: item.price.value.currencySymbol
+				};
+			})
+		};
 		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
 		totalPriceDiv.style.display = "none";
 		emmet.insertAfter(totalPriceDiv, `
@@ -1905,7 +1920,33 @@
             )
         )
     `);
-		await updatePr(await createExpandedPr(pr));
+		await updatePr(await createExpandedCompactPr(compactPr));
+	}
+	function createCompactReqItem(item) {
+		return {
+			commodityCode: getPrItemCommodity(item)?.code ?? "",
+			price: item.price.value.amount,
+			quantity: item.quantity.value,
+			currency: item.price.value.currency,
+			currencySymbol: item.price.value.currencySymbol
+		};
+	}
+	function createCompactPr(pr) {
+		return {
+			prId: pr.reqId,
+			items: pr.lineItems.map((item) => {
+				return createCompactReqItem(item);
+			})
+		};
+	}
+	function createCompactReqItemFromCartItem(item) {
+		return {
+			commodityCode: item.itemCommodityCode,
+			price: item.unitPrice,
+			quantity: item.quantity,
+			currency: item.unitPriceMoney.currency,
+			currencySymbol: item.unitPriceMoney.currencySymbol
+		};
 	}
 	async function decorateReqPage() {
 		let sectionMain = document.querySelector(`section[role="main"]`);
@@ -1913,9 +1954,20 @@
 		if (getAndSetDecorated(sectionMain)) return;
 		gringo("Decorating aanvraag page...");
 		let prId = (await fetchReqContext()).requisitionId;
-		pr = await fetchPr(prId);
-		debugger;
-		if (!pr) return;
+		let cart = await fetchShoppingCart();
+		let compactPr;
+		gringo("Cart length:");
+		gringo(cart.length);
+		if (cart.length == 0) {
+			pr = await fetchPr(prId);
+			if (!pr) return;
+			compactPr = createCompactPr(pr);
+		} else compactPr = {
+			prId,
+			items: cart.map((item) => {
+				return createCompactReqItemFromCartItem(item);
+			})
+		};
 		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
 		totalPriceDiv.style.display = "none";
 		emmet.insertAfter(totalPriceDiv, `
@@ -1927,7 +1979,7 @@
             )
         )
     `);
-		await updatePr(await createExpandedPr(pr));
+		await updatePr(await createExpandedCompactPr(compactPr));
 	}
 	function calcPrTotal(pr) {
 		let total = 0;
@@ -1935,12 +1987,6 @@
 		let currency = "EUR";
 		for (let item of pr.items) {
 			if (!item.tarif) {
-				total = 0;
-				break;
-			}
-			if (item.item.price.value.currency != currency) {
-				currency = item.item.price.value.currency + "?";
-				currencySymbel = "?";
 				total = 0;
 				break;
 			}
@@ -1968,9 +2014,7 @@
 	});
 	function calcBrutoLinePrice(item, tarif) {
 		let bruto = null;
-		let price = item.price.value;
-		let quantity = item.quantity.value;
-		bruto = price.amount * quantity * (100 + tarif);
+		bruto = item.price * item.quantity * (100 + tarif);
 		bruto = Math.round(bruto) / 100;
 		return bruto;
 	}
@@ -1993,6 +2037,21 @@
 				ledger,
 				budget,
 				grant
+			});
+		}
+		return {
+			pr,
+			items
+		};
+	}
+	async function createExpandedCompactPr(pr) {
+		let items = [];
+		for (let item of pr.items) {
+			let tarif = null;
+			tarif = (await getBtwTarifsCachedInSession()).get(item.commodityCode) ?? null;
+			items.push({
+				item,
+				tarif
 			});
 		}
 		return {
@@ -2038,8 +2097,8 @@
 		}
 		let bruto = calcBrutoLinePrice(item, tarif);
 		let brutoStr = priceFormatter.format(bruto);
-		let price = item.price.value;
-		divBruto.textContent = `${price.currencySymbol}${brutoStr}  ${price.currency}`;
+		item.price;
+		divBruto.textContent = `${item.currencySymbol}${brutoStr}  ${item.currency}`;
 	}
 	function updatePrItem(pr, lineEl, index) {
 		let btwDif = lineEl.querySelector("div.newBruto div.btw");
@@ -2077,19 +2136,19 @@
 	async function btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl) {
 		let selected = select.value;
 		if (selected == txtSelecteer) return;
-		let commodity = getPrItemCommodity(pr.items[index].item);
-		if (!commodity) {
+		let commodity = pr.items[index].item.commodityCode;
+		if (commodity == "") {
 			alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
 			return;
 		}
 		let tarifs = await getBtwTarifsCachedInSession();
-		tarifs.set(commodity.code, {
-			commodityCode: commodity.code,
-			description: commodity.dscr,
+		tarifs.set(commodity, {
+			commodityCode: commodity,
+			description: "",
 			tarif: parseInt(selected)
 		});
 		await uploadBtwTarifs(tarifs);
-		pr = await createExpandedPr(pr.pr);
+		pr = await createExpandedCompactPr(pr.pr);
 		updatePrItem(pr, lineEl, index);
 	}
 	//#endregion
@@ -2645,7 +2704,7 @@
 		if (!metaWrapper) return;
 		await updateMetaFields(metaWrapper, meta);
 		let newTotal = reqDiv.querySelector("div.gringo.listRowTotal");
-		let { total, currencySymbel } = calcPrTotal(await createExpandedPr(await fetchPr(request.id)));
+		let { total, currencySymbel } = calcPrTotal(await createExpandedCompactPr(createCompactPr(await fetchPr(request.id))));
 		if (total != 0) {
 			newTotal.textContent = `${currencySymbel}${priceFormatter$1.format(total)}`;
 			newTotal.style.display = "block";

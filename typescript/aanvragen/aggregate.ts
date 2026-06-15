@@ -1,4 +1,4 @@
-import {calcBrutoLinePrice, createExpandedPr, ExpandedPrItem} from "../aanvraag/observer";
+import {calcBrutoLinePrice, createCompactReqItem, createCompactReqItemFromCartItem, createExpandedPr, ExpandedPrItem} from "../aanvraag/observer";
 import {ExpandedPr, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
 import {createHtmlTable, InfoBlock} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
@@ -130,9 +130,9 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
             let itemNo = index.toString();
             let bruto = 0;
             if(item.tarif)
-                bruto = calcBrutoLinePrice(item.item, item.tarif.tarif);
+                bruto = calcBrutoLinePrice(createCompactReqItem(item.item), item.tarif.tarif);
             else
-                bruto = calcBrutoLinePrice(item.item, 0); //use netto pri;
+                bruto = calcBrutoLinePrice(createCompactReqItem(item.item), 0); //use netto pri;
             let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
             let meta = await fetchMetaCached(pr.pr.reqId);
             let project = meta.project??"";
