@@ -944,6 +944,14 @@
 		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`);
 		return chain.getJson();
 	}
+	async function fetchReqContext() {
+		let chain = new FetchChain();
+		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
+		let userInfo = chain.getJson();
+		if (!userInfo) console.error("gringo: could not get userInfo.");
+		await chain.fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/obo`);
+		return chain.getJson();
+	}
 	//#endregion
 	//#region typescript/aanvragen/requests.ts
 	async function fetchRequestList() {
@@ -1842,33 +1850,71 @@
 	}
 	//#endregion
 	//#region typescript/aanvraag/observer.ts
-	var AanvraagObserver = class extends PartialUrlObserver {
+	var RequisitionObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("viewRequisition", onMutation$2, false, onPageRefreshed$3);
+			super("requisition", onMutation$2, false, onReqPageRefreshed);
 		}
 		isPageReallyLoaded() {
 			return isPageProbablyLoaded$2();
 		}
 	};
-	var observer_default$1 = new AanvraagObserver();
-	function onPageRefreshed$3() {
+	var ViewReqObserver = class extends PartialUrlObserver {
+		constructor() {
+			super("viewRequisition", onMutation$2, false, onViewReqPageRefreshed);
+		}
+		isPageReallyLoaded() {
+			return isPageProbablyLoaded$2();
+		}
+	};
+	var observer_default$1 = {
+		viewReqObserver: new ViewReqObserver(),
+		requisitionObserver: new RequisitionObserver()
+	};
+	function onReqPageRefreshed() {
 		gringo("page Aanvraag refreshed.");
-		decoratePage();
+		decorateReqPage();
+	}
+	function onViewReqPageRefreshed() {
+		gringo("page Aanvraag refreshed.");
+		decorateViewReqPage();
 	}
 	function isPageProbablyLoaded$2() {
 		return true;
 	}
 	function onMutation$2(mutation) {
-		decoratePage().then(() => {});
+		decorateViewReqPage().then(() => {});
 		return false;
 	}
 	let pr = null;
-	async function decoratePage() {
+	async function decorateViewReqPage() {
 		let sectionMain = document.querySelector(`section[role="main"]`);
 		if (!sectionMain) return;
 		if (getAndSetDecorated(sectionMain)) return;
 		gringo("Decorating aanvraag page...");
-		pr = await fetchPr(location.pathname.replace("/gb/viewRequisition/", ""));
+		let pageName = location.pathname.includes("viewRequisition") ? "viewRequisition" : "requisition";
+		pr = await fetchPr(location.pathname.replace(`/gb/${pageName}/`, ""));
+		if (!pr) return;
+		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
+		totalPriceDiv.style.display = "none";
+		emmet.insertAfter(totalPriceDiv, `
+        div.newTotal.gringo>(
+            div.newTotal.block-heading.total-price{Totale kosten}+
+            div.blueBlock.flexRow.w100.mbe-1ch>(
+                label{Bruto bedrag}+
+                div.newTotalBruto.pull-end{€---,--- EUR}
+            )
+        )
+    `);
+		await updatePr(await createExpandedPr(pr));
+	}
+	async function decorateReqPage() {
+		let sectionMain = document.querySelector(`section[role="main"]`);
+		if (!sectionMain) return;
+		if (getAndSetDecorated(sectionMain)) return;
+		gringo("Decorating aanvraag page...");
+		let prId = (await fetchReqContext()).requisitionId;
+		pr = await fetchPr(prId);
+		debugger;
 		if (!pr) return;
 		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
 		totalPriceDiv.style.display = "none";
@@ -3203,7 +3249,8 @@
 			});
 			registerObserver(requestObservers.aanvragenObserver);
 			registerObserver(requestObservers.recentRequestsObsverver);
-			registerObserver(observer_default$1);
+			registerObserver(observer_default$1.requisitionObserver);
+			registerObserver(observer_default$1.viewReqObserver);
 			registerObserver(observer_default);
 			onPageChanged();
 			if (document.readyState == "complete") {

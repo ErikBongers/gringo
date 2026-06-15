@@ -1,26 +1,40 @@
 import {PartialUrlObserver} from "../pageObserver";
 import {getAndSetDecorated, gringo} from "../globals";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
-import {fetchPr} from "../sap/api";
+import {fetchPr, fetchReqContext} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
 import {AccountingField, Btw, ExpandedPr, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
 import {getBudgetCode} from "../aanvragen/aggregate";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 
-class AanvraagObserver extends PartialUrlObserver {
+class RequisitionObserver extends PartialUrlObserver {
     constructor() {
-        super( "viewRequisition", onMutation, false, onPageRefreshed );
+        super( "requisition", onMutation, false, onReqPageRefreshed );
     }
     isPageReallyLoaded(): boolean {
         return isPageProbablyLoaded();
     }
 }
 
-export default new AanvraagObserver();
+class ViewReqObserver extends PartialUrlObserver {
+    constructor() {
+        super( "viewRequisition", onMutation, false, onViewReqPageRefreshed );
+    }
+    isPageReallyLoaded(): boolean {
+        return isPageProbablyLoaded();
+    }
+}
 
-function onPageRefreshed() {
+export default {viewReqObserver: new ViewReqObserver(), requisitionObserver: new RequisitionObserver()} as const;
+
+function onReqPageRefreshed() {
     gringo("page Aanvraag refreshed.");
-    decoratePage();
+    decorateReqPage();
+}
+
+function onViewReqPageRefreshed() {
+    gringo("page Aanvraag refreshed.");
+    decorateViewReqPage();
 }
 
 function isPageProbablyLoaded(): boolean {
@@ -28,13 +42,13 @@ function isPageProbablyLoaded(): boolean {
 }
 
 function onMutation(mutation: MutationRecord) {
-    decoratePage().then(() => {});
+    decorateViewReqPage().then(() => {});
     return false;
 }
 
 let pr: PurchaseRequisition | null = null;
 
-async function decoratePage() {
+async function decorateViewReqPage() {
     let sectionMain = document.querySelector(`section[role="main"]`) as HTMLElement | null;
     if(!sectionMain)
         return;
@@ -43,8 +57,48 @@ async function decoratePage() {
         return;
     gringo("Decorating aanvraag page...");
 
-    let prId = location.pathname.replace("/gb/viewRequisition/", "");
+    let pageName = location.pathname.includes("viewRequisition") ? "viewRequisition" : "requisition";
+    let prId = location.pathname.replace(`/gb/${pageName}/`, "");
     pr = await fetchPr(prId);
+    if(!pr)
+        return;
+
+    let totalPriceDiv = document.querySelector("div.block-heading.total-price") as HTMLElement;
+    totalPriceDiv.style.display = "none";
+    emmet.insertAfter(totalPriceDiv, `
+        div.newTotal.gringo>(
+            div.newTotal.block-heading.total-price{Totale kosten}+
+            div.blueBlock.flexRow.w100.mbe-1ch>(
+                label{Bruto bedrag}+
+                div.newTotalBruto.pull-end{€---,--- EUR}
+            )
+        )
+    `);
+
+
+    let expandedPr = await createExpandedPr(pr);
+    await updatePr(expandedPr);
+}
+
+async function decorateReqPage() {
+    let sectionMain = document.querySelector(`section[role="main"]`) as HTMLElement | null;
+    if(!sectionMain)
+        return;
+
+    if(getAndSetDecorated(sectionMain))
+        return;
+    gringo("Decorating aanvraag page...");
+
+    //obo: with PRID:
+    // https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/33e8a2ba14be4e8457dfd4791f19487e1ac0f60ce8ad811e0506bf866c9d6e1d/requisition/obo
+    let reqContext = await fetchReqContext();
+    let prId = reqContext.requisitionId;
+
+    //shopping cart with commodity codes:
+    // //https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/33e8a2ba14be4e8457dfd4791f19487e1ac0f60ce8ad811e0506bf866c9d6e1d/shoppingCart
+
+    pr = await fetchPr(prId);
+    debugger;
     if(!pr)
         return;
 

@@ -1,6 +1,6 @@
 import {getOptions, observers, registerObserver, settingsObservers} from "./globals";
 import requestObservers from "./aanvragen/observer";
-import aanvraagObserver from "./aanvraag/observer";
+import aanvraagObservers from "./aanvraag/observer";
 import reqFormObserver from "./reqForm/observer";
 
 init();
@@ -26,7 +26,8 @@ function init() {
         //do registrations here to get all these observers/pages into the same compilation unit.
         registerObserver(requestObservers.aanvragenObserver);
         registerObserver(requestObservers.recentRequestsObsverver);
-        registerObserver(aanvraagObserver);
+        registerObserver(aanvraagObservers.requisitionObserver);
+        registerObserver(aanvraagObservers.viewReqObserver);
         registerObserver(reqFormObserver);
 
         onPageChanged();

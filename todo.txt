@@ -1,3 +1,5 @@
+* Load user context only once: api.ts
+
 * Add CalcFields everywhere.
 
 * Test case undefined BTW tarif: > Eten > luxe visproducten.

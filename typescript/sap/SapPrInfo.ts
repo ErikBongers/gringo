@@ -1,3 +1,6 @@
+import {Money} from "./Money";
+import {SapValidation} from "./Validation";
+
 export interface PurchaseRequisition {
     reqId: string;
     erpId: string | null;
@@ -309,26 +312,8 @@ export interface SapAccountingSection extends SapSection {
     blankAccountAssignment: boolean;
 }
 
-export interface Money {
-    amount: number;
-    currency: string;
-    currencySymbol: string;
-    currencyScale: number;
-}
-
 export interface SapTooltip {
     displayString: string | null;
-}
-
-export interface SapValidation {
-    valid: boolean;
-    message: string | null;
-    severity: "Info" | "Justification" | string;
-    messageSource: string | null;
-    tierName: string | null;
-    parentNIC: number;
-    lineType: number;
-    skipValidationMessage: boolean;
 }
 
 export interface SapCommentInfo {
