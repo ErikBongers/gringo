@@ -3,7 +3,7 @@ import {formatPrice, gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter/html";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {getBtwTarif} from "../aanvragen/requests";
+import {ExpandedCompactPrItem, ExpandedPrItem, getBtwTarif} from "../aanvragen/requests";
 import {CalcField} from "../calcField";
 import {Parser} from "../calculator/parser";
 import {EntangledFields} from "../entangledFields";
@@ -97,6 +97,8 @@ export class PriceData {
 
     set netto(value: number | null) {
         this._netto = value;
+        if(this.expandedPrItem)
+            this.expandedPrItem.item.quantity = this._netto!;
         if(this._netto)
             this._bruto = this._netto * (1 + this._btw / 100);
     }
@@ -108,13 +110,17 @@ export class PriceData {
         this._bruto = value;
         if(this._bruto)
             this._netto = this._bruto / (1 + this._btw / 100);
+            if(this.expandedPrItem)
+                this.expandedPrItem.item.quantity = this._netto!;
     }
     private _bruto: number | null;
     private _netto: number | null;
     private _btw: number;
+    private expandedPrItem: ExpandedCompactPrItem | null;
 
-    constructor(btw: number) {
+    constructor(btw: number, expandedPrItem: ExpandedCompactPrItem | null) {
         this._btw = btw;
+        this.expandedPrItem = expandedPrItem;
     }
 }
 
@@ -124,8 +130,8 @@ export interface BrutoNettoCalcFields {
     entangledFields: EntangledFields<PriceData>;
 }
 
-export function addNettoAndBrutoFields(btw: number, calcFieldsContainer: HTMLElement) {
-    let entangledFields = new EntangledFields<PriceData>(new PriceData(btw));
+export function addNettoAndBrutoFields(btw: number, calcFieldsContainer: HTMLElement, expandedPrItem: ExpandedCompactPrItem | null) {
+    let entangledFields = new EntangledFields<PriceData>(new PriceData(btw, expandedPrItem));
 
     calcFieldsContainer.classList.add("flexRow");
 
@@ -181,7 +187,7 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSetRadionButtons(el);
 
     let btw = tarif?.tarif ?? 0;
-    let calcFields = addNettoAndBrutoFields(btw, calcFieldsContainer);
+    let calcFields = addNettoAndBrutoFields(btw, calcFieldsContainer, null);
 
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
     fieldQuantityInput.value = "1";

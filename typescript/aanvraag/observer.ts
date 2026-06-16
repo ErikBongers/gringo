@@ -191,11 +191,15 @@ export function calcPrTotal(pr: ExpandedCompactPr) {
     return {total, currencySymbel, currency};
 }
 
-async function updatePr(pr: ExpandedCompactPr) {
+function updateTotalBruto(pr: ExpandedCompactPr) {
     let newTotal = document.querySelector("div.newTotalBruto")!; //! should be present
     let {total, currencySymbel, currency} = calcPrTotal(pr);
 
     newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}  ${currency}`;
+}
+
+async function updatePr(pr: ExpandedCompactPr) {
+    updateTotalBruto(pr);
 
     let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)] as HTMLElement[];
     for (let index = 0; index < nonDecoratedItems.length; index++) {
@@ -264,7 +268,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
     let calcFieldsContainer = emmet.appendChild(brutoRow, `
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first as HTMLDivElement;
-    let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer);
+    let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer, pr.items[index]);
     let fieldQuantity = lineEl.querySelector("div.field-quantity") as HTMLDivElement;
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
 
@@ -273,6 +277,12 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
             return;
         fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
         triggerFieldChanged(fieldQuantityInput);
+    });
+
+    //add the general total field, so it gets automatically updated.
+    let newTotalDiv = document.querySelector("div.newTotalBruto") as HTMLDivElement;
+    calcFields.entangledFields.add(newTotalDiv, (ctx: PriceData)=> {
+        updateTotalBruto(pr);
     });
 
     fieldQuantity.classList.add("hidePlusMinButtons");

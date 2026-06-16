@@ -1,6 +1,5 @@
-* When creating a new pr,
-* Add CalcFields everywhere.
-  > in Pr edit mode (url = "requisition"), replace the bruto display block with bruto and netto fields in the samme layout as in ReqForm: Bruto + BTW + Netto
+* Pr brutto total is sum of item totals (which can have a different BTW tarif).
+  > update the expandedPrItems when changing values and call the totals update function.
 
 * Test case undefined BTW tarif: > Eten > luxe visproducten.
 

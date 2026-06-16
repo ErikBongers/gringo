@@ -2247,6 +2247,7 @@
 		}
 		set netto(value) {
 			this._netto = value;
+			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
 			if (this._netto) this._bruto = this._netto * (1 + this._btw / 100);
 		}
 		get bruto() {
@@ -2255,13 +2256,15 @@
 		set bruto(value) {
 			this._bruto = value;
 			if (this._bruto) this._netto = this._bruto / (1 + this._btw / 100);
+			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
 		}
-		constructor(btw) {
+		constructor(btw, expandedPrItem) {
 			this._btw = btw;
+			this.expandedPrItem = expandedPrItem;
 		}
 	};
-	function addNettoAndBrutoFields(btw, calcFieldsContainer) {
-		let entangledFields = new EntangledFields(new PriceData(btw));
+	function addNettoAndBrutoFields(btw, calcFieldsContainer, expandedPrItem) {
+		let entangledFields = new EntangledFields(new PriceData(btw, expandedPrItem));
 		calcFieldsContainer.classList.add("flexRow");
 		let nettoCalcField = new CalcField(calcFieldsContainer, "Netto", btw.toString() + "%", ["gringo", "blueBlock"], (field) => {
 			if (!field.result) return;
@@ -2307,7 +2310,7 @@
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
-		let calcFields = addNettoAndBrutoFields(tarif?.tarif ?? 0, calcFieldsContainer);
+		let calcFields = addNettoAndBrutoFields(tarif?.tarif ?? 0, calcFieldsContainer, null);
 		let fieldQuantityInput = fieldQuantity.querySelector("input");
 		fieldQuantityInput.value = "1";
 		calcFields.entangledFields.add(fieldQuantityInput, (ctx) => {
@@ -2499,10 +2502,13 @@
 			currency
 		};
 	}
-	async function updatePr(pr) {
+	function updateTotalBruto(pr) {
 		let newTotal = document.querySelector("div.newTotalBruto");
 		let { total, currencySymbel, currency } = calcPrTotal(pr);
 		newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}  ${currency}`;
+	}
+	async function updatePr(pr) {
+		updateTotalBruto(pr);
 		let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
 		for (let index = 0; index < nonDecoratedItems.length; index++) {
 			let itemEl = nonDecoratedItems[index];
@@ -2572,13 +2578,17 @@
 		let calcFieldsContainer = emmet.appendChild(brutoRow, `
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first;
-		let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer);
+		let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer, pr.items[index]);
 		let fieldQuantity = lineEl.querySelector("div.field-quantity");
 		let fieldQuantityInput = fieldQuantity.querySelector("input");
 		calcFields.entangledFields.add(fieldQuantityInput, (ctx) => {
 			if (!ctx.netto) return;
 			fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
 			triggerFieldChanged(fieldQuantityInput);
+		});
+		let newTotalDiv = document.querySelector("div.newTotalBruto");
+		calcFields.entangledFields.add(newTotalDiv, (ctx) => {
+			updateTotalBruto(pr);
 		});
 		fieldQuantity.classList.add("hidePlusMinButtons");
 		updatePrItem(pr, lineEl, index, calcFields);
