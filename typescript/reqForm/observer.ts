@@ -228,7 +228,7 @@ async function fetchReqFormInfo() {
     return await res.json() as ProcurementForm;
 }
 
-function triggerFieldChanged(input: HTMLInputElement) {
+export function triggerFieldChanged(input: HTMLInputElement) {
     input.dispatchEvent(new Event('change')); //todo: reduce these events (the last 2 are probably needed).
     input.dispatchEvent(new Event('input'));
     input.dispatchEvent(new Event('blur'));

@@ -2573,7 +2573,14 @@
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first;
 		let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer);
-		lineEl.querySelector("div.field-quantity").classList.add("hidePlusMinButtons");
+		let fieldQuantity = lineEl.querySelector("div.field-quantity");
+		let fieldQuantityInput = fieldQuantity.querySelector("input");
+		calcFields.entangledFields.add(fieldQuantityInput, (ctx) => {
+			if (!ctx.netto) return;
+			fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
+			triggerFieldChanged(fieldQuantityInput);
+		});
+		fieldQuantity.classList.add("hidePlusMinButtons");
 		updatePrItem(pr, lineEl, index, calcFields);
 	}
 	function updatePrItemBrutoField(item, tarif, lineEl, index) {

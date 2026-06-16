@@ -1,5 +1,5 @@
 import {PartialUrlObserver} from "../pageObserver";
-import {getAndSetDecorated, gringo} from "../globals";
+import {formatPrice, getAndSetDecorated, gringo} from "../globals";
 import {PurchaseRequisition, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr, fetchReqContext, fetchShoppingCart} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
@@ -7,7 +7,7 @@ import {AccountingField, Btw, CompactReqItem, CompactRequisition, ExpandedCompac
 import {getBudgetCode} from "../aanvragen/aggregate";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 import {RequisitionItem} from "../sap/ShoppingCart";
-import {addNettoAndBrutoFields, BrutoNettoCalcFields} from "../reqForm/observer";
+import {addNettoAndBrutoFields, BrutoNettoCalcFields, PriceData, triggerFieldChanged} from "../reqForm/observer";
 
 class RequisitionObserver extends PartialUrlObserver {
     constructor() {
@@ -266,6 +266,15 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
     `).first as HTMLDivElement;
     let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer);
     let fieldQuantity = lineEl.querySelector("div.field-quantity") as HTMLDivElement;
+    let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
+
+    calcFields.entangledFields.add(fieldQuantityInput, (ctx: PriceData) => {
+        if(!ctx.netto)
+            return;
+        fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
+        triggerFieldChanged(fieldQuantityInput);
+    });
+
     fieldQuantity.classList.add("hidePlusMinButtons");
 
     updatePrItem(pr, lineEl, index, calcFields);
