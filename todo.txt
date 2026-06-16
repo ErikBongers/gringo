@@ -1,4 +1,23 @@
+* Add project and tags to aanvraag page.
+
 * quantity field updates the server on blur. Postpone the blur until netto or bruto are blurred to avoid server roundtrip on each character.
+
+* Totalen: allow grouping by tag or project.
+  > use top level groupings or per budget?
+  > or no groupings but extra columns?
+  > or...both?
+  > the drop down should have a header that allows this extra grouping:
+    "Group by"...followed by selected tags or projects.
+      > e.g. only select the tags MW and BK.
+        > this will result in a next level of collapses for MW, BK and the 'others'.
+        > How does UI work?
+          > default is that all the PRs are listed.
+          > When user selects a grouping item, the PRs are removed and replaced with new sub-collapses that are closed.
+          > How to select groupings:
+              - tags can be on a single line
+              - projects...some sort of drop down with checkboxes?
+          > these groupings are remembered.
+
 
 * Test case undefined BTW tarif: > Eten > luxe visproducten.
 
