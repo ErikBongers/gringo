@@ -3,7 +3,7 @@ import {formatPrice, gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter/html";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {Btw, getBtwTarif} from "../aanvragen/requests";
+import {getBtwTarif} from "../aanvragen/requests";
 import {CalcField} from "../calcField";
 import {Parser} from "../calculator/parser";
 import {EntangledFields} from "../entangledFields";
@@ -140,16 +140,17 @@ async function decoratePanel(el: HTMLElement) {
     let btw = tarif?.tarif ?? 0;
     let entangledFields = new EntangledFields<PriceData>(new PriceData(btw));
 
-    let brutoCalcField = new CalcField(li, "Bruto", btw.toString()+"%", ["gringo", "blueBlock"], (field) => {
-        if(!field.result)
-            return;
-        entangledFields.context.bruto = field.result.result;
-        entangledFields.updateOtherFields();
-    });
-    let nettoCalcField = new CalcField(li, "Netto", "", [], (field) => {
+    let nettoCalcField = new CalcField(li, "Netto", btw.toString()+"%", ["gringo", "blueBlock"], (field) => {
         if(!field.result)
             return;
         entangledFields.context.netto = field.result.result;
+        entangledFields.updateOtherFields();
+    });
+
+    let brutoCalcField = new CalcField(li, "Bruto", "", [], (field) => {
+        if(!field.result)
+            return;
+        entangledFields.context.bruto = field.result.result;
         entangledFields.updateOtherFields();
     });
 

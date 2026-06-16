@@ -2062,9 +2062,7 @@
 	async function decoratePrItem(pr, lineEl, index) {
 		let priceSection = lineEl.querySelector("div.price-section");
 		if (!priceSection) return;
-		let rows = priceSection.querySelectorAll("div.row");
-		rows[0];
-		let brutoRow = rows[1];
+		let brutoRow = priceSection.querySelectorAll("div.row")[1];
 		let brutoRowChildren = [...brutoRow.children];
 		brutoRowChildren.forEach((c) => c.style.display = "none");
 		let brutoDiv = brutoRowChildren.pop();
@@ -3236,14 +3234,14 @@
 		li.classList.add("flexRow");
 		let btw = tarif?.tarif ?? 0;
 		let entangledFields = new EntangledFields(new PriceData(btw));
-		let brutoCalcField = new CalcField(li, "Bruto", btw.toString() + "%", ["gringo", "blueBlock"], (field) => {
-			if (!field.result) return;
-			entangledFields.context.bruto = field.result.result;
-			entangledFields.updateOtherFields();
-		});
-		let nettoCalcField = new CalcField(li, "Netto", "", [], (field) => {
+		let nettoCalcField = new CalcField(li, "Netto", btw.toString() + "%", ["gringo", "blueBlock"], (field) => {
 			if (!field.result) return;
 			entangledFields.context.netto = field.result.result;
+			entangledFields.updateOtherFields();
+		});
+		let brutoCalcField = new CalcField(li, "Bruto", "", [], (field) => {
+			if (!field.result) return;
+			entangledFields.context.bruto = field.result.result;
 			entangledFields.updateOtherFields();
 		});
 		entangledFields.add(brutoCalcField.input, (ctx) => {
