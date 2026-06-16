@@ -1,5 +1,4 @@
-* Pr brutto total is sum of item totals (which can have a different BTW tarif).
-  > update the expandedPrItems when changing values and call the totals update function.
+* quantity field updates the server on blur. Postpone the blur until netto or bruto are blurred to avoid server roundtrip on each character.
 
 * Test case undefined BTW tarif: > Eten > luxe visproducten.
 
