@@ -1,3 +1,4 @@
+* When creating a new pr,
 * Add CalcFields everywhere.
   > in Pr edit mode (url = "requisition"), replace the bruto display block with bruto and netto fields in the samme layout as in ReqForm: Bruto + BTW + Netto
 

@@ -2582,23 +2582,14 @@
 		});
 		fieldQuantity.classList.add("hidePlusMinButtons");
 		updatePrItem(pr, lineEl, index, calcFields);
-	}
-	function updatePrItemBrutoField(item, tarif, lineEl, index) {
-		let divBruto = lineEl.querySelector("div.newBruto div.bruto");
-		if (isNaN(tarif)) {
-			divBruto.textContent = `€---,-- EUR`;
-			return;
-		}
-		let bruto = calcBrutoLinePrice(item, tarif);
-		let brutoStr = priceFormatter.format(bruto);
-		item.price;
-		divBruto.textContent = `${item.currencySymbol}${brutoStr}  ${item.currency}`;
+		calcFields.entangledFields.context.netto = parseFloat(fieldQuantityInput.value);
+		calcFields.entangledFields.setCurrentSource(fieldQuantityInput);
+		calcFields.entangledFields.updateOtherFields();
 	}
 	function updatePrItem(pr, lineEl, index, calcFields) {
 		if (pr.items[index].tarif) {
 			calcFields.entangledFields.context.btw = pr.items[index].tarif.tarif;
 			calcFields.nettoCalcField.postFieldLabelDiv.textContent = calcFields.entangledFields.context.btw.toString() + "%";
-			updatePrItemBrutoField(pr.items[index].item, pr.items[index].tarif.tarif, lineEl, index);
 		} else {
 			calcFields.entangledFields.context.btw = 666;
 			calcFields.nettoCalcField.postFieldLabelDiv.textContent = calcFields.entangledFields.context.btw.toString() + "%";

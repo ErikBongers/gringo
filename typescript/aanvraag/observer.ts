@@ -3,7 +3,7 @@ import {formatPrice, getAndSetDecorated, gringo} from "../globals";
 import {PurchaseRequisition, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr, fetchReqContext, fetchShoppingCart} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
-import {AccountingField, Btw, CompactReqItem, CompactRequisition, ExpandedCompactPr, ExpandedCompactPrItem, ExpandedPr, ExpandedPrItem, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
+import {Btw, CompactReqItem, CompactRequisition, ExpandedCompactPr, ExpandedCompactPrItem, ExpandedPr, ExpandedPrItem, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger} from "../aanvragen/requests";
 import {getBudgetCode} from "../aanvragen/aggregate";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 import {RequisitionItem} from "../sap/ShoppingCart";
@@ -277,26 +277,17 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
 
     fieldQuantity.classList.add("hidePlusMinButtons");
 
-    updatePrItem(pr, lineEl, index, calcFields);
-}
-
-function updatePrItemBrutoField(item: CompactReqItem, tarif: number, lineEl: HTMLElement, index: number) {
-    let divBruto = lineEl.querySelector("div.newBruto div.bruto") as HTMLDivElement;
-    if (isNaN(tarif)) {
-        divBruto.textContent = `€---,-- EUR`;
-        return;
-    }
-    let bruto = calcBrutoLinePrice(item, tarif)
-    let brutoStr = priceFormatter.format(bruto);
-    let price = item.price;
-    divBruto.textContent = `${item.currencySymbol}${brutoStr}  ${item.currency}`;
+    updatePrItem(pr, lineEl, index, calcFields); //todo: this sets btw tarif correctly. The name of the function is also ambiguous. What does it update?
+    //initial fill of netto and bruto fields.
+    calcFields.entangledFields.context.netto = parseFloat(fieldQuantityInput.value);
+    calcFields.entangledFields.setCurrentSource(fieldQuantityInput);
+    calcFields.entangledFields.updateOtherFields();
 }
 
 function updatePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index: number, calcFields: BrutoNettoCalcFields) {
     if (pr.items[index].tarif) {
         calcFields.entangledFields.context.btw = pr.items[index].tarif.tarif;
         calcFields.nettoCalcField.postFieldLabelDiv!.textContent = calcFields.entangledFields.context.btw.toString() + "%"; //! suffix label MUST be present.
-        updatePrItemBrutoField(pr.items[index].item, pr.items[index].tarif.tarif, lineEl, index);
     } else {
         calcFields.entangledFields.context.btw = 666;
         calcFields.nettoCalcField.postFieldLabelDiv!.textContent = calcFields.entangledFields.context.btw.toString() + "%"; //! suffix label MUST be present.
@@ -325,7 +316,7 @@ function updatePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index: number,
 }
 
 function onBtwSelectChange(pr: ExpandedCompactPr, index: number, lineEl: HTMLElement, tarif: number) {
-    updatePrItemBrutoField(pr.items[index].item, tarif, lineEl, index);
+    //todo: update CalcFields ctx.btw
 }
 
 //todo
