@@ -953,6 +953,7 @@
 	}
 	//#endregion
 	//#region typescript/aanvragen/requests.ts
+	let globalBtwTarifs = null;
 	async function fetchRequestList() {
 		let chain = new FetchChain();
 		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
@@ -1042,7 +1043,6 @@
 	async function getBtwTarif(commodityCode) {
 		return (await getBtwTarifsCachedInSession()).get(commodityCode) ?? null;
 	}
-	let globalBtwTarifs = null;
 	function getAccountingField(prItem, idIncludes) {
 		let field = prItem.accounting.fields?.find((f) => f.id.endsWith(idIncludes));
 		if (!field) return null;

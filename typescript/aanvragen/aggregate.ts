@@ -1,5 +1,5 @@
-import {calcBrutoLinePrice, createCompactReqItem, createCompactReqItemFromCartItem, createExpandedPr, ExpandedPrItem} from "../aanvraag/observer";
-import {ExpandedPr, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
+import {calcBrutoLinePrice, createCompactReqItem, createCompactReqItemFromCartItem, createExpandedPr} from "../aanvraag/observer";
+import {ExpandedPr, ExpandedPrItem, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
 import {createHtmlTable, InfoBlock} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
 

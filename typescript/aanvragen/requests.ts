@@ -2,17 +2,91 @@ import {FetchChain} from "../fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
-import {getOptions, gringo, InfoBlock} from "../globals";
+import {InfoBlock} from "../globals";
 import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
-import {CompactRequisition, ExpandedCompactPrItem, ExpandedPrItem} from "../aanvraag/observer";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
-import {emmet} from "../../libs/Emmeter/html";
-import {RequestBasicInfo} from "./observer";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {LedgerToBudgetCode} from "./budgetCodes";
-import {getBudgetCode} from "./aggregate";
+
+export interface ExpandedPrItem {
+    pr: PurchaseRequisition;
+    item: SapLineItem;
+    tarif: Btw | null;
+    ledger: AccountingField | null;
+    budget: LedgerToBudgetCode | null;
+    grant: AccountingField | null;
+}
+
+export interface ExpandedCompactPrItem {
+    item: CompactReqItem;
+    tarif: Btw | null;
+}
+
+export interface CompactReqItem {
+    commodityCode: string,
+    price: number;
+    quantity: number,
+    currency: string,
+    currencySymbol: string,
+}
+export interface CompactRequisition {
+    prId: string,
+    items: CompactReqItem[],
+}
+
+export interface FetchListContext {
+    counter: number;
+    infoBlock: InfoBlock;
+}
+
+export interface PrMeta {
+    prId: string,
+    tags: string[],
+    project?: string,
+}
+
+export interface ExpandedPr {
+    pr: PurchaseRequisition,
+    items: ExpandedPrItem[];
+}
+
+export interface ExpandedCompactPr {
+    pr: CompactRequisition,
+    items: ExpandedCompactPrItem[];
+}
+
+export interface ChangedFile<T> {
+    name: string;
+    data: T,
+    changed: string
+}
+
+export interface BtwTarifs {
+    tarifs: Btw[];
+}
+
+let globalBtwTarifs: Map<string, Btw> | null = null;
+
+export interface AccountingField {
+    code: string;
+    dscr: string;
+}
+
+export interface Btw {
+    commodityCode: string;
+    description: string;
+    tarif: number;
+}
+
+export interface TagDef {
+    name: string,
+    description: string,
+    color: string,
+    bkgColor: string,
+    order: number
+}
 
 export async function fetchRequestList() {
     let chain = new FetchChain();
@@ -48,11 +122,6 @@ export async function fetchFullRequest(prId: string, ctx: FetchListContext) {
     return pr;
 }
 
-export interface FetchListContext {
-    counter: number;
-    infoBlock: InfoBlock;
-}
-
 export async function fetchRequestListAndDetails(infoBlock: InfoBlock) {
     infoBlock.info.innerHTML = "PR lijst ophalen...";
     let requestList = await fetchRequestList();
@@ -70,22 +139,6 @@ export async function fetchRequestListAndDetails(infoBlock: InfoBlock) {
     return detailsList;
 }
 
-export interface PrMeta {
-    prId: string,
-    tags: string[],
-    project?: string,
-}
-
-export interface ExpandedPr {
-    pr: PurchaseRequisition,
-    items: ExpandedPrItem[];
-}
-
-export interface ExpandedCompactPr {
-    pr: CompactRequisition,
-    items: ExpandedCompactPrItem[];
-}
-
 export async function fetchChangedMetas() {
     let changedMetas: ChangedFile<PrMeta>[];
     let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
@@ -100,12 +153,6 @@ export async function fetchChangedMetas() {
     let zFetchedDate = fetchedDate.toISOString();
     localStorage.setItem(KEY_LAST_FETCHED_METAS, zFetchedDate);
     return changedMetas;
-}
-
-export interface ChangedFile<T> {
-    name: string;
-    data: T,
-    changed: string
 }
 
 export async function fetchMetaCached(prId: string) {
@@ -127,12 +174,6 @@ export async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" 
     if (what == "localStorage and cloud")
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     await saveMetaLocal(meta);
-}
-
-export interface Btw {
-    commodityCode: string;
-    description: string;
-    tarif: number;
 }
 
 export async function getBtwTarifsCachedInSession(): Promise<Map<string, Btw>> {
@@ -159,17 +200,6 @@ export async function uploadBtwTarifs(tarifsMap: Map<string, Btw>) {
 export async function getBtwTarif(commodityCode: string) {
     let tarifs = await getBtwTarifsCachedInSession();
     return tarifs.get(commodityCode) ?? null;
-}
-
-export interface BtwTarifs {
-    tarifs: Btw[];
-}
-
-let globalBtwTarifs: Map<string, Btw> | null = null;
-
-export interface AccountingField {
-    code: string;
-    dscr: string;
 }
 
 function getAccountingField(prItem: SapLineItem, idIncludes: string) {
@@ -208,14 +238,6 @@ export function getPrItemAsset(prItem: SapLineItem) {
 
 export function getPrItemGrant(prItem: SapLineItem) {
     return getAccountingField(prItem, "cus_Grant");
-}
-
-export interface TagDef {
-    name: string,
-    description: string,
-    color: string,
-    bkgColor: string,
-    order: number
 }
 
 let globalTagsMap: Map<string, TagDef> | null = null;

@@ -3,7 +3,7 @@ import {getAndSetDecorated, gringo} from "../globals";
 import {PurchaseRequisition, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr, fetchReqContext, fetchShoppingCart} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
-import {AccountingField, Btw, ExpandedCompactPr, ExpandedPr, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
+import {AccountingField, Btw, CompactReqItem, CompactRequisition, ExpandedCompactPr, ExpandedCompactPrItem, ExpandedPr, ExpandedPrItem, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger, uploadBtwTarifs} from "../aanvragen/requests";
 import {getBudgetCode} from "../aanvragen/aggregate";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 import {RequisitionItem} from "../sap/ShoppingCart";
@@ -205,20 +205,6 @@ async function updatePr(pr: ExpandedCompactPr) {
 
 let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, minimumFractionDigits: 2});
 
-export interface ExpandedPrItem {
-    pr: PurchaseRequisition;
-    item: SapLineItem;
-    tarif: Btw | null;
-    ledger: AccountingField | null;
-    budget: LedgerToBudgetCode | null;
-    grant: AccountingField | null;
-}
-
-export interface ExpandedCompactPrItem {
-    item: CompactReqItem;
-    tarif: Btw | null;
-}
-
 export function calcBrutoLinePrice(item: CompactReqItem, tarif: number) {
     let bruto: number | null = null;
     let price = item.price;
@@ -226,18 +212,6 @@ export function calcBrutoLinePrice(item: CompactReqItem, tarif: number) {
     bruto = price * quantity * (100 + tarif);
     bruto = Math.round(bruto) / 100;
     return bruto;
-}
-
-export interface CompactReqItem {
-    commodityCode: string,
-    price: number;
-    quantity: number,
-    currency: string,
-    currencySymbol: string,
-}
-export interface CompactRequisition {
-    prId: string,
-    items: CompactReqItem[],
 }
 
 export async function createExpandedPr(pr: PurchaseRequisition) {
@@ -277,7 +251,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
     if(!priceSection)
         return;
     let rows = priceSection.querySelectorAll("div.row");
-    let nettoRow = rows[0];
+    // nettoRow = rows[0]
     let brutoRow = rows[1] as HTMLElement;
     let brutoRowChildren = [...brutoRow.children] as HTMLElement[];
     brutoRowChildren.forEach(c => c.style.display = "none");

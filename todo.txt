@@ -1,6 +1,5 @@
-* Load user context only once: api.ts
-
 * Add CalcFields everywhere.
+  > in Pr edit mode (url = "requisition"), replace the bruto display block with bruto and netto fields in the samme layout as in ReqForm: Bruto + BTW + Netto
 
 * Test case undefined BTW tarif: > Eten > luxe visproducten.
 
