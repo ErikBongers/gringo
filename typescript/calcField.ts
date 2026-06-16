@@ -8,6 +8,7 @@ export class CalcField {
     resultLabel: HTMLElement;
     resultErrorImage: HTMLElement;
     result: ParseResult | null = null;
+    postFieldLabelDiv: HTMLDivElement | null = null;
 
     constructor(container: HTMLElement, label: string, postFieldLabel: string, postFieldLabelClass: string[], onRecalculated: (field: CalcField) => void) {
         let postFieldEmmet = "";
@@ -44,6 +45,9 @@ export class CalcField {
             this.reCalc();
             onRecalculated(this);
         });
+        if(postFieldLabel != "") {
+            this.postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel") as HTMLDivElement;
+        }
     }
 
     reCalc() {

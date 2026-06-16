@@ -1035,11 +1035,6 @@
 		tarifs.tarifs.forEach((t) => globalBtwTarifs.set(t.commodityCode, t));
 		return globalBtwTarifs;
 	}
-	async function uploadBtwTarifs(tarifsMap) {
-		let tarifs = { tarifs: [...tarifsMap.values()] };
-		await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
-		globalBtwTarifs = tarifsMap;
-	}
 	async function getBtwTarif(commodityCode) {
 		return (await getBtwTarifsCachedInSession()).get(commodityCode) ?? null;
 	}
@@ -1848,13 +1843,519 @@
 		return jsonPrData;
 	}
 	//#endregion
-	//#region typescript/aanvraag/observer.ts
-	var RequisitionObserver = class extends PartialUrlObserver {
+	//#region typescript/sap/SapUserInfo.ts
+	async function getUserInfo() {
+		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
+	}
+	//#endregion
+	//#region typescript/calculator/cursor.ts
+	var Cursor = class Cursor {
+		constructor(text) {
+			this.text = text;
+			this.length = this.text.length;
+			this.currentPos = -1;
+		}
+		static copy(cursor) {
+			let newCursor = new Cursor(cursor.text);
+			newCursor.currentPos = cursor.currentPos;
+			return newCursor;
+		}
+		eat(char) {
+			if (this.currentPos >= this.length) return false;
+			if (this.text[this.currentPos] == char) {
+				this.currentPos++;
+				return true;
+			}
+			return false;
+		}
+		get pos() {
+			return this.currentPos;
+		}
+		get current() {
+			if (this.currentPos >= this.length) return "";
+			return this.text[this.currentPos];
+		}
+		next() {
+			if (this.currentPos >= this.length) return "";
+			this.currentPos++;
+			return this.current;
+		}
+		peek() {
+			if (this.currentPos + 1 >= this.length) return "";
+			return this.text[this.currentPos + 1];
+		}
+		getText(pos, length) {
+			return this.text.substring(pos, pos + length);
+		}
+	};
+	//#endregion
+	//#region typescript/calculator/tokenizer.ts
+	function getText(token) {
+		return token.cursor.getText(token.pos, token.length);
+	}
+	var Tokenizer = class {
+		constructor(text) {
+			this.cursor = new Cursor(text);
+		}
+		setCursor(cursor) {
+			this.cursor = cursor;
+		}
+		cloneCursor() {
+			return Cursor.copy(this.cursor);
+		}
+		next() {
+			this.skipWhitespace();
+			let char = this.cursor.next();
+			switch (char) {
+				case "": return null;
+				case "€":
+				case "$":
+				case "(":
+				case ")":
+				case "+":
+				case "-":
+				case "*":
+				case "/": return {
+					type: char,
+					cursor: this.cursor,
+					pos: this.cursor.pos,
+					length: 1
+				};
+				case ".":
+				case ",":
+				case "0":
+				case "1":
+				case "2":
+				case "3":
+				case "4":
+				case "5":
+				case "6":
+				case "7":
+				case "8":
+				case "9": return this.getNumberToken();
+				default: return {
+					type: "UNKNOWN",
+					cursor: this.cursor,
+					pos: this.cursor.pos,
+					length: 1
+				};
+			}
+		}
+		getNumberToken() {
+			let token = {
+				type: "NUMBER",
+				cursor: this.cursor,
+				pos: this.cursor.pos,
+				length: 0
+			};
+			let start = this.cursor.pos;
+			while (this.cursor.peek().match(/[0-9.,]/)) this.cursor.next();
+			token.length = this.cursor.pos - start + 1;
+			return token;
+		}
+		skipWhitespace() {
+			while (this.cursor.peek().match(/\s/)) this.cursor.next();
+		}
+	};
+	//#endregion
+	//#region typescript/calculator/peekingTokenizer.ts
+	var PeekingTokenizer = class {
+		constructor(text) {
+			this.peekedToken = null;
+			this.tokenizer = new Tokenizer(text);
+		}
+		peek() {
+			if (this.peekedToken) return this.peekedToken;
+			let cursor = this.tokenizer.cloneCursor();
+			this.peekedToken = this.tokenizer.next();
+			this.tokenizer.setCursor(cursor);
+			return this.peekedToken;
+		}
+		next() {
+			this.peekedToken = null;
+			return this.tokenizer.next();
+		}
+		getCursor() {
+			return this.tokenizer.cloneCursor();
+		}
+		match(tokenType) {
+			let token = this.peek();
+			if (token?.type == tokenType) {
+				this.next();
+				return token;
+			}
+			return null;
+		}
+	};
+	//#endregion
+	//#region typescript/calculator/parser.ts
+	const ERR_EXPECTED_CLOSE_PAREN = {
+		error_type: "E",
+		message: "expected ')'"
+	};
+	var Parser = class {
+		constructor(text) {
+			this.peekingTokenizer = new PeekingTokenizer(text);
+		}
+		parse() {
+			return this.parseExpression();
+		}
+		parseExpression() {
+			let term1 = this.parseTerm();
+			while (true) {
+				let operator = this.peekingTokenizer.peek();
+				if (!operator) return term1;
+				if (operator.type != "+" && operator.type != "-") return term1;
+				this.peekingTokenizer.next();
+				let term2 = this.parseTerm();
+				if (operator.type == "+") term1 = {
+					result: term1.result + term2.result,
+					errors: term1.errors.concat(term2.errors)
+				};
+				else term1 = {
+					result: term1.result - term2.result,
+					errors: term1.errors.concat(term2.errors)
+				};
+			}
+		}
+		parseTerm() {
+			let factor1 = this.parseFactor();
+			while (true) {
+				let operator = this.peekingTokenizer.peek();
+				if (!operator) return factor1;
+				if (operator.type != "*" && operator.type != "/") return factor1;
+				this.peekingTokenizer.next();
+				let factor2 = this.parseFactor();
+				if (operator.type == "*") factor1 = {
+					result: factor1.result * factor2.result,
+					errors: factor1.errors.concat(factor2.errors)
+				};
+				else factor1 = {
+					result: factor1.result / factor2.result,
+					errors: factor1.errors.concat(factor2.errors)
+				};
+			}
+		}
+		parseFactor() {
+			if (this.peekingTokenizer.match("(")) {
+				let res = this.parseExpression();
+				let peeked = this.peekingTokenizer.peek();
+				if (peeked?.type == ")") this.peekingTokenizer.next();
+				else if (peeked != null) res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
+				else res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
+				return res;
+			}
+			return this.parseCurrency();
+		}
+		parseCurrency() {
+			let peeked = this.peekingTokenizer.peek();
+			if (!peeked) return {
+				result: 0,
+				errors: []
+			};
+			if (peeked.type == "€") this.peekingTokenizer.next();
+			return this.parseNumber();
+		}
+		parseNumber() {
+			let token = this.peekingTokenizer.next();
+			if (!token) return {
+				result: 0,
+				errors: []
+			};
+			let text = getText(token);
+			text = text.trim();
+			if (text.startsWith("€")) text = text.substring(1);
+			let decimalPoint;
+			let thousandSeparator;
+			let lastCommaIndex = text.lastIndexOf(",");
+			if (text.lastIndexOf(".") > lastCommaIndex) {
+				decimalPoint = ".";
+				thousandSeparator = ",";
+			} else {
+				decimalPoint = ",";
+				thousandSeparator = ".";
+			}
+			text = text.replaceAll(thousandSeparator, "");
+			let slices = text.split(decimalPoint);
+			if (slices.length > 1) {
+				let decimals = slices.pop();
+				text = slices.join("") + "." + decimals;
+			}
+			return {
+				result: parseFloat(text),
+				errors: []
+			};
+		}
+	};
+	//#endregion
+	//#region typescript/calcField.ts
+	var CalcField = class {
+		constructor(container, label, postFieldLabel, postFieldLabelClass, onRecalculated) {
+			this.result = null;
+			this.postFieldLabelDiv = null;
+			let postFieldEmmet = "";
+			if (postFieldLabel != "") postFieldEmmet = `+
+                div.postFieldLabel>
+                    div${postFieldLabelClass.join(".")}{${postFieldLabel}}
+            `;
+			let fieldDiv = emmet.appendChild(container, `
+            div>
+                div.input-wrap>
+                    div.form-group>(
+                        label.editable-field-label{${label}}+
+                        div.field-wrapper>(
+                                (
+                                div.flexRow>(
+                                    input.form-control[type="text"]
+                                    ${postFieldEmmet}
+                                )
+                            )+
+                            div.flexRow.calcResult>(
+                                label+
+                                i.fa.fa-triangle-exclamation
+                            )
+                        )                                                    
+                    )
+        `).first;
+			this.input = fieldDiv.querySelector("input");
+			this.resultDiv = fieldDiv.querySelector("div.calcResult");
+			this.resultLabel = this.resultDiv.querySelector("label");
+			this.resultErrorImage = fieldDiv.querySelector("i.fa");
+			this.input.addEventListener("keyup", (ev) => {
+				this.reCalc();
+				onRecalculated(this);
+			});
+			if (postFieldLabel != "") this.postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel");
+		}
+		reCalc() {
+			if (this.input.value == "") {
+				this.result = null;
+				this.resultLabel.textContent = "";
+				this.resultDiv.classList.toggle("error", false);
+				return;
+			}
+			this.result = new Parser(this.input.value).parse();
+			this.resultLabel.textContent = formatPrice(this.result.result);
+			this.resultDiv.classList.toggle("error", this.result.errors.length > 0);
+			this.resultErrorImage.title = this.result.errors.map((e) => e.message).join("\n");
+		}
+	};
+	//#endregion
+	//#region typescript/entangledFields.ts
+	var EntangledFields = class {
+		constructor(context) {
+			this.fields = [];
+			this.context = context;
+			this.currentSourceField = null;
+			this.isTransfering = false;
+		}
+		add(field, updateCallback1) {
+			this.fields.push({
+				field,
+				callback: updateCallback1
+			});
+			field.addEventListener("focus", () => {
+				if (!this.isTransfering) this.currentSourceField = field;
+			});
+		}
+		setCurrentSource(field) {
+			this.currentSourceField = field;
+		}
+		updateOtherFields() {
+			if (this.isTransfering) return;
+			this.isTransfering = true;
+			this.fields.filter((f) => f.field != this.currentSourceField).forEach((f) => f.callback(this.context));
+			this.isTransfering = false;
+		}
+	};
+	//#endregion
+	//#region typescript/reqForm/observer.ts
+	var ReqFormObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("requisition", onMutation$2, false, onReqPageRefreshed);
+			super("reqform", onMutation$2, false, onPageRefreshed$2);
 		}
 		isPageReallyLoaded() {
 			return isPageProbablyLoaded$2();
+		}
+	};
+	var observer_default$1 = new ReqFormObserver();
+	function onPageRefreshed$2() {
+		gringo("Reqform page refreshed!");
+		checkDecorations$1();
+	}
+	function isPageProbablyLoaded$2() {
+		return true;
+	}
+	function onMutation$2(mutation) {
+		checkDecorations$1();
+		return false;
+	}
+	function checkDecorations$1() {
+		checkAndSetDecoration(document.querySelector("div.req-form-panel"), decoratePanel);
+	}
+	function scanAndSelectPerEenheid(ulUnitOfMeasure) {
+		let anchorPerEenheid = [...ulUnitOfMeasure.querySelectorAll("a")].find((a) => a.innerText.includes("Per eenheid"));
+		if (anchorPerEenheid) {
+			anchorPerEenheid.dispatchEvent(new Event("mousedown", { bubbles: true }));
+			anchorPerEenheid.dispatchEvent(new Event("click", { bubbles: true }));
+			anchorPerEenheid.dispatchEvent(new Event("mouseup", { bubbles: true }));
+			ulUnitOfMeasure.style.display = "";
+			document.body.dataset.gringoEenheidSet = "true";
+			return;
+		}
+		setTimeout(() => scanAndSelectPerEenheid(ulUnitOfMeasure), 100);
+	}
+	function scanAndSetRadionButtons(el) {
+		let radioButtons = el.querySelectorAll(`af-radio-button-group input[type="radio"]`);
+		if (radioButtons.length == 3) {
+			radioButtons[0].dispatchEvent(new Event("mousedown", { bubbles: true }));
+			radioButtons[0].dispatchEvent(new Event("click", { bubbles: true }));
+			radioButtons[0].dispatchEvent(new Event("change", { bubbles: true }));
+			radioButtons[0].dispatchEvent(new Event("mouseup", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("mousedown", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("click", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("change", { bubbles: true }));
+			radioButtons[2].dispatchEvent(new Event("mouseup", { bubbles: true }));
+			document.body.dataset.gringoRadioButtonsSet = "true";
+			return;
+		}
+		setTimeout(() => scanAndSetRadionButtons(el), 100);
+	}
+	function scanAndSetFirstFieldFocus(el, btnUnitOfMeasure) {
+		if (document.body.dataset.gringoEenheidSet == "true" && document.body.dataset.gringoRadioButtonsSet == "true") {
+			if (btnUnitOfMeasure.textContent.includes("Per eenheid")) {
+				let fieldProductNameInput = el.querySelector("div.adhoc-form-name input");
+				setTimeout(() => {
+					fieldProductNameInput.focus();
+					gringo("focus set.");
+				}, 100);
+				return;
+			}
+		}
+		gringo("waiting to set focus...");
+		setTimeout(() => scanAndSetFirstFieldFocus(el, btnUnitOfMeasure), 100);
+	}
+	var PriceData = class {
+		get btw() {
+			return this._btw;
+		}
+		set btw(value) {
+			this._btw = value;
+		}
+		get netto() {
+			return this._netto;
+		}
+		set netto(value) {
+			this._netto = value;
+			if (this._netto) this._bruto = this._netto * (1 + this._btw / 100);
+		}
+		get bruto() {
+			return this._bruto;
+		}
+		set bruto(value) {
+			this._bruto = value;
+			if (this._bruto) this._netto = this._bruto / (1 + this._btw / 100);
+		}
+		constructor(btw) {
+			this._btw = btw;
+		}
+	};
+	function addNettoAndBrutoFields(btw, calcFieldsContainer) {
+		let entangledFields = new EntangledFields(new PriceData(btw));
+		calcFieldsContainer.classList.add("flexRow");
+		let nettoCalcField = new CalcField(calcFieldsContainer, "Netto", btw.toString() + "%", ["gringo", "blueBlock"], (field) => {
+			if (!field.result) return;
+			entangledFields.context.netto = field.result.result;
+			entangledFields.updateOtherFields();
+		});
+		let brutoCalcField = new CalcField(calcFieldsContainer, "Bruto", "", [], (field) => {
+			if (!field.result) return;
+			entangledFields.context.bruto = field.result.result;
+			entangledFields.updateOtherFields();
+		});
+		entangledFields.add(brutoCalcField.input, (ctx) => {
+			if (!ctx.bruto) return;
+			brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
+			brutoCalcField.reCalc();
+		});
+		entangledFields.add(nettoCalcField.input, (ctx) => {
+			if (!ctx.netto) return;
+			nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
+			nettoCalcField.reCalc();
+		});
+		return {
+			entangledFields,
+			brutoCalcField,
+			nettoCalcField
+		};
+	}
+	async function decoratePanel(el) {
+		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
+		let calcFieldsContainer = emmet.appendChild(ul, `
+        div.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
+    `).first;
+		let fieldQuantity = el.querySelector("div.field-quantity");
+		let tarif = await getBtwTarif((await fetchReqFormInfo()).commodityCode);
+		let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group");
+		emmet.appendChild(fieldQuantityInputGroup, `
+        span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
+    `);
+		let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`);
+		let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`);
+		let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul");
+		ulUnitOfMeasure.style.display = "none";
+		btnUnitOfMeasure.dispatchEvent(new Event("click"));
+		scanAndSelectPerEenheid(ulUnitOfMeasure);
+		scanAndSetRadionButtons(el);
+		let calcFields = addNettoAndBrutoFields(tarif?.tarif ?? 0, calcFieldsContainer);
+		let fieldQuantityInput = fieldQuantity.querySelector("input");
+		fieldQuantityInput.value = "1";
+		calcFields.entangledFields.add(fieldQuantityInput, (ctx) => {
+			if (!ctx.netto) return;
+			fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
+			triggerFieldChanged(fieldQuantityInput);
+		});
+		decorateFieldQuantity(fieldQuantity);
+		let fieldMoney = el.querySelector("div.field-money input");
+		fieldMoney.value = "1";
+		triggerFieldChanged(fieldMoney);
+		scanAndSetFirstFieldFocus(el, btnUnitOfMeasure);
+	}
+	function decorateFieldQuantity(fieldQuantity) {
+		fieldQuantity.classList.add("hidePlusMinButtons");
+		let input = fieldQuantity.querySelector("input");
+		input.addEventListener("paste", (ev) => {
+			let data = ev.clipboardData?.getData("text/plain");
+			if (data) {
+				input.value = formatPrice(new Parser(data).parse().result, "", "");
+				triggerFieldChanged(input);
+				ev.preventDefault();
+			}
+		});
+	}
+	async function fetchReqFormInfo() {
+		let userInfo = await getUserInfo();
+		let userId = userInfo.hashedUser;
+		let tenant = userInfo.tenant;
+		let resourceId = new URLSearchParams(location.search).get("fromresourceid");
+		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
+		return await (await fetch(daUrl)).json();
+	}
+	function triggerFieldChanged(input) {
+		input.dispatchEvent(new Event("change"));
+		input.dispatchEvent(new Event("input"));
+		input.dispatchEvent(new Event("blur"));
+		input.dispatchEvent(new Event("keyup"));
+		input.dispatchEvent(new Event("mouseout"));
+	}
+	//#endregion
+	//#region typescript/aanvraag/observer.ts
+	var RequisitionObserver = class extends PartialUrlObserver {
+		constructor() {
+			super("requisition", onMutation$1, false, onReqPageRefreshed);
+		}
+		isPageReallyLoaded() {
+			return isPageProbablyLoaded$1();
 		}
 	};
 	var ViewReqObserver = class extends PartialUrlObserver {
@@ -1862,10 +2363,10 @@
 			super("viewRequisition", onViewMutation, false, onViewReqPageRefreshed);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded$2();
+			return isPageProbablyLoaded$1();
 		}
 	};
-	var observer_default$1 = {
+	var observer_default = {
 		viewReqObserver: new ViewReqObserver(),
 		requisitionObserver: new RequisitionObserver()
 	};
@@ -1877,10 +2378,10 @@
 		gringo("page Aanvraag refreshed.");
 		decorateViewReqPage();
 	}
-	function isPageProbablyLoaded$2() {
+	function isPageProbablyLoaded$1() {
 		return true;
 	}
-	function onMutation$2(mutation) {
+	function onMutation$1(mutation) {
 		decorateReqPage().then(() => {});
 		return false;
 	}
@@ -2068,24 +2569,12 @@
 		let brutoDiv = brutoRowChildren.pop();
 		brutoDiv.style.display = "none";
 		brutoRow.querySelector("div.newBruto")?.remove();
-		emmet.appendChild(brutoRow, `
-        div.gringo.newBruto.flexRow.w100.blueBlock>(
-            (
-                div.gringo.tarif.col-xs-8>(
-                    label{BTW}+
-                    div.btw{21%}
-                )
-            )+
-            (
-                div.gringo.col-xs-4.pull-end>(
-                    label{Bruto bedrag}+
-                    div.bruto{€---,-- EUR}
-                )
-            )
-        )
-    `);
+		let calcFieldsContainer = emmet.appendChild(brutoRow, `
+        div.gringo.newBruto.flexRow.w100.blueBlock
+    `).first;
+		let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer);
 		lineEl.querySelector("div.field-quantity").classList.add("hidePlusMinButtons");
-		updatePrItem(pr, lineEl, index);
+		updatePrItem(pr, lineEl, index, calcFields);
 	}
 	function updatePrItemBrutoField(item, tarif, lineEl, index) {
 		let divBruto = lineEl.querySelector("div.newBruto div.bruto");
@@ -2098,56 +2587,15 @@
 		item.price;
 		divBruto.textContent = `${item.currencySymbol}${brutoStr}  ${item.currency}`;
 	}
-	function updatePrItem(pr, lineEl, index) {
-		let btwDif = lineEl.querySelector("div.newBruto div.btw");
+	function updatePrItem(pr, lineEl, index, calcFields) {
 		if (pr.items[index].tarif) {
-			btwDif.textContent = pr.items[index].tarif.tarif + "%";
+			calcFields.entangledFields.context.btw = pr.items[index].tarif.tarif;
+			calcFields.nettoCalcField.postFieldLabelDiv.textContent = calcFields.entangledFields.context.btw.toString() + "%";
 			updatePrItemBrutoField(pr.items[index].item, pr.items[index].tarif.tarif, lineEl, index);
 		} else {
-			btwDif.textContent = "";
-			let txtSelecteer = "--selecteer--";
-			emmet.appendChild(btwDif, `
-            (
-                select>(
-                    option[value="${txtSelecteer}"]{${txtSelecteer}}+
-                    option[value="0"]{0%}+
-                    option[value="6"]{6%}+
-                    option[value="12"]{12%}+
-                    option[value="21"]{21%}
-                )
-            )+
-            button.btwSave.m1{Bewaar voor dit artikel}
-        `);
-			let select = btwDif.querySelector("select");
-			select.onchange = (ev) => {
-				onBtwSelectChange(pr, index, lineEl, parseInt(select.value));
-			};
-			let button = btwDif.querySelector("button.btwSave");
-			button.onclick = async (ev) => {
-				await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl);
-			};
+			calcFields.entangledFields.context.btw = 666;
+			calcFields.nettoCalcField.postFieldLabelDiv.textContent = calcFields.entangledFields.context.btw.toString() + "%";
 		}
-	}
-	function onBtwSelectChange(pr, index, lineEl, tarif) {
-		updatePrItemBrutoField(pr.items[index].item, tarif, lineEl, index);
-	}
-	async function btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl) {
-		let selected = select.value;
-		if (selected == txtSelecteer) return;
-		let commodity = pr.items[index].item.commodityCode;
-		if (commodity == "") {
-			alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
-			return;
-		}
-		let tarifs = await getBtwTarifsCachedInSession();
-		tarifs.set(commodity, {
-			commodityCode: commodity,
-			description: "",
-			tarif: parseInt(selected)
-		});
-		await uploadBtwTarifs(tarifs);
-		pr = await createExpandedCompactPr(pr.pr);
-		updatePrItem(pr, lineEl, index);
 	}
 	//#endregion
 	//#region typescript/tabs.ts
@@ -2363,10 +2811,10 @@
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("request-info-list/requisition", onMutation$1, false, onPageRefreshed$2);
+			super("request-info-list/requisition", onMutation, false, onPageRefreshed$1);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded$1();
+			return isPageProbablyLoaded();
 		}
 	};
 	var RecentRequestsObserver = class extends PartialUrlObserver {
@@ -2374,25 +2822,25 @@
 			super("request-info-list/recentrequests", onRecentRequestMutation, false, onRecentRequestPageRefreshed);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded$1();
+			return isPageProbablyLoaded();
 		}
 	};
 	let requestObservers = {
 		aanvragenObserver: new AanvragenObserver(),
 		recentRequestsObsverver: new RecentRequestsObserver()
 	};
-	function onPageRefreshed$2() {
+	function onPageRefreshed$1() {
 		gringo("page Aanvragen refreshed xxx.");
-		checkDecorations$1();
+		checkDecorations();
 	}
 	function onRecentRequestPageRefreshed() {
 		checkRecentRequestsDecorations();
 	}
-	function isPageProbablyLoaded$1() {
+	function isPageProbablyLoaded() {
 		return !!getPagination();
 	}
-	function onMutation$1(mutation) {
-		checkDecorations$1();
+	function onMutation(mutation) {
+		checkDecorations();
 		return false;
 	}
 	function onRecentRequestMutation(mutation) {
@@ -2405,7 +2853,7 @@
 		el.dataset.gringoCurrentPage = input.value;
 		return isDecorated;
 	}
-	function checkDecorations$1() {
+	function checkDecorations() {
 		checkAndSetDecoration(document.querySelector("body"), decorateBody);
 		checkAndSetDecoration(document.querySelector("main"), decorateMain);
 		checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
@@ -2802,497 +3250,6 @@
 		helpPopup.style.display = "none";
 	}
 	//#endregion
-	//#region typescript/sap/SapUserInfo.ts
-	async function getUserInfo() {
-		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
-	}
-	//#endregion
-	//#region typescript/calculator/cursor.ts
-	var Cursor = class Cursor {
-		constructor(text) {
-			this.text = text;
-			this.length = this.text.length;
-			this.currentPos = -1;
-		}
-		static copy(cursor) {
-			let newCursor = new Cursor(cursor.text);
-			newCursor.currentPos = cursor.currentPos;
-			return newCursor;
-		}
-		eat(char) {
-			if (this.currentPos >= this.length) return false;
-			if (this.text[this.currentPos] == char) {
-				this.currentPos++;
-				return true;
-			}
-			return false;
-		}
-		get pos() {
-			return this.currentPos;
-		}
-		get current() {
-			if (this.currentPos >= this.length) return "";
-			return this.text[this.currentPos];
-		}
-		next() {
-			if (this.currentPos >= this.length) return "";
-			this.currentPos++;
-			return this.current;
-		}
-		peek() {
-			if (this.currentPos + 1 >= this.length) return "";
-			return this.text[this.currentPos + 1];
-		}
-		getText(pos, length) {
-			return this.text.substring(pos, pos + length);
-		}
-	};
-	//#endregion
-	//#region typescript/calculator/tokenizer.ts
-	function getText(token) {
-		return token.cursor.getText(token.pos, token.length);
-	}
-	var Tokenizer = class {
-		constructor(text) {
-			this.cursor = new Cursor(text);
-		}
-		setCursor(cursor) {
-			this.cursor = cursor;
-		}
-		cloneCursor() {
-			return Cursor.copy(this.cursor);
-		}
-		next() {
-			this.skipWhitespace();
-			let char = this.cursor.next();
-			switch (char) {
-				case "": return null;
-				case "€":
-				case "$":
-				case "(":
-				case ")":
-				case "+":
-				case "-":
-				case "*":
-				case "/": return {
-					type: char,
-					cursor: this.cursor,
-					pos: this.cursor.pos,
-					length: 1
-				};
-				case ".":
-				case ",":
-				case "0":
-				case "1":
-				case "2":
-				case "3":
-				case "4":
-				case "5":
-				case "6":
-				case "7":
-				case "8":
-				case "9": return this.getNumberToken();
-				default: return {
-					type: "UNKNOWN",
-					cursor: this.cursor,
-					pos: this.cursor.pos,
-					length: 1
-				};
-			}
-		}
-		getNumberToken() {
-			let token = {
-				type: "NUMBER",
-				cursor: this.cursor,
-				pos: this.cursor.pos,
-				length: 0
-			};
-			let start = this.cursor.pos;
-			while (this.cursor.peek().match(/[0-9.,]/)) this.cursor.next();
-			token.length = this.cursor.pos - start + 1;
-			return token;
-		}
-		skipWhitespace() {
-			while (this.cursor.peek().match(/\s/)) this.cursor.next();
-		}
-	};
-	//#endregion
-	//#region typescript/calculator/peekingTokenizer.ts
-	var PeekingTokenizer = class {
-		constructor(text) {
-			this.peekedToken = null;
-			this.tokenizer = new Tokenizer(text);
-		}
-		peek() {
-			if (this.peekedToken) return this.peekedToken;
-			let cursor = this.tokenizer.cloneCursor();
-			this.peekedToken = this.tokenizer.next();
-			this.tokenizer.setCursor(cursor);
-			return this.peekedToken;
-		}
-		next() {
-			this.peekedToken = null;
-			return this.tokenizer.next();
-		}
-		getCursor() {
-			return this.tokenizer.cloneCursor();
-		}
-		match(tokenType) {
-			let token = this.peek();
-			if (token?.type == tokenType) {
-				this.next();
-				return token;
-			}
-			return null;
-		}
-	};
-	//#endregion
-	//#region typescript/calculator/parser.ts
-	const ERR_EXPECTED_CLOSE_PAREN = {
-		error_type: "E",
-		message: "expected ')'"
-	};
-	var Parser = class {
-		constructor(text) {
-			this.peekingTokenizer = new PeekingTokenizer(text);
-		}
-		parse() {
-			return this.parseExpression();
-		}
-		parseExpression() {
-			let term1 = this.parseTerm();
-			while (true) {
-				let operator = this.peekingTokenizer.peek();
-				if (!operator) return term1;
-				if (operator.type != "+" && operator.type != "-") return term1;
-				this.peekingTokenizer.next();
-				let term2 = this.parseTerm();
-				if (operator.type == "+") term1 = {
-					result: term1.result + term2.result,
-					errors: term1.errors.concat(term2.errors)
-				};
-				else term1 = {
-					result: term1.result - term2.result,
-					errors: term1.errors.concat(term2.errors)
-				};
-			}
-		}
-		parseTerm() {
-			let factor1 = this.parseFactor();
-			while (true) {
-				let operator = this.peekingTokenizer.peek();
-				if (!operator) return factor1;
-				if (operator.type != "*" && operator.type != "/") return factor1;
-				this.peekingTokenizer.next();
-				let factor2 = this.parseFactor();
-				if (operator.type == "*") factor1 = {
-					result: factor1.result * factor2.result,
-					errors: factor1.errors.concat(factor2.errors)
-				};
-				else factor1 = {
-					result: factor1.result / factor2.result,
-					errors: factor1.errors.concat(factor2.errors)
-				};
-			}
-		}
-		parseFactor() {
-			if (this.peekingTokenizer.match("(")) {
-				let res = this.parseExpression();
-				let peeked = this.peekingTokenizer.peek();
-				if (peeked?.type == ")") this.peekingTokenizer.next();
-				else if (peeked != null) res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
-				else res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
-				return res;
-			}
-			return this.parseCurrency();
-		}
-		parseCurrency() {
-			let peeked = this.peekingTokenizer.peek();
-			if (!peeked) return {
-				result: 0,
-				errors: []
-			};
-			if (peeked.type == "€") this.peekingTokenizer.next();
-			return this.parseNumber();
-		}
-		parseNumber() {
-			let token = this.peekingTokenizer.next();
-			if (!token) return {
-				result: 0,
-				errors: []
-			};
-			let text = getText(token);
-			text = text.trim();
-			if (text.startsWith("€")) text = text.substring(1);
-			let decimalPoint;
-			let thousandSeparator;
-			let lastCommaIndex = text.lastIndexOf(",");
-			if (text.lastIndexOf(".") > lastCommaIndex) {
-				decimalPoint = ".";
-				thousandSeparator = ",";
-			} else {
-				decimalPoint = ",";
-				thousandSeparator = ".";
-			}
-			text = text.replaceAll(thousandSeparator, "");
-			let slices = text.split(decimalPoint);
-			if (slices.length > 1) {
-				let decimals = slices.pop();
-				text = slices.join("") + "." + decimals;
-			}
-			return {
-				result: parseFloat(text),
-				errors: []
-			};
-		}
-	};
-	//#endregion
-	//#region typescript/calcField.ts
-	var CalcField = class {
-		constructor(container, label, postFieldLabel, postFieldLabelClass, onRecalculated) {
-			this.result = null;
-			let postFieldEmmet = "";
-			if (postFieldLabel != "") postFieldEmmet = `+
-                div.postFieldLabel>
-                    div${postFieldLabelClass.join(".")}{${postFieldLabel}}
-            `;
-			let fieldDiv = emmet.appendChild(container, `
-            div>
-                div.input-wrap>
-                    div.form-group>(
-                        label.editable-field-label{${label}}+
-                        div.field-wrapper>(
-                                (
-                                div.flexRow>(
-                                    input.form-control[type="text"]
-                                    ${postFieldEmmet}
-                                )
-                            )+
-                            div.flexRow.calcResult>(
-                                label+
-                                i.fa.fa-triangle-exclamation
-                            )
-                        )                                                    
-                    )
-        `).first;
-			this.input = fieldDiv.querySelector("input");
-			this.resultDiv = fieldDiv.querySelector("div.calcResult");
-			this.resultLabel = this.resultDiv.querySelector("label");
-			this.resultErrorImage = fieldDiv.querySelector("i.fa");
-			this.input.addEventListener("keyup", (ev) => {
-				this.reCalc();
-				onRecalculated(this);
-			});
-		}
-		reCalc() {
-			if (this.input.value == "") {
-				this.result = null;
-				this.resultLabel.textContent = "";
-				this.resultDiv.classList.toggle("error", false);
-				return;
-			}
-			this.result = new Parser(this.input.value).parse();
-			this.resultLabel.textContent = formatPrice(this.result.result);
-			this.resultDiv.classList.toggle("error", this.result.errors.length > 0);
-			this.resultErrorImage.title = this.result.errors.map((e) => e.message).join("\n");
-		}
-	};
-	//#endregion
-	//#region typescript/entangledFields.ts
-	var EntangledFields = class {
-		constructor(context) {
-			this.fields = [];
-			this.context = context;
-			this.currentSourceField = null;
-			this.isTransfering = false;
-		}
-		add(field, updateCallback1) {
-			this.fields.push({
-				field,
-				callback: updateCallback1
-			});
-			field.addEventListener("focus", () => {
-				if (!this.isTransfering) this.currentSourceField = field;
-			});
-		}
-		setCurrentSource(field) {
-			this.currentSourceField = field;
-		}
-		updateOtherFields() {
-			if (this.isTransfering) return;
-			this.isTransfering = true;
-			this.fields.filter((f) => f.field != this.currentSourceField).forEach((f) => f.callback(this.context));
-			this.isTransfering = false;
-		}
-	};
-	//#endregion
-	//#region typescript/reqForm/observer.ts
-	var ReqFormObserver = class extends PartialUrlObserver {
-		constructor() {
-			super("reqform", onMutation, false, onPageRefreshed$1);
-		}
-		isPageReallyLoaded() {
-			return isPageProbablyLoaded();
-		}
-	};
-	var observer_default = new ReqFormObserver();
-	function onPageRefreshed$1() {
-		gringo("Reqform page refreshed!");
-		checkDecorations();
-	}
-	function isPageProbablyLoaded() {
-		return true;
-	}
-	function onMutation(mutation) {
-		checkDecorations();
-		return false;
-	}
-	function checkDecorations() {
-		checkAndSetDecoration(document.querySelector("div.req-form-panel"), decoratePanel);
-	}
-	function scanAndSelectPerEenheid(ulUnitOfMeasure) {
-		let anchorPerEenheid = [...ulUnitOfMeasure.querySelectorAll("a")].find((a) => a.innerText.includes("Per eenheid"));
-		if (anchorPerEenheid) {
-			anchorPerEenheid.dispatchEvent(new Event("mousedown", { bubbles: true }));
-			anchorPerEenheid.dispatchEvent(new Event("click", { bubbles: true }));
-			anchorPerEenheid.dispatchEvent(new Event("mouseup", { bubbles: true }));
-			ulUnitOfMeasure.style.display = "";
-			document.body.dataset.gringoEenheidSet = "true";
-			return;
-		}
-		setTimeout(() => scanAndSelectPerEenheid(ulUnitOfMeasure), 100);
-	}
-	function scanAndSetRadionButtons(el) {
-		let radioButtons = el.querySelectorAll(`af-radio-button-group input[type="radio"]`);
-		if (radioButtons.length == 3) {
-			radioButtons[0].dispatchEvent(new Event("mousedown", { bubbles: true }));
-			radioButtons[0].dispatchEvent(new Event("click", { bubbles: true }));
-			radioButtons[0].dispatchEvent(new Event("change", { bubbles: true }));
-			radioButtons[0].dispatchEvent(new Event("mouseup", { bubbles: true }));
-			radioButtons[2].dispatchEvent(new Event("mousedown", { bubbles: true }));
-			radioButtons[2].dispatchEvent(new Event("click", { bubbles: true }));
-			radioButtons[2].dispatchEvent(new Event("change", { bubbles: true }));
-			radioButtons[2].dispatchEvent(new Event("mouseup", { bubbles: true }));
-			document.body.dataset.gringoRadioButtonsSet = "true";
-			return;
-		}
-		setTimeout(() => scanAndSetRadionButtons(el), 100);
-	}
-	function scanAndSetFirstFieldFocus(el, btnUnitOfMeasure) {
-		if (document.body.dataset.gringoEenheidSet == "true" && document.body.dataset.gringoRadioButtonsSet == "true") {
-			if (btnUnitOfMeasure.textContent.includes("Per eenheid")) {
-				let fieldProductNameInput = el.querySelector("div.adhoc-form-name input");
-				setTimeout(() => {
-					fieldProductNameInput.focus();
-					gringo("focus set.");
-				}, 100);
-				return;
-			}
-		}
-		gringo("waiting to set focus...");
-		setTimeout(() => scanAndSetFirstFieldFocus(el, btnUnitOfMeasure), 100);
-	}
-	var PriceData = class {
-		get netto() {
-			return this._netto;
-		}
-		set netto(value) {
-			this._netto = value;
-			if (this._netto) this._bruto = this._netto * (1 + this.btw / 100);
-		}
-		get bruto() {
-			return this._bruto;
-		}
-		set bruto(value) {
-			this._bruto = value;
-			if (this._bruto) this._netto = this._bruto / (1 + this.btw / 100);
-		}
-		constructor(btw) {
-			this.btw = btw;
-		}
-	};
-	async function decoratePanel(el) {
-		let ul = el.querySelector("div.adhoc-item-detail-section div.input-wrap-container");
-		let li = emmet.appendChild(ul, `
-        li.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
-    `).first;
-		let fieldQuantity = el.querySelector("div.field-quantity");
-		let fieldQuantityInput = fieldQuantity.querySelector("input");
-		fieldQuantityInput.value = "1";
-		let tarif = await getBtwTarif((await fetchReqFormInfo()).commodityCode);
-		let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group");
-		emmet.appendChild(fieldQuantityInputGroup, `
-        span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
-    `);
-		let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`);
-		let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`);
-		let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul");
-		ulUnitOfMeasure.style.display = "none";
-		btnUnitOfMeasure.dispatchEvent(new Event("click"));
-		scanAndSelectPerEenheid(ulUnitOfMeasure);
-		scanAndSetRadionButtons(el);
-		li.classList.add("flexRow");
-		let btw = tarif?.tarif ?? 0;
-		let entangledFields = new EntangledFields(new PriceData(btw));
-		let nettoCalcField = new CalcField(li, "Netto", btw.toString() + "%", ["gringo", "blueBlock"], (field) => {
-			if (!field.result) return;
-			entangledFields.context.netto = field.result.result;
-			entangledFields.updateOtherFields();
-		});
-		let brutoCalcField = new CalcField(li, "Bruto", "", [], (field) => {
-			if (!field.result) return;
-			entangledFields.context.bruto = field.result.result;
-			entangledFields.updateOtherFields();
-		});
-		entangledFields.add(brutoCalcField.input, (ctx) => {
-			if (!ctx.bruto) return;
-			brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
-			brutoCalcField.reCalc();
-		});
-		entangledFields.add(fieldQuantityInput, (ctx) => {
-			if (!ctx.netto) return;
-			fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
-			triggerFieldChanged(fieldQuantityInput);
-		});
-		entangledFields.add(nettoCalcField.input, (ctx) => {
-			if (!ctx.netto) return;
-			nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
-			nettoCalcField.reCalc();
-		});
-		decorateFieldQuantity(fieldQuantity);
-		let fieldMoney = el.querySelector("div.field-money input");
-		fieldMoney.value = "1";
-		triggerFieldChanged(fieldMoney);
-		scanAndSetFirstFieldFocus(el, btnUnitOfMeasure);
-	}
-	function decorateFieldQuantity(fieldQuantity) {
-		fieldQuantity.classList.add("hidePlusMinButtons");
-		let input = fieldQuantity.querySelector("input");
-		input.addEventListener("paste", (ev) => {
-			let data = ev.clipboardData?.getData("text/plain");
-			if (data) {
-				input.value = formatPrice(new Parser(data).parse().result, "", "");
-				triggerFieldChanged(input);
-				ev.preventDefault();
-			}
-		});
-	}
-	async function fetchReqFormInfo() {
-		let userInfo = await getUserInfo();
-		let userId = userInfo.hashedUser;
-		let tenant = userInfo.tenant;
-		let resourceId = new URLSearchParams(location.search).get("fromresourceid");
-		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
-		return await (await fetch(daUrl)).json();
-	}
-	function triggerFieldChanged(input) {
-		input.dispatchEvent(new Event("change"));
-		input.dispatchEvent(new Event("input"));
-		input.dispatchEvent(new Event("blur"));
-		input.dispatchEvent(new Event("keyup"));
-		input.dispatchEvent(new Event("mouseout"));
-	}
-	//#endregion
 	//#region typescript/main.ts
 	init();
 	function init() {
@@ -3307,9 +3264,9 @@
 			});
 			registerObserver(requestObservers.aanvragenObserver);
 			registerObserver(requestObservers.recentRequestsObsverver);
-			registerObserver(observer_default$1.requisitionObserver);
-			registerObserver(observer_default$1.viewReqObserver);
-			registerObserver(observer_default);
+			registerObserver(observer_default.requisitionObserver);
+			registerObserver(observer_default.viewReqObserver);
+			registerObserver(observer_default$1);
 			onPageChanged();
 			if (document.readyState == "complete") {
 				console.log("document ready. firing onPageRefreshed.");
