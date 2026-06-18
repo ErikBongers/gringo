@@ -111,12 +111,16 @@ export function createCompactReqItem(item: SapLineItem) {
     };
 }
 
-export function createCompactPr(pr: PurchaseRequisition) {
+export function createCompactPr(pr: PurchaseRequisition): CompactRequisition {
+    let items:  CompactReqItem[] = [];
+    if(pr.lineItems) { //e.g. "PR49386-V2": "Geannuleerd": all items have been removed.
+        items = pr.lineItems.map(item => {
+            return createCompactReqItem(item);
+        });
+    }
     return {
         prId: pr.reqId,
-        items: pr.lineItems.map(item => {
-            return createCompactReqItem(item);
-        })
+        items
     };
 }
 

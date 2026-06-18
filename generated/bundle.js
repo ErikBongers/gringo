@@ -2436,11 +2436,13 @@
 		};
 	}
 	function createCompactPr(pr) {
+		let items = [];
+		if (pr.lineItems) items = pr.lineItems.map((item) => {
+			return createCompactReqItem(item);
+		});
 		return {
 			prId: pr.reqId,
-			items: pr.lineItems.map((item) => {
-				return createCompactReqItem(item);
-			})
+			items
 		};
 	}
 	function createCompactReqItemFromCartItem(item) {
