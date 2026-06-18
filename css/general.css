@@ -436,11 +436,13 @@ request-info-item.hidden {
 
 .subGroupsContainer {
     margin: 1ch;
+    margin-block-end: 2ch;
     padding: 2ch;
     background-color: white;
     border-radius: 1ch;
 }
 
 details.subGroups {
-    margin-block-start: .5ch;
+    margin-block: .7ch;
+    margin-inline-start: 3ch;
 }
