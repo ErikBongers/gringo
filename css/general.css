@@ -180,6 +180,7 @@ main.hideTeam {
 }
 
 .gringoTag, button.gringoTag {
+    display: inline-block;
     padding: .2ch .7ch;
     width: fit-content;
     border-radius: 2ch;
@@ -220,7 +221,8 @@ main.hideTeam {
 
 }
 
-#tagsFilterTable {
+#tagsFilterTable,
+table.budgetGroupings {
     & td{
         padding-inline: 1ch;
         padding-block: .2ch;
@@ -430,4 +432,15 @@ request-info-item.hidden {
         }
         padding: .3ch;
     }
+}
+
+.subGroupsContainer {
+    margin: 1ch;
+    padding: 2ch;
+    background-color: white;
+    border-radius: 1ch;
+}
+
+details.subGroups {
+    margin-block-start: .5ch;
 }

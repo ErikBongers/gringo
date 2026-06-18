@@ -1,11 +1,11 @@
 import {emmet} from "../../libs/Emmeter/html";
 import {createInfoBlock, formatPrice} from "../globals";
 import {createJsonPrData, getBudgetDscr, getRequestsPerGroup, JsonPrData, JsonPrItem} from "./aggregate";
-import {displayMetaFields, displayTags, hideFloatingHelp, updateMetaFields} from "./observer";
+import {displayMetaFields, displayTags, hideFloatingHelp, paintTag, updateMetaFields} from "./observer";
 import {Tabs} from "../tabs";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {getMetaLocal} from "../db/gringoDb";
-import {fetchMetaCached, PrMeta} from "./requests";
+import {fetchMetaCached, getGlobalTags, PrMeta, TagDef} from "./requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
 
@@ -182,12 +182,102 @@ export interface PrItemGroup {
     items: JsonPrItem[]
 }
 
+async function getGlobalTagsAndAndere() {
+    let globalTags = await getGlobalTags();
+    let alltags = structuredClone(globalTags);
+    let andereTag: TagDef = {
+        name: "(andere)",
+        description: "",
+        bkgColor: "",
+        color: "",
+        order: 9999
+    }
+    alltags.set(andereTag.name, andereTag);
+    return alltags;
+}
+
 async function displayPerBudget(wrapper: HTMLElement, perBudget:  PrItemGroup[]) {
     emmet.appendChild(wrapper, `h2{Per Budget}`)
+    let subGroupsCollapse = emmet.appendChild(wrapper, `
+        details.subGroups>
+            summary{Ondergroeperingen}+
+            div.subGroupsContainer
+    `).first as HTMLDetailsElement;
+    //add checkboxes for tags
+    //also add a checkbox for "--rest--"
+    let subGroupsContainer = subGroupsCollapse.querySelector(".subGroupsContainer") as HTMLDivElement;
+    let tbody = emmet.appendChild(subGroupsContainer,'table.budgetGroupings>tbody').last as HTMLTableSectionElement;
+    let tagDefs = await getGlobalTagsAndAndere();
+    [...tagDefs.values()]
+        .sort((a, b) => a.order - b.order)
+        .forEach(tagDef => {
+            createTagFilterRow(tbody, tagDef);
+        });
+    updateGroupings(getBudgetSubGroupings());
+
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement; //todo: rename css class?
     for(let itemGroup of perBudget) {
         await displayGroupedBlock(itemGroup, container);
     }
+}
+
+function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef) {
+    let tr = emmet.appendChild(tbody, `tr`).first as HTMLTableRowElement;
+    tr.dataset.groupName = tagDef.name;
+    emmet.appendChild(tr, `
+                (td>span.naked.gringoTag{${tagDef.name}})+
+                (td>button.naked.filter>(
+                    span.equal{✔}+
+                    span.empty{▢}
+                    )
+                )
+            `);
+    let tagSpan = tr.querySelector("span")!;
+    paintTag(tagSpan, tagDef, true);
+    let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
+    filterButton.onclick = async (ev) => {
+        let groupings = getBudgetSubGroupings();
+        let grouping = groupings.find(g => g.name == tagDef.name);
+        if(!grouping) {
+            let grouping: BudgetGrouping = {
+                groupingType: "tag",
+                name: tagDef.name
+            }
+            groupings.push(grouping);
+        } else {
+            groupings = groupings.filter(g => g.name != tagDef.name);
+        }
+        saveBudgetSubGroupings(groupings);
+        updateGroupings(groupings);
+        //todo: update list.
+    };
+}
+
+function updateGroupings(groupings: BudgetGrouping[]) {
+    let table = document.querySelector("table.budgetGroupings") as HTMLTableElement;
+    for(let tr of table.tBodies[0].rows) {
+        let groupName = tr.dataset.groupName!;
+        let group = groupings.find(g => g.name == groupName);
+        let btnGroup = tr.querySelector("button.filter") as HTMLButtonElement; //todo: rename class to checkBox?
+        btnGroup.classList.toggle("equal", !!group);
+        btnGroup.classList.toggle("empty", !group);
+    }
+}
+
+export interface BudgetGrouping {
+    groupingType: "tag" | "project";
+    name: string;
+}
+
+function getBudgetSubGroupings() {
+    let groupings =  localStorage.getItem("budgetSubGroupings");
+    if(!groupings)
+        return [];
+    return JSON.parse(groupings) as BudgetGrouping[];
+}
+
+function saveBudgetSubGroupings(groupings: BudgetGrouping[]) {
+    localStorage.setItem("budgetSubGroupings", JSON.stringify(groupings));
 }
 
 async function displayGroupedBlock(itemGroup: PrItemGroup, container: HTMLDivElement) {

@@ -2765,10 +2765,77 @@
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
 		for (let project of perProject) await displayGroupedBlock(project, container);
 	}
+	async function getGlobalTagsAndAndere() {
+		let globalTags = await getGlobalTags();
+		let alltags = structuredClone(globalTags);
+		let andereTag = {
+			name: "(andere)",
+			description: "",
+			bkgColor: "",
+			color: "",
+			order: 9999
+		};
+		alltags.set(andereTag.name, andereTag);
+		return alltags;
+	}
 	async function displayPerBudget(wrapper, perBudget) {
 		emmet.appendChild(wrapper, `h2{Per Budget}`);
+		let subGroupsContainer = emmet.appendChild(wrapper, `
+        details.subGroups>
+            summary{Ondergroeperingen}+
+            div.subGroupsContainer
+    `).first.querySelector(".subGroupsContainer");
+		let tbody = emmet.appendChild(subGroupsContainer, "table.budgetGroupings>tbody").last;
+		[...(await getGlobalTagsAndAndere()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			createTagFilterRow$1(tbody, tagDef);
+		});
+		updateGroupings(getBudgetSubGroupings());
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
 		for (let itemGroup of perBudget) await displayGroupedBlock(itemGroup, container);
+	}
+	function createTagFilterRow$1(tbody, tagDef) {
+		let tr = emmet.appendChild(tbody, `tr`).first;
+		tr.dataset.groupName = tagDef.name;
+		emmet.appendChild(tr, `
+                (td>span.naked.gringoTag{${tagDef.name}})+
+                (td>button.naked.filter>(
+                    span.equal{✔}+
+                    span.empty{▢}
+                    )
+                )
+            `);
+		paintTag(tr.querySelector("span"), tagDef, true);
+		let filterButton = tr.querySelector("button.filter");
+		filterButton.onclick = async (ev) => {
+			let groupings = getBudgetSubGroupings();
+			if (!groupings.find((g) => g.name == tagDef.name)) {
+				let grouping = {
+					groupingType: "tag",
+					name: tagDef.name
+				};
+				groupings.push(grouping);
+			} else groupings = groupings.filter((g) => g.name != tagDef.name);
+			saveBudgetSubGroupings(groupings);
+			updateGroupings(groupings);
+		};
+	}
+	function updateGroupings(groupings) {
+		let table = document.querySelector("table.budgetGroupings");
+		for (let tr of table.tBodies[0].rows) {
+			let groupName = tr.dataset.groupName;
+			let group = groupings.find((g) => g.name == groupName);
+			let btnGroup = tr.querySelector("button.filter");
+			btnGroup.classList.toggle("equal", !!group);
+			btnGroup.classList.toggle("empty", !group);
+		}
+	}
+	function getBudgetSubGroupings() {
+		let groupings = localStorage.getItem("budgetSubGroupings");
+		if (!groupings) return [];
+		return JSON.parse(groupings);
+	}
+	function saveBudgetSubGroupings(groupings) {
+		localStorage.setItem("budgetSubGroupings", JSON.stringify(groupings));
 	}
 	async function displayGroupedBlock(itemGroup, container) {
 		let details = emmet.appendChild(container, `

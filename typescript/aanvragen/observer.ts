@@ -487,7 +487,7 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
         newTotal.style.display = "none";
 }
 
-function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
+export function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
     tagElement.innerText = tagDef.name;
     tagElement.classList.add("gringoTag");
     tagElement.style.color = tagDef.color != "" ? tagDef.color : "inherit";

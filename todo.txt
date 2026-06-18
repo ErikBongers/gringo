@@ -3,10 +3,17 @@
 * quantity field updates the server on blur. Postpone the blur until netto or bruto are blurred to avoid server roundtrip on each character.
 
 * Totalen: allow grouping by tag or project.
+  > "why is this such a hign price"?
+    > groupings need to be expandable.
+    > that means sub-collapses have prio over columns...
+    > but columns are more handy.
+    > start with subcollapses
+      > this way we have the grouped data.
+      > columns can be added later.
   > use top level groupings or per budget?
   > or no groupings but extra columns?
   > or...both?
-  > the drop down should have a header that allows this extra grouping:
+  > Top menu/collapse that allows grouping:
     "Group by"...followed by selected tags or projects.
       > e.g. only select the tags MW and BK.
         > this will result in a next level of collapses for MW, BK and the 'others'.
