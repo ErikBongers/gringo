@@ -15,9 +15,7 @@
     "strictNullChecks": true,
     "paths": {
     },
-    "typeRoots": ["node_modules/@types"]
+    "typeRoots": ["node_modules/@types"],
+    "types": [ "chrome", "node" ],
   },
-  "types": [
-    "chrome"
-  ]
 }
