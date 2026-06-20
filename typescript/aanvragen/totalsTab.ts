@@ -7,6 +7,9 @@ import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchMetaCached, getGlobalTags, PrMeta, TagDef} from "./requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
+import {BudgetGrouping} from "../db/localStorage";
+import storage from "../db/localStorage";
+
 
 async function onRefreshClicked(ev: PointerEvent) {
     sessionStorage.removeItem("jsonPrData");
@@ -31,6 +34,7 @@ async function createProjectItemGroups(expenses: JsonPrItem[]) {
             items,
             dscr: groupId == "" ? "--nog geen project--" : dscr,
             total,
+            children: [],
         }
     });
     return projectItemGroups;
@@ -52,6 +56,7 @@ async function createBudgetItemGroups(expenses: JsonPrItem[]) {
             items,
             dscr: groupId == "" ? "--nog geen budget--" : dscr,
             total,
+            children: [],
         }
     });
     return budgetItemGroups;
@@ -155,7 +160,7 @@ async function displayPerProject(wrapper: HTMLElement, perProject: PrItemGroup[]
     emmet.appendChild(wrapper, `h2{Per project}`)
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement;
     for(let project of perProject) {
-        await displayGroupedBlock(project, container);
+        displayGroupedBlock(project, container);
     }
 }
 
@@ -163,7 +168,8 @@ export interface PrItemGroup {
     groupId: string,
     dscr: string,
     total: number,
-    items: JsonPrItem[]
+    items: JsonPrItem[],
+    children: PrItemGroup[],
 }
 
 async function getGlobalTagsAndAndere() {
@@ -197,11 +203,11 @@ async function displayPerBudget(wrapper: HTMLElement, perBudget:  PrItemGroup[])
         .forEach(tagDef => {
             createTagFilterRow(tbody, tagDef);
         });
-    updateGroupings(getBudgetSubGroupings());
+    updateGroupingsFilters(storage.local.getBudgetSubGroupings());
 
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement; //todo: rename css class?
     for(let itemGroup of perBudget) {
-        await displayGroupedBlock(itemGroup, container);
+        displayGroupedBlock(itemGroup, container);
     }
 }
 
@@ -220,7 +226,7 @@ function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef) {
     paintTag(tagSpan, tagDef, true);
     let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
     filterButton.onclick = async (ev) => {
-        let groupings = getBudgetSubGroupings();
+        let groupings = storage.local.getBudgetSubGroupings();
         let grouping = groupings.find(g => g.name == tagDef.name);
         if(!grouping) {
             let grouping: BudgetGrouping = {
@@ -231,13 +237,13 @@ function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef) {
         } else {
             groupings = groupings.filter(g => g.name != tagDef.name);
         }
-        saveBudgetSubGroupings(groupings);
-        updateGroupings(groupings);
+        storage.local.saveBudgetSubGroupings(groupings);
+        updateGroupingsFilters(groupings);
         //todo: update list.
     };
 }
 
-function updateGroupings(groupings: BudgetGrouping[]) {
+function updateGroupingsFilters(groupings: BudgetGrouping[]) {
     let table = document.querySelector("table.budgetGroupings") as HTMLTableElement;
     for(let tr of table.tBodies[0].rows) {
         let groupName = tr.dataset.groupName!;
@@ -248,51 +254,37 @@ function updateGroupings(groupings: BudgetGrouping[]) {
     }
 }
 
-export interface BudgetGrouping {
-    groupingType: "tag" | "project";
-    name: string;
-}
-
-function getBudgetSubGroupings() {
-    let groupings =  localStorage.getItem("budgetSubGroupings");
-    if(!groupings)
-        return [];
-    return JSON.parse(groupings) as BudgetGrouping[];
-}
-
-function saveBudgetSubGroupings(groupings: BudgetGrouping[]) {
-    localStorage.setItem("budgetSubGroupings", JSON.stringify(groupings));
-}
-
-async function displayGroupedBlock(itemGroup: PrItemGroup, container: HTMLDivElement) {
+function displayGroupedBlock(itemGroup: PrItemGroup, container: HTMLElement) {
     let details = emmet.appendChild(container, `
-            div.details.midBlue>
-                div.summary>
-                    div.group.flexInline>(
-                        (
-                            span>(
-                                span.dscr{${itemGroup.dscr}}
-                            )
-                        )+
-                        span.price{${formatPrice(itemGroup.total)}}
-                    )
+        div.details.midBlue>
+            div.summary>
+                div.group.flexInline>(
+                    (
+                        span>(
+                            span.dscr{${itemGroup.dscr}}
+                        )
+                    )+
+                    span.price{${formatPrice(itemGroup.total)}}
+                )
         `).first as HTMLDetailsElement;
     itemGroup.items.sort((a,b) => a.prId.localeCompare(b.prId));
     for (let item of itemGroup.items) {
-        await displayItem(details, item);
+        displayItem(details, item);
     }
 
-    let summaries = container.querySelectorAll(".summary") as NodeListOf<HTMLElement>;
+    let summaries = details.querySelectorAll(":scope > .summary") as NodeListOf<HTMLElement>;
     summaries.forEach(s => {
         s.onclick = () => {
             s.parentElement!.classList.toggle("open");
         };
-    })
+    });
+    for (let child of itemGroup.children) {
+        displayGroupedBlock(child, details);
+    }
 }
 
-async function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
+function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
     let itemId = item.prId + "_" + item.itemNo;
-    let meta = await fetchMetaCached(item.prId);
     let row = emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (

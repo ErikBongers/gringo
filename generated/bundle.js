@@ -2655,6 +2655,20 @@
 		}
 	};
 	//#endregion
+	//#region typescript/db/localStorage.ts
+	function getBudgetSubGroupings() {
+		let groupings = localStorage.getItem("budgetSubGroupings");
+		if (!groupings) return [];
+		return JSON.parse(groupings);
+	}
+	function saveBudgetSubGroupings(groupings) {
+		localStorage.setItem("budgetSubGroupings", JSON.stringify(groupings));
+	}
+	var localStorage_default = { local: {
+		getBudgetSubGroupings,
+		saveBudgetSubGroupings
+	} };
+	//#endregion
 	//#region typescript/aanvragen/totalsTab.ts
 	async function onRefreshClicked(ev) {
 		sessionStorage.removeItem("jsonPrData");
@@ -2672,7 +2686,8 @@
 				groupId,
 				items,
 				dscr: groupId == "" ? "--nog geen project--" : dscr,
-				total
+				total,
+				children: []
 			};
 		});
 	}
@@ -2688,7 +2703,8 @@
 				groupId,
 				items,
 				dscr: groupId == "" ? "--nog geen budget--" : dscr,
-				total
+				total,
+				children: []
 			};
 		});
 	}
@@ -2775,7 +2791,7 @@
 	async function displayPerProject(wrapper, perProject) {
 		emmet.appendChild(wrapper, `h2{Per project}`);
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
-		for (let project of perProject) await displayGroupedBlock(project, container);
+		for (let project of perProject) displayGroupedBlock(project, container);
 	}
 	async function getGlobalTagsAndAndere() {
 		let globalTags = await getGlobalTags();
@@ -2801,9 +2817,9 @@
 		[...(await getGlobalTagsAndAndere()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			createTagFilterRow$1(tbody, tagDef);
 		});
-		updateGroupings(getBudgetSubGroupings());
+		updateGroupingsFilters(localStorage_default.local.getBudgetSubGroupings());
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
-		for (let itemGroup of perBudget) await displayGroupedBlock(itemGroup, container);
+		for (let itemGroup of perBudget) displayGroupedBlock(itemGroup, container);
 	}
 	function createTagFilterRow$1(tbody, tagDef) {
 		let tr = emmet.appendChild(tbody, `tr`).first;
@@ -2819,7 +2835,7 @@
 		paintTag(tr.querySelector("span"), tagDef, true);
 		let filterButton = tr.querySelector("button.filter");
 		filterButton.onclick = async (ev) => {
-			let groupings = getBudgetSubGroupings();
+			let groupings = localStorage_default.local.getBudgetSubGroupings();
 			if (!groupings.find((g) => g.name == tagDef.name)) {
 				let grouping = {
 					groupingType: "tag",
@@ -2827,11 +2843,11 @@
 				};
 				groupings.push(grouping);
 			} else groupings = groupings.filter((g) => g.name != tagDef.name);
-			saveBudgetSubGroupings(groupings);
-			updateGroupings(groupings);
+			localStorage_default.local.saveBudgetSubGroupings(groupings);
+			updateGroupingsFilters(groupings);
 		};
 	}
-	function updateGroupings(groupings) {
+	function updateGroupingsFilters(groupings) {
 		let table = document.querySelector("table.budgetGroupings");
 		for (let tr of table.tBodies[0].rows) {
 			let groupName = tr.dataset.groupName;
@@ -2841,38 +2857,30 @@
 			btnGroup.classList.toggle("empty", !group);
 		}
 	}
-	function getBudgetSubGroupings() {
-		let groupings = localStorage.getItem("budgetSubGroupings");
-		if (!groupings) return [];
-		return JSON.parse(groupings);
-	}
-	function saveBudgetSubGroupings(groupings) {
-		localStorage.setItem("budgetSubGroupings", JSON.stringify(groupings));
-	}
-	async function displayGroupedBlock(itemGroup, container) {
+	function displayGroupedBlock(itemGroup, container) {
 		let details = emmet.appendChild(container, `
-            div.details.midBlue>
-                div.summary>
-                    div.group.flexInline>(
-                        (
-                            span>(
-                                span.dscr{${itemGroup.dscr}}
-                            )
-                        )+
-                        span.price{${formatPrice(itemGroup.total)}}
-                    )
+        div.details.midBlue>
+            div.summary>
+                div.group.flexInline>(
+                    (
+                        span>(
+                            span.dscr{${itemGroup.dscr}}
+                        )
+                    )+
+                    span.price{${formatPrice(itemGroup.total)}}
+                )
         `).first;
 		itemGroup.items.sort((a, b) => a.prId.localeCompare(b.prId));
-		for (let item of itemGroup.items) await displayItem(details, item);
-		container.querySelectorAll(".summary").forEach((s) => {
+		for (let item of itemGroup.items) displayItem(details, item);
+		details.querySelectorAll(":scope > .summary").forEach((s) => {
 			s.onclick = () => {
 				s.parentElement.classList.toggle("open");
 			};
 		});
+		for (let child of itemGroup.children) displayGroupedBlock(child, details);
 	}
-	async function displayItem(details, item) {
+	function displayItem(details, item) {
 		let itemId = item.prId + "_" + item.itemNo;
-		await fetchMetaCached(item.prId);
 		emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (
