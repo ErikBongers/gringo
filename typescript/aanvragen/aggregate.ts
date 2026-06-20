@@ -1,4 +1,4 @@
-import {calcBrutoLinePrice, createCompactReqItem, createCompactReqItemFromCartItem, createExpandedPr} from "../aanvraag/observer";
+import {calcBrutoLinePrice, createCompactReqItem, createExpandedPr} from "../aanvraag/observer";
 import {ExpandedPr, ExpandedPrItem, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
 import {createHtmlTable, InfoBlock} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
@@ -39,14 +39,14 @@ export async function getExtendedRequests(infoBlock: InfoBlock) {
     return extendedReqs;
 }
 
-export type GroupFunc = (item: JsonPrItem) => Promise<string>;
+export type GroupFunc<Item> = (item: Item) => Promise<string>;
 
-export async function getRequestsPerGroup(expenses: JsonPrItem[], groupFunc: GroupFunc, groups: string[]) {
-    let groupMap = new Map<string, JsonPrItem[]>();
+    export async function getItemsPerGroup<Item>(items: Item[], groupFunc: GroupFunc<Item>, groups: string[]) {
+    let groupMap = new Map<string, Item[]>();
     for (let group of groups) {
         groupMap.set(group, []);
     }
-    for (let item of expenses) {
+    for (let item of items) {
         let group = await groupFunc(item);
         if (!groupMap.has(group)) {
             groupMap.set(group, []);
@@ -153,4 +153,31 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
         }
     }
     return jsonPrData;
+}
+
+export interface BudgetLevel {
+    key: string;
+    descr: string;
+    price: number;
+    children: Map<string, BudgetLevel>;
+    items: ExpandedPrItem[];
+}
+
+export async function getExpenses(infoBlock: InfoBlock) {
+    let jsonPrData: JsonPrData;
+    let jsonPrDataStr = sessionStorage.getItem("jsonPrData");
+    if (jsonPrDataStr) {
+        jsonPrData = JSON.parse(jsonPrDataStr) as JsonPrData;
+    } else {
+        jsonPrData = await createJsonPrData(infoBlock);
+        sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
+    }
+    return jsonPrData.items
+        .filter(item => !["In aanmaak", "Afgewezen"].includes(item.status))
+        .filter(item => {
+            return item.budget != "" //todo: include empty budgets
+                && (item.budget.startsWith("6")
+                    || item.budget.startsWith("2")
+                );
+        });
 }

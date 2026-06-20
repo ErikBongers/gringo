@@ -1,10 +1,9 @@
 import {emmet} from "../../libs/Emmeter/html";
 import {createInfoBlock, formatPrice} from "../globals";
-import {createJsonPrData, getBudgetDscr, getRequestsPerGroup, JsonPrData, JsonPrItem} from "./aggregate";
+import {getBudgetDscr, getExpenses, getItemsPerGroup, JsonPrItem} from "./aggregate";
 import {displayMetaFields, displayTags, hideFloatingHelp, paintTag, updateMetaFields} from "./observer";
 import {Tabs} from "../tabs";
 import {getGlobalSettingsCached} from "../plugin_options/options";
-import {getMetaLocal} from "../db/gringoDb";
 import {fetchMetaCached, getGlobalTags, PrMeta, TagDef} from "./requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
@@ -14,6 +13,50 @@ async function onRefreshClicked(ev: PointerEvent) {
     await fillTotalsTab();
 }
 
+async function createProjectItemGroups(expenses: JsonPrItem[]) {
+    let perProject = await getItemsPerGroup(expenses, async (item) => {
+        let meta = await fetchMetaCached(item.prId);
+        return meta.project ?? "";
+    }, (await getGlobalSettingsCached()).projects);
+
+    let projectItemGroups: PrItemGroup[] = [...perProject.entries()].map((mappedItem) => {
+        let groupId = mappedItem[0];
+        let items = mappedItem[1];
+        let dscr = groupId;
+        let total = items
+            .map(i => i.bruto)
+            .reduce((a, b) => a + b, 0);
+        return {
+            groupId,
+            items,
+            dscr: groupId == "" ? "--nog geen project--" : dscr,
+            total,
+        }
+    });
+    return projectItemGroups;
+}
+
+async function createBudgetItemGroups(expenses: JsonPrItem[]) {
+    let perBudget = await getItemsPerGroup(expenses, async (item) => {
+        return item.budget;
+    }, []);
+    let budgetItemGroups: PrItemGroup[] = [...perBudget.entries()].map((mappedItem) => {
+        let groupId = mappedItem[0];
+        let items = mappedItem[1];
+        let dscr = groupId + " " + (getBudgetDscr(groupId) ?? "--geen omschrijving--");
+        let total = items
+            .map(i => i.bruto)
+            .reduce((a, b) => a + b, 0);
+        return {
+            groupId,
+            items,
+            dscr: groupId == "" ? "--nog geen budget--" : dscr,
+            total,
+        }
+    });
+    return budgetItemGroups;
+}
+
 export async function fillTotalsTab() {
     hideFloatingHelp();
     let totalsTab = document.querySelector("div.gringo.totalsTab") as HTMLElement;
@@ -21,8 +64,10 @@ export async function fillTotalsTab() {
     emmet.appendChild(totalsTab, `
         (button.naked.refresh>i.fa.fa-repeat)+
         div.infoContainer+
-        div.tabsContainer
+        div.tabsContainer+
+        div.popoversContainer
     `);
+    let popoversContainer = totalsTab.querySelector("div.popoversContainer") as HTMLDivElement;
     let button = totalsTab.querySelector("button.refresh") as HTMLButtonElement;
     button.onclick = (ev) => onRefreshClicked(ev);
     let infoContainer = totalsTab.querySelector("div.infoContainer") as HTMLElement;
@@ -44,78 +89,17 @@ export async function fillTotalsTab() {
     let tabPerProject = tabsContainer.querySelector("div#tabPerProject") as HTMLElement;
     let tabPerBudget = tabsContainer.querySelector("div#tabPerBudget") as HTMLElement;
     tabs.switch(0);
-    //create a block "Uitgaven" for the 6xx ledgers.
-    //On top have a Grand total
-    //Below for the first digit, and so on.
-    //Every level expandable
-    //Expansion is saved.
-    //Every row is a flexRow, with the last column (price) at a fixed distance (not influenced by indent).
-
-    //Do aggregation per level.
-    // 6 : descr : price
-    // 61 : descr : price
-    // 611 : descr : price
-    //this is a tree structure.
-    //for every item, drill down the tree and insert it at the deepest level.
-    let jsonPrData: JsonPrData;
-    let jsonPrDataStr = sessionStorage.getItem("jsonPrData");
-    if(jsonPrDataStr) {
-        jsonPrData = JSON.parse(jsonPrDataStr) as JsonPrData;
-    } else {
-        jsonPrData = await createJsonPrData(infoBlock);
-        sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
-    }
-    let expenses = jsonPrData.items
-        .filter(item => !["In aanmaak", "Afgewezen"].includes(item.status))
-        .filter(item => {
-            return item.budget != ""
-                && ( item.budget.startsWith("6")
-                    || item.budget.startsWith("2")
-                );
-        });
-    expenses.sort((a, b) => a.budget.localeCompare(b.budget));
+    let expenses = await getExpenses(infoBlock);
+    expenses.sort((a, b) => a.budget.localeCompare(b.budget)); //todo: is this sort needed?
 
     infoBlock.info.innerHTML = "";
-    let perProject = await getRequestsPerGroup(expenses, async (item) => {
-        let meta = await fetchMetaCached(item.prId);
-        return meta.project??"";
-    }, (await getGlobalSettingsCached()).projects);
 
-    let projectItemGroups: PrItemGroup[] = [...perProject.entries()].map((mappedItem) => {
-        let groupId = mappedItem[0];
-        let items = mappedItem[1];
-        let dscr = groupId;
-        let total = items
-            .map(i => i.bruto)
-            .reduce((a, b) => a + b, 0);
-        return {
-            groupId,
-            items,
-            dscr: groupId == "" ? "--nog geen project--" : dscr,
-            total,
-        }
-    });
-
+    let projectItemGroups = await createProjectItemGroups(expenses);
     await displayPerProject(tabPerProject, projectItemGroups);
-    let perBudget = await getRequestsPerGroup(expenses, async (item) => {
-        return item.budget;
-    }, []);
-    let budgetItemGroups: PrItemGroup[] = [...perBudget.entries()].map((mappedItem) => {
-        let groupId = mappedItem[0];
-        let  items = mappedItem[1];
-        let dscr = groupId + " " + (getBudgetDscr(groupId)?? "--geen omschrijving--");
-        let total = items
-            .map(i => i.bruto)
-            .reduce((a, b) => a + b, 0);
-        return {
-            groupId,
-            items,
-            dscr: groupId == "" ? "--nog geen budget--" : dscr,
-            total,
-        }
-    });
+
+    let budgetItemGroups = await createBudgetItemGroups(expenses);
     await displayPerBudget(tabPerBudget, budgetItemGroups);
-    let popoversContainer = emmet.appendChild(totalsTab, "div.popoversContainer").first as HTMLDivElement;
+
     await createPopovers(popoversContainer, expenses);
     let cloudBudgets: CloudBudgets = {
         timestamp: (new Date()).toISOString(),
@@ -335,3 +319,35 @@ async function updateRelatedItemPopover(prId: string, meta: PrMeta) {
         await updatePopover(popover, meta);
     }
 }
+
+/*
+function displayBudgetLevel(container: HTMLElement, budgetLvl: BudgetLevel) {
+    emmet.appendChild(container, `
+        div.group.flexRow.w100.indent${budgetLvl.key.length}>(
+            (
+                span>(
+                    span.lvl{${budgetLvl.key}}+
+                    span.descr{${budgetLvl.descr}}
+                )
+            )+
+            span.price{ todo:total price }
+        )
+    `);
+    for(let item of budgetLvl.items) {
+        emmet.appendChild(container, `
+        div.item.flexRow.w100>(
+            (
+                span>(
+                    span.lvl{${item.budget}}+
+                    span.descr{${item.title}}+
+                    span.status{${item.tags}}
+                )
+            )+
+            span.price{${item.bruto}}
+        )
+    `);
+    }
+    budgetLvl.children.forEach(b => displayBudgetLevel(container, b));
+}
+
+*/

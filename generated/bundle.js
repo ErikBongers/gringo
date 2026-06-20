@@ -1768,10 +1768,10 @@
 		for (const pr of reqs) extendedReqs.push(await createExpandedPr(pr));
 		return extendedReqs;
 	}
-	async function getRequestsPerGroup(expenses, groupFunc, groups) {
+	async function getItemsPerGroup(items, groupFunc, groups) {
 		let groupMap = /* @__PURE__ */ new Map();
 		for (let group of groups) groupMap.set(group, []);
-		for (let item of expenses) {
+		for (let item of items) {
 			let group = await groupFunc(item);
 			if (!groupMap.has(group)) groupMap.set(group, []);
 			groupMap.get(group).push(item);
@@ -1841,6 +1841,18 @@
 			});
 		}
 		return jsonPrData;
+	}
+	async function getExpenses(infoBlock) {
+		let jsonPrData;
+		let jsonPrDataStr = sessionStorage.getItem("jsonPrData");
+		if (jsonPrDataStr) jsonPrData = JSON.parse(jsonPrDataStr);
+		else {
+			jsonPrData = await createJsonPrData(infoBlock);
+			sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
+		}
+		return jsonPrData.items.filter((item) => !["In aanmaak", "Afgewezen"].includes(item.status)).filter((item) => {
+			return item.budget != "" && (item.budget.startsWith("6") || item.budget.startsWith("2"));
+		});
 	}
 	//#endregion
 	//#region typescript/sap/SapUserInfo.ts
@@ -2648,6 +2660,38 @@
 		sessionStorage.removeItem("jsonPrData");
 		await fillTotalsTab();
 	}
+	async function createProjectItemGroups(expenses) {
+		return [...(await getItemsPerGroup(expenses, async (item) => {
+			return (await fetchMetaCached(item.prId)).project ?? "";
+		}, (await getGlobalSettingsCached()).projects)).entries()].map((mappedItem) => {
+			let groupId = mappedItem[0];
+			let items = mappedItem[1];
+			let dscr = groupId;
+			let total = items.map((i) => i.bruto).reduce((a, b) => a + b, 0);
+			return {
+				groupId,
+				items,
+				dscr: groupId == "" ? "--nog geen project--" : dscr,
+				total
+			};
+		});
+	}
+	async function createBudgetItemGroups(expenses) {
+		return [...(await getItemsPerGroup(expenses, async (item) => {
+			return item.budget;
+		}, [])).entries()].map((mappedItem) => {
+			let groupId = mappedItem[0];
+			let items = mappedItem[1];
+			let dscr = groupId + " " + (getBudgetDscr(groupId) ?? "--geen omschrijving--");
+			let total = items.map((i) => i.bruto).reduce((a, b) => a + b, 0);
+			return {
+				groupId,
+				items,
+				dscr: groupId == "" ? "--nog geen budget--" : dscr,
+				total
+			};
+		});
+	}
 	async function fillTotalsTab() {
 		hideFloatingHelp();
 		let totalsTab = document.querySelector("div.gringo.totalsTab");
@@ -2655,8 +2699,10 @@
 		emmet.appendChild(totalsTab, `
         (button.naked.refresh>i.fa.fa-repeat)+
         div.infoContainer+
-        div.tabsContainer
+        div.tabsContainer+
+        div.popoversContainer
     `);
+		let popoversContainer = totalsTab.querySelector("div.popoversContainer");
 		let button = totalsTab.querySelector("button.refresh");
 		button.onclick = (ev) => onRefreshClicked(ev);
 		let infoContainer = totalsTab.querySelector("div.infoContainer");
@@ -2683,48 +2729,12 @@
 		let tabPerProject = tabsContainer.querySelector("div#tabPerProject");
 		let tabPerBudget = tabsContainer.querySelector("div#tabPerBudget");
 		tabs.switch(0);
-		let jsonPrData;
-		let jsonPrDataStr = sessionStorage.getItem("jsonPrData");
-		if (jsonPrDataStr) jsonPrData = JSON.parse(jsonPrDataStr);
-		else {
-			jsonPrData = await createJsonPrData(infoBlock);
-			sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
-		}
-		let expenses = jsonPrData.items.filter((item) => !["In aanmaak", "Afgewezen"].includes(item.status)).filter((item) => {
-			return item.budget != "" && (item.budget.startsWith("6") || item.budget.startsWith("2"));
-		});
+		let expenses = await getExpenses(infoBlock);
 		expenses.sort((a, b) => a.budget.localeCompare(b.budget));
 		infoBlock.info.innerHTML = "";
-		await displayPerProject(tabPerProject, [...(await getRequestsPerGroup(expenses, async (item) => {
-			return (await fetchMetaCached(item.prId)).project ?? "";
-		}, (await getGlobalSettingsCached()).projects)).entries()].map((mappedItem) => {
-			let groupId = mappedItem[0];
-			let items = mappedItem[1];
-			let dscr = groupId;
-			let total = items.map((i) => i.bruto).reduce((a, b) => a + b, 0);
-			return {
-				groupId,
-				items,
-				dscr: groupId == "" ? "--nog geen project--" : dscr,
-				total
-			};
-		}));
-		let budgetItemGroups = [...(await getRequestsPerGroup(expenses, async (item) => {
-			return item.budget;
-		}, [])).entries()].map((mappedItem) => {
-			let groupId = mappedItem[0];
-			let items = mappedItem[1];
-			let dscr = groupId + " " + (getBudgetDscr(groupId) ?? "--geen omschrijving--");
-			let total = items.map((i) => i.bruto).reduce((a, b) => a + b, 0);
-			return {
-				groupId,
-				items,
-				dscr: groupId == "" ? "--nog geen budget--" : dscr,
-				total
-			};
-		});
+		await displayPerProject(tabPerProject, await createProjectItemGroups(expenses));
+		let budgetItemGroups = await createBudgetItemGroups(expenses);
 		await displayPerBudget(tabPerBudget, budgetItemGroups);
-		let popoversContainer = emmet.appendChild(totalsTab, "div.popoversContainer").first;
 		await createPopovers(popoversContainer, expenses);
 		let cloudBudgets = {
 			timestamp: (/* @__PURE__ */ new Date()).toISOString(),

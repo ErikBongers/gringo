@@ -1,4 +1,7 @@
-* Add project and tags to aanvraag page.
+* subgroups:
+ > use the generic nesting I created for budgets.
+
+* budget depends on grants? Include them in budget key.
 
 * quantity field updates the server on blur. Postpone the blur until netto or bruto are blurred to avoid server roundtrip on each character.
 
