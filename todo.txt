@@ -1,3 +1,10 @@
+* Ouders mail sturen dat initiatie terug open staat.
+  > eerst nog ff testen...
+
+* expenses file is saved to cloud. Probably not needed?
+
+* PR48767: lots of items, only the 1st has bruto/netto.
+
 * subgroups:
  > use the generic nesting I created for budgets.
 

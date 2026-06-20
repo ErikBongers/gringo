@@ -419,6 +419,7 @@
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
+		partialUrl;
 		constructor(partialUrl) {
 			this.partialUrl = partialUrl;
 		}
@@ -427,8 +428,13 @@
 		}
 	};
 	var BaseObserver = class {
+		onPageChangedCallback;
+		onPageRefreshedCallback;
+		pageFilter;
+		onMutation;
+		observer;
+		trackModal;
 		constructor(onPageChangedCallback, pageFilter, onMutationCallback, trackModal = false, onPageRefreshedCallback) {
-			this.isPageMatching = () => this.pageFilter.match();
 			this.onPageChangedCallback = onPageChangedCallback;
 			this.onPageRefreshedCallback = onPageRefreshedCallback;
 			this.pageFilter = pageFilter;
@@ -443,6 +449,7 @@
 				if (this.onMutation(mutation)) break;
 			}
 		}
+		isPageMatching = () => this.pageFilter.match();
 		onPageRefreshed() {
 			if (this.onPageRefreshedCallback) {
 				if (this.isPageMatching()) tryUntilThen(this.isPageReallyLoaded, this.onPageRefreshedCallback);
@@ -756,6 +763,7 @@
 	//#endregion
 	//#region typescript/tokenScanner.ts
 	var ScannerElse = class {
+		scannerIf;
 		constructor(scannerIf) {
 			this.scannerIf = scannerIf;
 		}
@@ -765,6 +773,8 @@
 		}
 	};
 	var ScannerIf = class {
+		yes;
+		scanner;
 		constructor(yes, scanner) {
 			this.yes = yes;
 			this.scanner = scanner;
@@ -775,6 +785,9 @@
 		}
 	};
 	var TokenScanner = class TokenScanner {
+		valid;
+		source;
+		cursor;
 		constructor(text) {
 			this.valid = true;
 			this.source = text;
@@ -859,9 +872,7 @@
 	//#endregion
 	//#region typescript/fetchChain.ts
 	var FetchChain = class {
-		constructor() {
-			this.lastText = "";
-		}
+		lastText = "";
 		get() {
 			return this.lastText;
 		}
@@ -1862,6 +1873,9 @@
 	//#endregion
 	//#region typescript/calculator/cursor.ts
 	var Cursor = class Cursor {
+		text;
+		currentPos;
+		length;
 		constructor(text) {
 			this.text = text;
 			this.length = this.text.length;
@@ -1906,6 +1920,7 @@
 		return token.cursor.getText(token.pos, token.length);
 	}
 	var Tokenizer = class {
+		cursor;
 		constructor(text) {
 			this.cursor = new Cursor(text);
 		}
@@ -1972,8 +1987,9 @@
 	//#endregion
 	//#region typescript/calculator/peekingTokenizer.ts
 	var PeekingTokenizer = class {
+		tokenizer;
+		peekedToken = null;
 		constructor(text) {
-			this.peekedToken = null;
 			this.tokenizer = new Tokenizer(text);
 		}
 		peek() {
@@ -2006,6 +2022,7 @@
 		message: "expected ')'"
 	};
 	var Parser = class {
+		peekingTokenizer;
 		constructor(text) {
 			this.peekingTokenizer = new PeekingTokenizer(text);
 		}
@@ -2102,9 +2119,13 @@
 	//#endregion
 	//#region typescript/calcField.ts
 	var CalcField = class {
+		input;
+		resultDiv;
+		resultLabel;
+		resultErrorImage;
+		result = null;
+		postFieldLabelDiv = null;
 		constructor(container, label, postFieldLabel, postFieldLabelClass, onRecalculated) {
-			this.result = null;
-			this.postFieldLabelDiv = null;
 			let postFieldEmmet = "";
 			if (postFieldLabel != "") postFieldEmmet = `+
                 div.postFieldLabel>
@@ -2155,6 +2176,10 @@
 	//#endregion
 	//#region typescript/entangledFields.ts
 	var EntangledFields = class {
+		fields;
+		currentSourceField;
+		isTransfering;
+		context;
 		constructor(context) {
 			this.fields = [];
 			this.context = context;
@@ -2270,6 +2295,10 @@
 			if (this._bruto) this._netto = this._bruto / (1 + this._btw / 100);
 			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
 		}
+		_bruto;
+		_netto;
+		_btw;
+		expandedPrItem;
 		constructor(btw, expandedPrItem) {
 			this._btw = btw;
 			this.expandedPrItem = expandedPrItem;
@@ -2622,6 +2651,9 @@
 	//#endregion
 	//#region typescript/tabs.ts
 	var Tabs = class {
+		tabDefs;
+		tabs;
+		beforeTabSwitch;
 		constructor(parent, tabDefs, beforeTabSwitch) {
 			this.tabDefs = tabDefs;
 			this.beforeTabSwitch = beforeTabSwitch ?? null;
@@ -2664,7 +2696,7 @@
 	function saveBudgetSubGroupings(groupings) {
 		localStorage.setItem("budgetSubGroupings", JSON.stringify(groupings));
 	}
-	var localStorage_default = { local: {
+	const storage = { local: {
 		getBudgetSubGroupings,
 		saveBudgetSubGroupings
 	} };
@@ -2679,10 +2711,16 @@
 			return (await fetchMetaCached(item.prId)).project ?? "";
 		}, (await getGlobalSettingsCached()).projects)).entries()].map((mappedItem) => {
 			let groupId = mappedItem[0];
-			let items = mappedItem[1];
+			let items = mappedItem[1].map((item) => {
+				return {
+					item,
+					division: 1
+				};
+			});
 			let dscr = groupId;
-			let total = items.map((i) => i.bruto).reduce((a, b) => a + b, 0);
+			let total = items.map((i) => i.item.bruto).reduce((a, b) => a + b, 0);
 			return {
+				level: 0,
 				groupId,
 				items,
 				dscr: groupId == "" ? "--nog geen project--" : dscr,
@@ -2691,15 +2729,24 @@
 			};
 		});
 	}
+	function calcTotal(items) {
+		return items.map((i) => i.item.bruto / i.division).reduce((a, b) => a + b, 0);
+	}
 	async function createBudgetItemGroups(expenses) {
-		return [...(await getItemsPerGroup(expenses, async (item) => {
+		let budgetItemGroups = [...(await getItemsPerGroup(expenses, async (item) => {
 			return item.budget;
 		}, [])).entries()].map((mappedItem) => {
 			let groupId = mappedItem[0];
-			let items = mappedItem[1];
+			let items = mappedItem[1].map((item) => {
+				return {
+					item,
+					division: 1
+				};
+			});
 			let dscr = groupId + " " + (getBudgetDscr(groupId) ?? "--geen omschrijving--");
-			let total = items.map((i) => i.bruto).reduce((a, b) => a + b, 0);
+			let total = calcTotal(items);
 			return {
+				level: 0,
 				groupId,
 				items,
 				dscr: groupId == "" ? "--nog geen budget--" : dscr,
@@ -2707,6 +2754,36 @@
 				children: []
 			};
 		});
+		let groupSettings = storage.local.getBudgetSubGroupings();
+		for (let itemGroup of budgetItemGroups) await createBudgetSubGroupings(itemGroup, groupSettings);
+		return budgetItemGroups;
+	}
+	async function createBudgetSubGroupings(items, groupSettings) {
+		let tagSet = new Set(groupSettings.filter((group) => group.groupingType == "tag").map((group) => group.name));
+		for (let groupTag of tagSet.values()) {
+			let groupItems = [];
+			for (let item of items.items) {
+				if (!item.tags) {
+					let meta = await fetchMetaCached(item.item.prId);
+					item.tags = new Set(meta.tags);
+				}
+				let matchingTags = tagSet.intersection(item.tags);
+				if (matchingTags.has(groupTag)) {
+					item.division = matchingTags.size;
+					groupItems.push(item);
+				}
+			}
+			items.children.push({
+				level: 1,
+				groupId: groupTag,
+				items: groupItems,
+				dscr: groupTag,
+				total: calcTotal(groupItems),
+				children: []
+			});
+		}
+		let groupedIds = new Set(items.children.map((g) => g.items.map((i) => i.item.prId)).flat());
+		items.items = items.items.filter((i) => !groupedIds.has(i.item.prId));
 	}
 	async function fillTotalsTab() {
 		hideFloatingHelp();
@@ -2817,7 +2894,7 @@
 		[...(await getGlobalTagsAndAndere()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			createTagFilterRow$1(tbody, tagDef);
 		});
-		updateGroupingsFilters(localStorage_default.local.getBudgetSubGroupings());
+		updateGroupingsFilters(storage.local.getBudgetSubGroupings());
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
 		for (let itemGroup of perBudget) displayGroupedBlock(itemGroup, container);
 	}
@@ -2835,7 +2912,7 @@
 		paintTag(tr.querySelector("span"), tagDef, true);
 		let filterButton = tr.querySelector("button.filter");
 		filterButton.onclick = async (ev) => {
-			let groupings = localStorage_default.local.getBudgetSubGroupings();
+			let groupings = storage.local.getBudgetSubGroupings();
 			if (!groupings.find((g) => g.name == tagDef.name)) {
 				let grouping = {
 					groupingType: "tag",
@@ -2843,7 +2920,7 @@
 				};
 				groupings.push(grouping);
 			} else groupings = groupings.filter((g) => g.name != tagDef.name);
-			localStorage_default.local.saveBudgetSubGroupings(groupings);
+			storage.local.saveBudgetSubGroupings(groupings);
 			updateGroupingsFilters(groupings);
 		};
 	}
@@ -2859,7 +2936,7 @@
 	}
 	function displayGroupedBlock(itemGroup, container) {
 		let details = emmet.appendChild(container, `
-        div.details.midBlue>
+        div.details.midBlue.indent${itemGroup.level}>
             div.summary>
                 div.group.flexInline>(
                     (
@@ -2870,7 +2947,7 @@
                     span.price{${formatPrice(itemGroup.total)}}
                 )
         `).first;
-		itemGroup.items.sort((a, b) => a.prId.localeCompare(b.prId));
+		itemGroup.items.sort((a, b) => a.item.prId.localeCompare(b.item.prId));
 		for (let item of itemGroup.items) displayItem(details, item);
 		details.querySelectorAll(":scope > .summary").forEach((s) => {
 			s.onclick = () => {
@@ -2880,18 +2957,18 @@
 		for (let child of itemGroup.children) displayGroupedBlock(child, details);
 	}
 	function displayItem(details, item) {
-		let itemId = item.prId + "_" + item.itemNo;
+		let itemId = item.item.prId + "_" + item.item.itemNo;
 		emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (
                 span>(
                     (
-                        button.naked.midBlueText[popovertarget="popover${itemId}" style="anchor-name: --anchor${itemId};"]{${item.prId}}
+                        button.naked.midBlueText[popovertarget="popover${itemId}" style="anchor-name: --anchor${itemId};"]{${item.item.prId}}
                     )+
-                    span.descr{${item.title}}
+                    span.descr{${item.item.title}}
                 )
             )+
-            span.price{${formatPrice(item.bruto)}}
+            span.price{${formatPrice(item.item.bruto)}}
         )
     `).first;
 	}

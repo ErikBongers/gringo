@@ -7,8 +7,7 @@ import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchMetaCached, getGlobalTags, PrMeta, TagDef} from "./requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
-import {BudgetGrouping} from "../db/localStorage";
-import storage from "../db/localStorage";
+import {BudgetGrouping, storage} from "../db/localStorage";
 
 
 async function onRefreshClicked(ev: PointerEvent) {
@@ -24,12 +23,15 @@ async function createProjectItemGroups(expenses: JsonPrItem[]) {
 
     let projectItemGroups: PrItemGroup[] = [...perProject.entries()].map((mappedItem) => {
         let groupId = mappedItem[0];
-        let items = mappedItem[1];
+        let items = mappedItem[1].map(item => {
+            return {item, division:1} satisfies GroupItem as GroupItem;
+        });
         let dscr = groupId;
         let total = items
-            .map(i => i.bruto)
+            .map(i => i.item.bruto)
             .reduce((a, b) => a + b, 0);
         return {
+            level: 0,
             groupId,
             items,
             dscr: groupId == "" ? "--nog geen project--" : dscr,
@@ -40,18 +42,25 @@ async function createProjectItemGroups(expenses: JsonPrItem[]) {
     return projectItemGroups;
 }
 
+function calcTotal(items: GroupItem[]) {
+    return items
+        .map(i => i.item.bruto/i.division)
+        .reduce((a, b) => a + b, 0);
+}
+
 async function createBudgetItemGroups(expenses: JsonPrItem[]) {
     let perBudget = await getItemsPerGroup(expenses, async (item) => {
         return item.budget;
     }, []);
     let budgetItemGroups: PrItemGroup[] = [...perBudget.entries()].map((mappedItem) => {
         let groupId = mappedItem[0];
-        let items = mappedItem[1];
+        let items = mappedItem[1].map(item => {
+            return {item, division:1} satisfies GroupItem as GroupItem;
+        });
         let dscr = groupId + " " + (getBudgetDscr(groupId) ?? "--geen omschrijving--");
-        let total = items
-            .map(i => i.bruto)
-            .reduce((a, b) => a + b, 0);
+        let total = calcTotal(items);
         return {
+            level: 0,
             groupId,
             items,
             dscr: groupId == "" ? "--nog geen budget--" : dscr,
@@ -59,7 +68,42 @@ async function createBudgetItemGroups(expenses: JsonPrItem[]) {
             children: [],
         }
     });
+    let groupSettings = storage.local.getBudgetSubGroupings();
+    for(let itemGroup of budgetItemGroups) {
+        await createBudgetSubGroupings(itemGroup, groupSettings);
+    }
     return budgetItemGroups;
+}
+
+async function createBudgetSubGroupings(items: PrItemGroup, groupSettings: BudgetGrouping[]) {
+    let tagSet = new Set(groupSettings
+        .filter(group => group.groupingType == "tag")
+        .map(group => group.name));
+
+    for (let groupTag of tagSet.values()) {
+        let groupItems: GroupItem[] = [];
+        for (let item of items.items) {
+            if(!item.tags) {
+                let meta = await fetchMetaCached(item.item.prId);
+                item.tags = new Set(meta.tags);
+            }
+            let matchingTags = tagSet.intersection(item.tags);
+            if (matchingTags.has(groupTag)) {
+                item.division = matchingTags.size; //note that we may be sharing this GroupItem for multiple groups. Use structuredClone(), or a custom clone if needed.
+                groupItems.push(item);
+            }
+        }
+        items.children.push({
+            level: 1,
+            groupId: groupTag,
+            items: groupItems,
+            dscr: groupTag,
+            total: calcTotal(groupItems),
+            children: [],
+        });
+    }
+    let groupedIds = new Set(items.children.map(g => g.items.map(i => i.item.prId)).flat());
+    items.items = items.items.filter(i => !groupedIds.has(i.item.prId));
 }
 
 export async function fillTotalsTab() {
@@ -164,11 +208,18 @@ async function displayPerProject(wrapper: HTMLElement, perProject: PrItemGroup[]
     }
 }
 
+export interface GroupItem {
+    item: JsonPrItem,
+    division: number, //if total is split over multiple groups
+    tags?: Set<string>,
+}
+
 export interface PrItemGroup {
+    level: number,
     groupId: string,
     dscr: string,
     total: number,
-    items: JsonPrItem[],
+    items: GroupItem[],
     children: PrItemGroup[],
 }
 
@@ -256,7 +307,7 @@ function updateGroupingsFilters(groupings: BudgetGrouping[]) {
 
 function displayGroupedBlock(itemGroup: PrItemGroup, container: HTMLElement) {
     let details = emmet.appendChild(container, `
-        div.details.midBlue>
+        div.details.midBlue.indent${itemGroup.level}>
             div.summary>
                 div.group.flexInline>(
                     (
@@ -267,7 +318,7 @@ function displayGroupedBlock(itemGroup: PrItemGroup, container: HTMLElement) {
                     span.price{${formatPrice(itemGroup.total)}}
                 )
         `).first as HTMLDetailsElement;
-    itemGroup.items.sort((a,b) => a.prId.localeCompare(b.prId));
+    itemGroup.items.sort((a,b) => a.item.prId.localeCompare(b.item.prId));
     for (let item of itemGroup.items) {
         displayItem(details, item);
     }
@@ -283,19 +334,19 @@ function displayGroupedBlock(itemGroup: PrItemGroup, container: HTMLElement) {
     }
 }
 
-function displayItem(details: HTMLDetailsElement, item: JsonPrItem) {
-    let itemId = item.prId + "_" + item.itemNo;
+function displayItem(details: HTMLDetailsElement, item: GroupItem) {
+    let itemId = item.item.prId + "_" + item.item.itemNo;
     let row = emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (
                 span>(
                     (
-                        button.naked.midBlueText[popovertarget="popover${itemId}" style="anchor-name: --anchor${itemId};"]{${item.prId}}
+                        button.naked.midBlueText[popovertarget="popover${itemId}" style="anchor-name: --anchor${itemId};"]{${item.item.prId}}
                     )+
-                    span.descr{${item.title}}
+                    span.descr{${item.item.title}}
                 )
             )+
-            span.price{${formatPrice(item.bruto)}}
+            span.price{${formatPrice(item.item.bruto)}}
         )
     `).first as HTMLDivElement;
 }

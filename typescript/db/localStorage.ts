@@ -14,7 +14,7 @@ function saveBudgetSubGroupings(groupings: BudgetGrouping[]) {
     localStorage.setItem("budgetSubGroupings", JSON.stringify(groupings));
 }
 
-export default {
+export const storage = {
     local: {
         getBudgetSubGroupings,
         saveBudgetSubGroupings,
