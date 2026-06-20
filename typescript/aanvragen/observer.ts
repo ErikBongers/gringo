@@ -63,10 +63,17 @@ function checkAndSetListPageDecorated(el: HTMLElement) {
     return isDecorated;
 }
 
+function checkandGetTabsFilled() {
+    let tabs= document.querySelector("nav.requests-nav div.tablist-element") as HTMLElement | null;
+    if(tabs?.querySelectorAll("div").length == 0)
+        return null;
+    return tabs;
+}
+
 function checkDecorations() {
     checkAndSetDecoration(document.querySelector("body"), decorateBody);
     checkAndSetDecoration(document.querySelector("main"), decorateMain);
-    checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
+    checkAndSetDecoration(checkandGetTabsFilled(), decorateTabs);
     checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
     checkAndSetDecoration(getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
 }
