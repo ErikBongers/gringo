@@ -12,10 +12,10 @@
     "noImplicitThis": true,
     "noImplicitReturns": true,
     "noImplicitAny": true,
-    "strictNullChecks": true,
+    "strict": true,
     "paths": {
     },
     "typeRoots": ["node_modules/@types"],
-    "types": [ "chrome", "node" ],
+    "types": [ "chrome", "node" ]
   },
 }

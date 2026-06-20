@@ -352,14 +352,14 @@ async function decorateSearchPanel() {
         inputCurrentPage.dataset.gringoCurrentPage = "";
     }
     [...requestSearchPanel.querySelectorAll(".search-button-container button")]
-        .forEach((button: HTMLButtonElement) => {
+        .forEach((button: Element) => {
             button.addEventListener("click", onAribaFilterButton);
         });
 }
 
 function scrapePRs() {
     gringo("Scraping...");
-    let requestsDivs = document.querySelectorAll("request-info-item");
+    let requestsDivs = document.querySelectorAll("request-info-item") as NodeListOf<HTMLElement>;
     let infos = [...requestsDivs].map(scrapeInfoItem);
     gringo(`Found ${infos.length} items.`);
     if(infos.length > 0)
@@ -374,7 +374,7 @@ export type RequestBasicInfo = {
 
 }
 
-function scrapeInfoItem(requestDiv: HTMLDivElement): RequestBasicInfo {
+function scrapeInfoItem(requestDiv: HTMLElement): RequestBasicInfo {
     let id = requestDiv.id.substring("request-".length);
     let divOrders = requestDiv.querySelector(".item-orders");
     let orderAnchors: HTMLAnchorElement[] = [];
@@ -556,7 +556,7 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
         await updatePrLine(request, meta);
     });
 
-    metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
+    metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev: Event) => {
         ev.stopPropagation();
     };
 

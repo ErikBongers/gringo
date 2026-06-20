@@ -113,8 +113,8 @@ export class PriceData {
             if(this.expandedPrItem)
                 this.expandedPrItem.item.quantity = this._netto!;
     }
-    private _bruto: number | null;
-    private _netto: number | null;
+    private _bruto: number | null = null;
+    private _netto: number | null = null;
     private _btw: number;
     private expandedPrItem: ExpandedCompactPrItem | null;
 

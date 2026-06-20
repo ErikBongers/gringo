@@ -432,7 +432,7 @@
 		onPageRefreshedCallback;
 		pageFilter;
 		onMutation;
-		observer;
+		observer = null;
 		trackModal;
 		constructor(onPageChangedCallback, pageFilter, onMutationCallback, trackModal = false, onPageRefreshedCallback) {
 			this.onPageChangedCallback = onPageChangedCallback;
@@ -473,7 +473,7 @@
 				console.error("Can't attach observer to element.");
 				return;
 			}
-			this.observer.observe(element, {
+			this.observer?.observe(element, {
 				attributes: false,
 				childList: true,
 				subtree: true
@@ -2295,8 +2295,8 @@
 			if (this._bruto) this._netto = this._bruto / (1 + this._btw / 100);
 			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
 		}
-		_bruto;
-		_netto;
+		_bruto = null;
+		_netto = null;
 		_btw;
 		expandedPrItem;
 		constructor(btw, expandedPrItem) {
