@@ -308,6 +308,9 @@ request-info-item.hidden {
     background-color: transparent;
     padding-inline: 5ch;
     padding-block-end: 4rem;
+    & .totalsHeader {
+        padding-inline: 0.5ch;
+    }
     & div.details {
         padding-inline: .5ch;
         & div.summary {
@@ -372,7 +375,11 @@ request-info-item.hidden {
         }
     }
     & span.price {
-        margin-inline-start: auto;
+        width: 11ch;
+        text-align: right;
+    }
+    & span.dscr {
+        margin-inline-end: auto;
     }
     & .midBlue {
         background-color: var(--mid-blue);

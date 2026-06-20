@@ -2702,6 +2702,62 @@
 	} };
 	//#endregion
 	//#region typescript/aanvragen/totalsTab.ts
+	async function fillTotalsTab() {
+		hideFloatingHelp();
+		let totalsTab = document.querySelector("div.gringo.totalsTab");
+		totalsTab.innerHTML = "";
+		emmet.appendChild(totalsTab, `
+        (button.naked.refresh>i.fa.fa-repeat)+
+        div.infoContainer+
+        div.tabsContainer+
+        div.popoversContainer
+    `);
+		let popoversContainer = totalsTab.querySelector("div.popoversContainer");
+		let button = totalsTab.querySelector("button.refresh");
+		button.onclick = (ev) => onRefreshClicked(ev);
+		let infoContainer = totalsTab.querySelector("div.infoContainer");
+		let tabsContainer = totalsTab.querySelector("div.tabsContainer");
+		let infoBlock = createInfoBlock(infoContainer);
+		infoBlock.title.textContent = "Totalen";
+		infoBlock.info.textContent = "Ophalen van gegevens....";
+		emmet.appendChild(tabsContainer, `
+        div.perProjectTab+div.perBudgetTab
+    `);
+		let tabs = new Tabs(tabsContainer, [{
+			btnId: "btnTabPerProject",
+			tabId: "tabPerProject",
+			btnContent: "Per project"
+		}, {
+			btnId: "btnTabPerBudget",
+			tabId: "tabPerBudget",
+			btnContent: "Per budget"
+		}]);
+		emmet.appendChild(tabsContainer, `
+        div#tabPerProject+
+        div#tabPerBudget
+    `);
+		let tabPerProject = tabsContainer.querySelector("div#tabPerProject");
+		let tabPerBudget = tabsContainer.querySelector("div#tabPerBudget");
+		tabs.switch(0);
+		let expenses = await getExpenses(infoBlock);
+		expenses.sort((a, b) => a.budget.localeCompare(b.budget));
+		infoBlock.info.innerHTML = "";
+		await displayPerProject(tabPerProject, await createProjectItemGroups(expenses));
+		let budgetItemGroups = await createBudgetItemGroups(expenses);
+		await displayPerBudget(tabPerBudget, budgetItemGroups);
+		await createPopovers(popoversContainer, expenses);
+		let cloudBudgets = {
+			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+			perBudget: budgetItemGroups.map((group) => {
+				return {
+					budget: group.groupId,
+					grant: "todo!!!",
+					total: group.total
+				};
+			})
+		};
+		await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
+	}
 	async function onRefreshClicked(ev) {
 		sessionStorage.removeItem("jsonPrData");
 		await fillTotalsTab();
@@ -2785,62 +2841,6 @@
 		let groupedIds = new Set(items.children.map((g) => g.items.map((i) => i.item.prId)).flat());
 		items.items = items.items.filter((i) => !groupedIds.has(i.item.prId));
 	}
-	async function fillTotalsTab() {
-		hideFloatingHelp();
-		let totalsTab = document.querySelector("div.gringo.totalsTab");
-		totalsTab.innerHTML = "";
-		emmet.appendChild(totalsTab, `
-        (button.naked.refresh>i.fa.fa-repeat)+
-        div.infoContainer+
-        div.tabsContainer+
-        div.popoversContainer
-    `);
-		let popoversContainer = totalsTab.querySelector("div.popoversContainer");
-		let button = totalsTab.querySelector("button.refresh");
-		button.onclick = (ev) => onRefreshClicked(ev);
-		let infoContainer = totalsTab.querySelector("div.infoContainer");
-		let tabsContainer = totalsTab.querySelector("div.tabsContainer");
-		let infoBlock = createInfoBlock(infoContainer);
-		infoBlock.title.textContent = "Totalen";
-		infoBlock.info.textContent = "Ophalen van gegevens....";
-		emmet.appendChild(tabsContainer, `
-        div.perProjectTab+div.perBudgetTab
-    `);
-		let tabs = new Tabs(tabsContainer, [{
-			btnId: "btnTabPerProject",
-			tabId: "tabPerProject",
-			btnContent: "Per project"
-		}, {
-			btnId: "btnTabPerBudget",
-			tabId: "tabPerBudget",
-			btnContent: "Per budget"
-		}]);
-		emmet.appendChild(tabsContainer, `
-        div#tabPerProject+
-        div#tabPerBudget
-    `);
-		let tabPerProject = tabsContainer.querySelector("div#tabPerProject");
-		let tabPerBudget = tabsContainer.querySelector("div#tabPerBudget");
-		tabs.switch(0);
-		let expenses = await getExpenses(infoBlock);
-		expenses.sort((a, b) => a.budget.localeCompare(b.budget));
-		infoBlock.info.innerHTML = "";
-		await displayPerProject(tabPerProject, await createProjectItemGroups(expenses));
-		let budgetItemGroups = await createBudgetItemGroups(expenses);
-		await displayPerBudget(tabPerBudget, budgetItemGroups);
-		await createPopovers(popoversContainer, expenses);
-		let cloudBudgets = {
-			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-			perBudget: budgetItemGroups.map((group) => {
-				return {
-					budget: group.groupId,
-					grant: "todo!!!",
-					total: group.total
-				};
-			})
-		};
-		await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
-	}
 	async function createPopovers(popoversContainer, expenses) {
 		for (let item of expenses) {
 			let meta = await fetchMetaCached(item.prId);
@@ -2896,6 +2896,16 @@
 		});
 		updateGroupingsFilters(storage.local.getBudgetSubGroupings());
 		let container = emmet.appendChild(wrapper, "div.perProject").first;
+		let subGroepLabels = storage.local.getBudgetSubGroupings().filter((s) => s.groupingType == "tag").map((s) => {
+			return `+span.price{${s.name}}`;
+		}).join("");
+		emmet.appendChild(container, `
+        div.flexRow.totalsHeader>(
+            span.dscr+
+            span.price{Totaal}
+            ${subGroepLabels}
+        )
+    `);
 		for (let itemGroup of perBudget) displayGroupedBlock(itemGroup, container);
 	}
 	function createTagFilterRow$1(tbody, tagDef) {
@@ -2935,16 +2945,16 @@
 		}
 	}
 	function displayGroupedBlock(itemGroup, container) {
+		let subGroupPriceSpans = itemGroup.children.map((subGroup) => {
+			return `+span.price{${formatPrice(subGroup.total)}}`;
+		}).join("");
 		let details = emmet.appendChild(container, `
         div.details.midBlue.indent${itemGroup.level}>
             div.summary>
                 div.group.flexInline>(
-                    (
-                        span>(
-                            span.dscr{${itemGroup.dscr}}
-                        )
-                    )+
+                    span.dscr{${itemGroup.dscr}}+
                     span.price{${formatPrice(itemGroup.total)}}
+                    ${subGroupPriceSpans}                    
                 )
         `).first;
 		itemGroup.items.sort((a, b) => a.item.prId.localeCompare(b.item.prId));

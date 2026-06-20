@@ -256,6 +256,20 @@ async function displayPerBudget(wrapper: HTMLElement, perBudget:  PrItemGroup[])
     updateGroupingsFilters(storage.local.getBudgetSubGroupings());
 
     let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement; //todo: rename css class?
+    let groupSettings = storage.local.getBudgetSubGroupings();
+    let subGroepLabels = groupSettings
+        .filter(s => s.groupingType == 'tag')
+        .map(s => {
+            return `+span.price{${s.name}}`
+        })
+        .join("");
+    emmet.appendChild(container, `
+        div.flexRow.totalsHeader>(
+            span.dscr+
+            span.price{Totaal}
+            ${subGroepLabels}
+        )
+    `)
     for(let itemGroup of perBudget) {
         displayGroupedBlock(itemGroup, container);
     }
@@ -305,16 +319,16 @@ function updateGroupingsFilters(groupings: BudgetGrouping[]) {
 }
 
 function displayGroupedBlock(itemGroup: PrItemGroup, container: HTMLElement) {
+    let subGroupPriceSpans = itemGroup.children.map(subGroup => {
+        return `+span.price{${formatPrice(subGroup.total)}}`;
+    }).join("");
     let details = emmet.appendChild(container, `
         div.details.midBlue.indent${itemGroup.level}>
             div.summary>
                 div.group.flexInline>(
-                    (
-                        span>(
-                            span.dscr{${itemGroup.dscr}}
-                        )
-                    )+
+                    span.dscr{${itemGroup.dscr}}+
                     span.price{${formatPrice(itemGroup.total)}}
+                    ${subGroupPriceSpans}                    
                 )
         `).first as HTMLDetailsElement;
     itemGroup.items.sort((a,b) => a.item.prId.localeCompare(b.item.prId));

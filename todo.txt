@@ -3,10 +3,11 @@
 
 * PR48767: lots of items, only the 1st has bruto/netto.
 
-* subgroups:
- > use the generic nesting I created for budgets.
+* subgroups: add columns?
+
 
 * budget depends on grants? Include them in budget key.
+  > projects don't, so this is less critical or urgent?
 
 * quantity field updates the server on blur. Postpone the blur until netto or bruto are blurred to avoid server roundtrip on each character.
 
