@@ -2743,8 +2743,7 @@
 		expenses.sort((a, b) => a.budget.localeCompare(b.budget));
 		infoBlock.info.innerHTML = "";
 		await displayPerProject(tabPerProject, await createProjectItemGroups(expenses));
-		let budgetItemGroups = await createBudgetItemGroups(expenses);
-		await displayPerBudget(tabPerBudget, budgetItemGroups);
+		let budgetItemGroups = await displayPerBudget(tabPerBudget, expenses);
 		await createPopovers(popoversContainer, expenses);
 		let cloudBudgets = {
 			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -2883,19 +2882,8 @@
 		alltags.set(andereTag.name, andereTag);
 		return alltags;
 	}
-	async function displayPerBudget(wrapper, perBudget) {
-		emmet.appendChild(wrapper, `h2{Per Budget}`);
-		let subGroupsContainer = emmet.appendChild(wrapper, `
-        details.subGroups>
-            summary{Ondergroeperingen}+
-            div.subGroupsContainer
-    `).first.querySelector(".subGroupsContainer");
-		let tbody = emmet.appendChild(subGroupsContainer, "table.budgetGroupings>tbody").last;
-		[...(await getGlobalTagsAndAndere()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			createTagFilterRow$1(tbody, tagDef);
-		});
-		updateGroupingsFilters(storage.local.getBudgetSubGroupings());
-		let container = emmet.appendChild(wrapper, "div.perProject").first;
+	async function fillBudgetLines(container, perBudget) {
+		container.innerHTML = "";
 		let subGroepLabels = storage.local.getBudgetSubGroupings().filter((s) => s.groupingType == "tag").map((s) => {
 			return `+span.price{${s.name}}`;
 		}).join("");
@@ -2907,8 +2895,25 @@
         )
     `);
 		for (let itemGroup of perBudget) displayGroupedBlock(itemGroup, container);
+		return perBudget;
 	}
-	function createTagFilterRow$1(tbody, tagDef) {
+	async function displayPerBudget(wrapper, expenses) {
+		emmet.appendChild(wrapper, `h2{Per Budget}`);
+		let subGroupsCollapse = emmet.appendChild(wrapper, `
+        details.subGroups>
+            summary{Ondergroeperingen}+
+            div.subGroupsContainer
+    `).first;
+		let container = emmet.appendChild(wrapper, "div.perProject").first;
+		let subGroupsContainer = subGroupsCollapse.querySelector(".subGroupsContainer");
+		let tbody = emmet.appendChild(subGroupsContainer, "table.budgetGroupings>tbody").last;
+		[...(await getGlobalTagsAndAndere()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			createTagFilterRow$1(tbody, tagDef, container, expenses);
+		});
+		updateGroupingsFilters(storage.local.getBudgetSubGroupings());
+		return await fillBudgetLines(container, await createBudgetItemGroups(expenses));
+	}
+	async function createTagFilterRow$1(tbody, tagDef, container, expenses) {
 		let tr = emmet.appendChild(tbody, `tr`).first;
 		tr.dataset.groupName = tagDef.name;
 		emmet.appendChild(tr, `
@@ -2932,6 +2937,7 @@
 			} else groupings = groupings.filter((g) => g.name != tagDef.name);
 			storage.local.saveBudgetSubGroupings(groupings);
 			updateGroupingsFilters(groupings);
+			await fillBudgetLines(container, await createBudgetItemGroups(expenses));
 		};
 	}
 	function updateGroupingsFilters(groupings) {

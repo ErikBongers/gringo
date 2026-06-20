@@ -60,8 +60,7 @@ export async function fillTotalsTab() {
     let projectItemGroups = await createProjectItemGroups(expenses);
     await displayPerProject(tabPerProject, projectItemGroups);
 
-    let budgetItemGroups = await createBudgetItemGroups(expenses);
-    await displayPerBudget(tabPerBudget, budgetItemGroups);
+    let budgetItemGroups = await displayPerBudget(tabPerBudget, expenses);
 
     await createPopovers(popoversContainer, expenses);
     let cloudBudgets: CloudBudgets = {
@@ -236,26 +235,8 @@ async function getGlobalTagsAndAndere() {
     return alltags;
 }
 
-async function displayPerBudget(wrapper: HTMLElement, perBudget:  PrItemGroup[]) {
-    emmet.appendChild(wrapper, `h2{Per Budget}`)
-    let subGroupsCollapse = emmet.appendChild(wrapper, `
-        details.subGroups>
-            summary{Ondergroeperingen}+
-            div.subGroupsContainer
-    `).first as HTMLDetailsElement;
-    //add checkboxes for tags
-    //also add a checkbox for "--rest--"
-    let subGroupsContainer = subGroupsCollapse.querySelector(".subGroupsContainer") as HTMLDivElement;
-    let tbody = emmet.appendChild(subGroupsContainer,'table.budgetGroupings>tbody').last as HTMLTableSectionElement;
-    let tagDefs = await getGlobalTagsAndAndere();
-    [...tagDefs.values()]
-        .sort((a, b) => a.order - b.order)
-        .forEach(tagDef => {
-            createTagFilterRow(tbody, tagDef);
-        });
-    updateGroupingsFilters(storage.local.getBudgetSubGroupings());
-
-    let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement; //todo: rename css class?
+async function fillBudgetLines(container: HTMLDivElement, perBudget: PrItemGroup[]) {
+    container.innerHTML = "";
     let groupSettings = storage.local.getBudgetSubGroupings();
     let subGroepLabels = groupSettings
         .filter(s => s.groupingType == 'tag')
@@ -270,12 +251,36 @@ async function displayPerBudget(wrapper: HTMLElement, perBudget:  PrItemGroup[])
             ${subGroepLabels}
         )
     `)
-    for(let itemGroup of perBudget) {
+    for (let itemGroup of perBudget) {
         displayGroupedBlock(itemGroup, container);
     }
+    return perBudget;
 }
 
-function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef) {
+async function displayPerBudget(wrapper: HTMLElement, expenses: JsonPrItem[]) {
+    emmet.appendChild(wrapper, `h2{Per Budget}`)
+    let subGroupsCollapse = emmet.appendChild(wrapper, `
+        details.subGroups>
+            summary{Ondergroeperingen}+
+            div.subGroupsContainer
+    `).first as HTMLDetailsElement;
+    let container = emmet.appendChild(wrapper, "div.perProject").first as HTMLDivElement; //todo: rename css class?
+    //add checkboxes for tags
+    //also add a checkbox for "--rest--"
+    let subGroupsContainer = subGroupsCollapse.querySelector(".subGroupsContainer") as HTMLDivElement;
+    let tbody = emmet.appendChild(subGroupsContainer,'table.budgetGroupings>tbody').last as HTMLTableSectionElement;
+    let tagDefs = await getGlobalTagsAndAndere();
+    [...tagDefs.values()]
+        .sort((a, b) => a.order - b.order)
+        .forEach(tagDef => {
+            createTagFilterRow(tbody, tagDef, container, expenses);
+        });
+    updateGroupingsFilters(storage.local.getBudgetSubGroupings());
+    let perBudget = await createBudgetItemGroups(expenses);
+    return await fillBudgetLines(container, perBudget);
+}
+
+async function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef, container: HTMLDivElement, expenses: JsonPrItem[]) {
     let tr = emmet.appendChild(tbody, `tr`).first as HTMLTableRowElement;
     tr.dataset.groupName = tagDef.name;
     emmet.appendChild(tr, `
@@ -303,7 +308,8 @@ function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef) {
         }
         storage.local.saveBudgetSubGroupings(groupings);
         updateGroupingsFilters(groupings);
-        //todo: update list.
+        let perBudget = await createBudgetItemGroups(expenses);
+        await fillBudgetLines(container, perBudget);
     };
 }
 
