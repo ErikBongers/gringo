@@ -2956,6 +2956,10 @@
 		});
 		for (let child of itemGroup.children) displayGroupedBlock(child, details);
 	}
+	function formatSplitItemPrice(item) {
+		if (item.division > 1) return `${formatPrice(item.item.bruto, "")}/${item.division} = ${formatPrice(item.item.bruto / item.division)}`;
+		else return formatPrice(item.item.bruto / item.division);
+	}
 	function displayItem(details, item) {
 		let itemId = item.item.prId + "_" + item.item.itemNo;
 		emmet.appendChild(details, `
@@ -2968,7 +2972,7 @@
                     span.descr{${item.item.title}}
                 )
             )+
-            span.price{${formatPrice(item.item.bruto)}}
+            span.price{${formatSplitItemPrice(item)}}
         )
     `).first;
 	}

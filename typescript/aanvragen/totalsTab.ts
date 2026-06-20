@@ -9,6 +9,73 @@ import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
 import {BudgetGrouping, storage} from "../db/localStorage";
 
+export interface BudgetLine {
+    budget: string,
+    grant: string,
+    total: number,
+}
+
+export interface CloudBudgets {
+    timestamp: string,
+    perBudget: BudgetLine[]
+}
+
+export async function fillTotalsTab() {
+    hideFloatingHelp();
+    let totalsTab = document.querySelector("div.gringo.totalsTab") as HTMLElement;
+    totalsTab.innerHTML = "";
+    emmet.appendChild(totalsTab, `
+        (button.naked.refresh>i.fa.fa-repeat)+
+        div.infoContainer+
+        div.tabsContainer+
+        div.popoversContainer
+    `);
+    let popoversContainer = totalsTab.querySelector("div.popoversContainer") as HTMLDivElement;
+    let button = totalsTab.querySelector("button.refresh") as HTMLButtonElement;
+    button.onclick = (ev) => onRefreshClicked(ev);
+    let infoContainer = totalsTab.querySelector("div.infoContainer") as HTMLElement;
+    let tabsContainer = totalsTab.querySelector("div.tabsContainer") as HTMLElement;
+    let infoBlock = createInfoBlock(infoContainer);
+    infoBlock.title.textContent = "Totalen";
+    infoBlock.info.textContent = "Ophalen van gegevens....";
+    emmet.appendChild(tabsContainer, `
+        div.perProjectTab+div.perBudgetTab
+    `);
+    let tabs = new Tabs(tabsContainer, [
+        { btnId: "btnTabPerProject", tabId: "tabPerProject", btnContent: "Per project"},
+        { btnId: "btnTabPerBudget", tabId: "tabPerBudget", btnContent: "Per budget"},
+    ]);
+    emmet.appendChild(tabsContainer, `
+        div#tabPerProject+
+        div#tabPerBudget
+    `);
+    let tabPerProject = tabsContainer.querySelector("div#tabPerProject") as HTMLElement;
+    let tabPerBudget = tabsContainer.querySelector("div#tabPerBudget") as HTMLElement;
+    tabs.switch(0);
+    let expenses = await getExpenses(infoBlock);
+    expenses.sort((a, b) => a.budget.localeCompare(b.budget)); //todo: is this sort needed?
+
+    infoBlock.info.innerHTML = "";
+
+    let projectItemGroups = await createProjectItemGroups(expenses);
+    await displayPerProject(tabPerProject, projectItemGroups);
+
+    let budgetItemGroups = await createBudgetItemGroups(expenses);
+    await displayPerBudget(tabPerBudget, budgetItemGroups);
+
+    await createPopovers(popoversContainer, expenses);
+    let cloudBudgets: CloudBudgets = {
+        timestamp: (new Date()).toISOString(),
+        perBudget: budgetItemGroups.map(group => {
+            return {
+                budget: group.groupId,
+                grant: "todo!!!", //todo.
+                total: group.total
+            }
+        }),
+    };
+    await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
+}
 
 async function onRefreshClicked(ev: PointerEvent) {
     sessionStorage.removeItem("jsonPrData");
@@ -104,74 +171,6 @@ async function createBudgetSubGroupings(items: PrItemGroup, groupSettings: Budge
     }
     let groupedIds = new Set(items.children.map(g => g.items.map(i => i.item.prId)).flat());
     items.items = items.items.filter(i => !groupedIds.has(i.item.prId));
-}
-
-export async function fillTotalsTab() {
-    hideFloatingHelp();
-    let totalsTab = document.querySelector("div.gringo.totalsTab") as HTMLElement;
-    totalsTab.innerHTML = "";
-    emmet.appendChild(totalsTab, `
-        (button.naked.refresh>i.fa.fa-repeat)+
-        div.infoContainer+
-        div.tabsContainer+
-        div.popoversContainer
-    `);
-    let popoversContainer = totalsTab.querySelector("div.popoversContainer") as HTMLDivElement;
-    let button = totalsTab.querySelector("button.refresh") as HTMLButtonElement;
-    button.onclick = (ev) => onRefreshClicked(ev);
-    let infoContainer = totalsTab.querySelector("div.infoContainer") as HTMLElement;
-    let tabsContainer = totalsTab.querySelector("div.tabsContainer") as HTMLElement;
-    let infoBlock = createInfoBlock(infoContainer);
-    infoBlock.title.textContent = "Totalen";
-    infoBlock.info.textContent = "Ophalen van gegevens....";
-    emmet.appendChild(tabsContainer, `
-        div.perProjectTab+div.perBudgetTab
-    `);
-    let tabs = new Tabs(tabsContainer, [
-        { btnId: "btnTabPerProject", tabId: "tabPerProject", btnContent: "Per project"},
-        { btnId: "btnTabPerBudget", tabId: "tabPerBudget", btnContent: "Per budget"},
-    ]);
-    emmet.appendChild(tabsContainer, `
-        div#tabPerProject+
-        div#tabPerBudget
-    `);
-    let tabPerProject = tabsContainer.querySelector("div#tabPerProject") as HTMLElement;
-    let tabPerBudget = tabsContainer.querySelector("div#tabPerBudget") as HTMLElement;
-    tabs.switch(0);
-    let expenses = await getExpenses(infoBlock);
-    expenses.sort((a, b) => a.budget.localeCompare(b.budget)); //todo: is this sort needed?
-
-    infoBlock.info.innerHTML = "";
-
-    let projectItemGroups = await createProjectItemGroups(expenses);
-    await displayPerProject(tabPerProject, projectItemGroups);
-
-    let budgetItemGroups = await createBudgetItemGroups(expenses);
-    await displayPerBudget(tabPerBudget, budgetItemGroups);
-
-    await createPopovers(popoversContainer, expenses);
-    let cloudBudgets: CloudBudgets = {
-        timestamp: (new Date()).toISOString(),
-        perBudget: budgetItemGroups.map(group => {
-            return {
-                budget: group.groupId,
-                grant: "todo!!!", //todo.
-                total: group.total
-            }
-        }),
-    };
-    await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
-}
-
-export interface BudgetLine {
-    budget: string,
-    grant: string,
-    total: number,
-}
-
-export interface CloudBudgets {
-    timestamp: string,
-    perBudget: BudgetLine[]
 }
 
 async function createPopovers(popoversContainer: HTMLDivElement, expenses: JsonPrItem[]) {
@@ -334,6 +333,13 @@ function displayGroupedBlock(itemGroup: PrItemGroup, container: HTMLElement) {
     }
 }
 
+function formatSplitItemPrice(item: GroupItem) {
+    if (item.division > 1)
+        return `${formatPrice(item.item.bruto, "")}/${item.division} = ${formatPrice(item.item.bruto/item.division)}`;
+    else
+        return formatPrice(item.item.bruto/item.division);
+}
+
 function displayItem(details: HTMLDetailsElement, item: GroupItem) {
     let itemId = item.item.prId + "_" + item.item.itemNo;
     let row = emmet.appendChild(details, `
@@ -346,7 +352,7 @@ function displayItem(details: HTMLDetailsElement, item: GroupItem) {
                     span.descr{${item.item.title}}
                 )
             )+
-            span.price{${formatPrice(item.item.bruto)}}
+            span.price{${formatSplitItemPrice(item)}}
         )
     `).first as HTMLDivElement;
 }
