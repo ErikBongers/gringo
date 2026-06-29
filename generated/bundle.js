@@ -61,6 +61,7 @@
 	//#region libs/Emmeter/html.ts
 	let emmet = {
 		create,
+		create2,
 		append,
 		insertBefore,
 		insertAfter,
@@ -79,6 +80,11 @@
 		if (node.id) selector += "#" + node.id;
 		if (node.classList.length > 0) selector += "." + node.classList.join(".");
 		return selector;
+	}
+	function create2(text, onIndex, hook) {
+		let first = appendChild(document.createElement("div"), text, onIndex, hook).first;
+		first.remove();
+		return first;
 	}
 	function create(text, onIndex, hook) {
 		nested = tokenize(text);
