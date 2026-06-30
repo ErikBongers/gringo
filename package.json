@@ -16,6 +16,7 @@
   "type": "module",
   "devDependencies": {
     "@types/chrome": "^0.0.313",
+    "@types/node": "^26.0.1",
     "rolldown": "^1.0.0-beta.8",
     "tsx": "^4.22.4"
   },

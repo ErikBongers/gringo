@@ -1,6 +1,6 @@
 // noinspection DuplicatedCode
 
-import assert from 'node:assert/strict';
+import * as assert from "node:assert";
 import {describe, test} from 'node:test';
 import {Cursor} from "./cursor";
 import {getText, Token, Tokenizer} from "./tokenizer";
