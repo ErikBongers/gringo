@@ -10,7 +10,9 @@
     "noImplicitThis": true,
     "noImplicitReturns": true,
     "noImplicitAny": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "typeRoots": ["node_modules/@types"],
+    "types": [ "chrome", "node" ]
   },
   "files": ["./typescript/plugin_options/options_page.ts"]
 }

@@ -11,7 +11,9 @@
     "noImplicitReturns": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "strict": true
+    "strict": true,
+    "typeRoots": ["node_modules/@types"],
+    "types": [ "chrome", "node" ]
   },
   "files": ["./typescript/serviceworker.ts"]
 }
