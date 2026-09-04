@@ -1,3 +1,44 @@
+* Fetch full table?
+  more than 200 PRs.
+
+* Totals to spreadsheet.
+  > make total fields calculated?
+
+* temp popup when copy to clipboard clicked
+* Solucious: (dit zijn zoekresultaten van artikels – is geen form!
+  Nt alcohol:
+  https://s1-eu.ariba.com/gb/search/search-result/explore/%22SO2022_1329X%20,%22?realm=744379882-C1
+  alcohol
+  https://s1-eu.ariba.com/gb/search/search-result/explore/%22SO2022_1329D%20,%22?realm=744379882-C1
+  Slechts 1 INPUT veld.
+  Geen plaats voor netto/bruto
+  Search results are list row with up to 3 items?
+  Desnoods netto/bruto onder elkaar?
+  Of net naast elkaar met hoofding on top en BTW daaronder? Niet onder want daar staat calcResult, dus erboven.
+  Bwa…toch onder elkaar, dan kan het veld langer voor berekeningen.
+
+  >>> kopieer de berekeningen naar winkelmandje en form (maar…Bahati voegt soms hetzelfde artikel 2x toe)
+  	Hoe link je een nieuwe lijn aan winkelmandjes lijn? Wel, shoppingCart kan worden opgevraagd, niet? Dus weet je wat de volgende lijn is.
+  	Maar…als iemand een lijn verwijderd klopt de index niet meer….
+
+
+  How to detect if a shoppingCart line is deleted…and which one?
+  	Add extra listeners?
+  	No captured indexes as these will shift when deleting!
+
+* bruto/netto, when copied from q field: consider a dot a thousands point!
+* 1280,00€ : euro at the end.
+  > also as decimal?
+
+* error
+index.js:125 Uncaught (in promise) DataError: Failed to execute 'put' on 'IDBObjectStore': Evaluating the object store's key path did not yield a value.
+    at Proxy.<anonymous> (index.js:125:26)
+    at Proxy.method (index.js:238:20)
+    at set (gringoDb.ts:26:29)Understand this error
+* check of er een bijlage is en gedeeld met team!
+* popup tags: a bit more opacity for the non-selected ones
+
+
 * Ouders mail sturen dat initiatie terug open staat.
   > eerst nog ff testen...
 
