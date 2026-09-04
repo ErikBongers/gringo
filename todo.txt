@@ -1,3 +1,7 @@
+* Budget split columns (in preparation for Excel summing)
+  > move price to right under "Totaal"
+  > split price: fill the 3 (or more) columns: Totaal, MW, BK.
+
 * Fetch full table?
   more than 200 PRs.
 
