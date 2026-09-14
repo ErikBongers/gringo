@@ -83,8 +83,12 @@ export class Tokenizer {
             length: 0,
         };
         let start = this.cursor.pos;
-        while(this.cursor.peek().match(/[0-9.,]/)) {
+        while(this.cursor.peek().match(/[\d., ]/)) {
             this.cursor.next();
+        }
+        //remove trailing spaces
+        while(this.cursor.current == " ") {
+            this.cursor.back();
         }
         token.length = this.cursor.pos - start + 1;
         return token;

@@ -61,6 +61,11 @@ describe('Testing tokenizer', () => {
         token = tok.next(); assert.equal(getText(token!), "1");
         token = tok.next(); assert.equal(getText(token!), "+");
         token = tok.next(); assert.equal(getText(token!), "2");
+        tok = new PeekingTokenizer(` 1 234,56 + 2 `);
+        token = tok.next(); assert.equal(getText(token!), "1 234,56");
+        token = tok.next(); assert.equal(getText(token!), "+");
+        token = tok.next(); assert.equal(getText(token!), "2");
+
     });
 
 });
@@ -92,14 +97,14 @@ describe('Testing Parser', () => {
         res = parser.parse(); assertResult(res, 123.4, []);
         parser = new Parser("1.2.3,4");
         res = parser.parse(); assertResult(res, 123.4, []);
+        parser = new Parser("1 234,5");
+        res = parser.parse(); assertResult(res, 1234.5, []);
     });
 
     test('parens', () => {
         let parser = new Parser("(123)");
         let res: ParseResult;
         res = parser.parse(); assertResult(res, 123, []);
-        parser = new Parser("(123 1)");
-        res = parser.parse(); assertResult(res, 123, [ERR_EXPECTED_CLOSE_PAREN]);
         parser = new Parser("(123");
         res = parser.parse(); assertResult(res, 123, [ERR_EXPECTED_CLOSE_PAREN]);
     });

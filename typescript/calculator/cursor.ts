@@ -6,7 +6,7 @@ export class Cursor {
     constructor(text: string) {
         this.text = text;
         this.length = this.text.length;
-        this.currentPos = -1;
+        this.currentPos = -1; //note that current() will crash by design.
     }
 
     static copy(cursor: Cursor) {
@@ -52,4 +52,9 @@ export class Cursor {
         return this.text.substring(pos, pos+length);
     }
 
+    back() {
+        if(this.currentPos < 0)
+            return;
+        this.currentPos--;
+    }
 }

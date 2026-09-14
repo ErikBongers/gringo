@@ -1,3 +1,14 @@
+* paste bedrag: soms een spatie voor de duizendtallen
+
+* berekening netto bedrag btw splitsing als btw bedrage gekend zijn
+//soluciuos:
+p6=9.74;
+p21=21.65;
+n6=p6/0.06;
+n21=p21/0.21;
+ntot=n6+n21;
+
+
 * Budget split columns (in preparation for Excel summing)
   > move price to right under "Totaal"
   > split price: fill the 3 (or more) columns: Totaal, MW, BK.

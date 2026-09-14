@@ -97,7 +97,7 @@ export class Parser {
             return {result: 0, errors: []};
 
         let text = getText(token);
-        text = text.trim();
+        text = text.replaceAll(" ", "");
         if(text.startsWith("€"))
             text = text.substring(1);
         let decimalPoint: string;
