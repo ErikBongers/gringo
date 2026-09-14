@@ -8,6 +8,7 @@ import {getBudgetCode} from "../aanvragen/aggregate";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 import {RequisitionItem} from "../sap/ShoppingCart";
 import {addNettoAndBrutoFields, BrutoNettoCalcFields, PriceData, triggerFieldChanged} from "../reqForm/observer";
+import {Parser} from "../calculator/parser";
 
 class RequisitionObserver extends PartialUrlObserver {
     constructor() {
@@ -293,7 +294,8 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
 
     updatePrItem(pr, lineEl, index, calcFields); //todo: this sets btw tarif correctly. The name of the function is also ambiguous. What does it update?
     //initial fill of netto and bruto fields.
-    calcFields.entangledFields.context.netto = parseFloat(fieldQuantityInput.value);
+    let parser = new Parser(fieldQuantityInput.value);
+    calcFields.entangledFields.context.netto = parser.parse().result;
     calcFields.entangledFields.setCurrentSource(fieldQuantityInput);
     calcFields.entangledFields.updateOtherFields();
 }

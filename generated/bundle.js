@@ -1919,6 +1919,10 @@
 		getText(pos, length) {
 			return this.text.substring(pos, pos + length);
 		}
+		back() {
+			if (this.currentPos < 0) return;
+			this.currentPos--;
+		}
 	};
 	//#endregion
 	//#region typescript/calculator/tokenizer.ts
@@ -1982,7 +1986,8 @@
 				length: 0
 			};
 			let start = this.cursor.pos;
-			while (this.cursor.peek().match(/[0-9.,]/)) this.cursor.next();
+			while (this.cursor.peek().match(/[\d., ]/)) this.cursor.next();
+			while (this.cursor.current == " ") this.cursor.back();
 			token.length = this.cursor.pos - start + 1;
 			return token;
 		}
@@ -2098,7 +2103,7 @@
 				errors: []
 			};
 			let text = getText(token);
-			text = text.trim();
+			text = text.replaceAll(" ", "");
 			if (text.startsWith("€")) text = text.substring(1);
 			let decimalPoint;
 			let thousandSeparator;
@@ -2641,7 +2646,8 @@
 		});
 		fieldQuantity.classList.add("hidePlusMinButtons");
 		updatePrItem(pr, lineEl, index, calcFields);
-		calcFields.entangledFields.context.netto = parseFloat(fieldQuantityInput.value);
+		let parser = new Parser(fieldQuantityInput.value);
+		calcFields.entangledFields.context.netto = parser.parse().result;
 		calcFields.entangledFields.setCurrentSource(fieldQuantityInput);
 		calcFields.entangledFields.updateOtherFields();
 	}
