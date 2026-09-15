@@ -1,4 +1,9 @@
-* paste bedrag: soms een spatie voor de duizendtallen
+* Fix setting tarif by user. See PR69922
+
+* Abort grouped fetches on page change.
+
+* Temporarily store calculations in localStorage until PR is known.
+* Store calculations in meta.
 
 * berekening netto bedrag btw splitsing als btw bedrage gekend zijn
 //soluciuos:

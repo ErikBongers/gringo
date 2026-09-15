@@ -173,7 +173,6 @@ function decorateRequestList() {
 
     fetchChangedMetas().then(async (changedFiles) => {
         gringo(changedFiles);
-        gringo("Todo: update local cache and UI");
         await saveMetasLocal(changedFiles.map(f => f.data));
         requests.forEach(decoratePr);
         await applyFilters(requests);
@@ -490,8 +489,11 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
         newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}`; //todo: use formatprice()
         newTotal.style.display = "block";
     }
-    else
+    else {
         newTotal.style.display = "none";
+        gringo(`price is 0 for ${request.id}`, request, pr);
+    }
+
 }
 
 export function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
@@ -567,7 +569,7 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     lastField.style.fontSize = ".6rem";
     let moneyAmount = lastField.querySelector("span.money-amount") as HTMLSpanElement;
     emmet.insertAfter(moneyAmount, `
-        div.gringo.blueBlock.listRowTotal{€1.234,56}    
+        div.gringo.blueBlock.listRowTotal{€-.---,--}    
     `);
 }
 

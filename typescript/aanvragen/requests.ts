@@ -2,7 +2,7 @@ import {FetchChain} from "../fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
-import {InfoBlock} from "../globals";
+import {gringo, InfoBlock} from "../globals";
 import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
@@ -111,6 +111,7 @@ export async function fetchRequestList() {
         }
     );
     let requestList: RequestListResponse = await chain.getJson();
+    gringo(`fetchRequestList count: ${requestList.requestList.length}`)
     return requestList
 }
 

@@ -3,7 +3,20 @@ import {formatPrice, getAndSetDecorated, gringo} from "../globals";
 import {PurchaseRequisition, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr, fetchReqContext, fetchShoppingCart} from "../sap/api";
 import {emmet} from "../../libs/Emmeter/html";
-import {Btw, CompactReqItem, CompactRequisition, ExpandedCompactPr, ExpandedCompactPrItem, ExpandedPr, ExpandedPrItem, getBtwTarifsCachedInSession, getPrItemAsset, getPrItemCommodity, getPrItemGrant, getPrItemLedger} from "../aanvragen/requests";
+import {
+    Btw,
+    CompactReqItem,
+    CompactRequisition,
+    ExpandedCompactPr,
+    ExpandedCompactPrItem,
+    ExpandedPr,
+    ExpandedPrItem,
+    getBtwTarifsCachedInSession,
+    getPrItemAsset,
+    getPrItemCommodity,
+    getPrItemGrant,
+    getPrItemLedger
+} from "../aanvragen/requests";
 import {getBudgetCode} from "../aanvragen/aggregate";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 import {RequisitionItem} from "../sap/ShoppingCart";
@@ -56,6 +69,10 @@ function onViewMutation(mutation: MutationRecord) {
 
 let pr: PurchaseRequisition | null = null;
 
+function getUrlPrId() {
+    return location.pathname.split("/").pop()!;
+}
+
 async function decorateViewReqPage() {
     let sectionMain = document.querySelector(`section[role="main"]`) as HTMLElement | null;
     if(!sectionMain)
@@ -66,7 +83,7 @@ async function decorateViewReqPage() {
     gringo("Decorating view aanvraag page...");
 
     let pageName = location.pathname.includes("viewRequisition") ? "viewRequisition" : "requisition";
-    let prId = location.pathname.replace(`/gb/${pageName}/`, "");
+    let prId = getUrlPrId();
     pr = await fetchPr(prId);
     if(!pr)
         return;
@@ -144,25 +161,23 @@ async function decorateReqPage() {
         return;
     gringo("Decorating aanvraag page...");
 
+    let prId = getUrlPrId();
     let reqContext = await fetchReqContext();
-    let prId = reqContext.requisitionId;
-
+    let contextPrId = reqContext.requisitionId;
     let cart = await fetchShoppingCart();
     let compactPr: CompactRequisition;
-    gringo("Cart length:");
-    gringo(cart.length);
-    if(cart.length == 0) { //we're opening an existing pr
-        pr = await fetchPr(prId);
-        if(!pr)
-            return;
-        compactPr = createCompactPr(pr);
-    } else {
+    if (prId == contextPrId && cart.length != 0) { //use shopping cart
         compactPr = {
-            prId,
+            prId: contextPrId,
             items: cart.map(item => {
                 return createCompactReqItemFromCartItem(item);
             })
         };
+    } else {
+        pr = await fetchPr(prId);
+        if (!pr)
+            return;
+        compactPr = createCompactPr(pr);
     }
 
     let totalPriceDiv = document.querySelector("div.block-heading.total-price") as HTMLElement;

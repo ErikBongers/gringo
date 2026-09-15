@@ -986,7 +986,9 @@
 			"orderByField": "daterequested",
 			"ascendingOrder": false
 		});
-		return await chain.getJson();
+		let requestList = await chain.getJson();
+		gringo(`fetchRequestList count: ${requestList.requestList.length}`);
+		return requestList;
 	}
 	async function fetchFullRequest(prId, ctx) {
 		let pr = await fetchPr(prId);
@@ -2445,13 +2447,16 @@
 		return false;
 	}
 	let pr = null;
+	function getUrlPrId() {
+		return location.pathname.split("/").pop();
+	}
 	async function decorateViewReqPage() {
 		let sectionMain = document.querySelector(`section[role="main"]`);
 		if (!sectionMain) return;
 		if (getAndSetDecorated(sectionMain)) return;
 		gringo("Decorating view aanvraag page...");
-		let pageName = location.pathname.includes("viewRequisition") ? "viewRequisition" : "requisition";
-		pr = await fetchPr(location.pathname.replace(`/gb/${pageName}/`, ""));
+		location.pathname.includes("viewRequisition");
+		pr = await fetchPr(getUrlPrId());
 		if (!pr) return;
 		let compactPr = {
 			prId: pr.reqId,
@@ -2511,21 +2516,21 @@
 		if (!sectionMain) return;
 		if (getAndSetDecorated(sectionMain)) return;
 		gringo("Decorating aanvraag page...");
-		let prId = (await fetchReqContext()).requisitionId;
+		let prId = getUrlPrId();
+		let contextPrId = (await fetchReqContext()).requisitionId;
 		let cart = await fetchShoppingCart();
 		let compactPr;
-		gringo("Cart length:");
-		gringo(cart.length);
-		if (cart.length == 0) {
-			pr = await fetchPr(prId);
-			if (!pr) return;
-			compactPr = createCompactPr(pr);
-		} else compactPr = {
-			prId,
+		if (prId == contextPrId && cart.length != 0) compactPr = {
+			prId: contextPrId,
 			items: cart.map((item) => {
 				return createCompactReqItemFromCartItem(item);
 			})
 		};
+		else {
+			pr = await fetchPr(prId);
+			if (!pr) return;
+			compactPr = createCompactPr(pr);
+		}
 		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
 		totalPriceDiv.style.display = "none";
 		emmet.insertAfter(totalPriceDiv, `
@@ -3146,7 +3151,6 @@
 		let requests = scrapePRs();
 		fetchChangedMetas().then(async (changedFiles) => {
 			gringo(changedFiles);
-			gringo("Todo: update local cache and UI");
 			await saveMetasLocal(changedFiles.map((f) => f.data));
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
@@ -3378,11 +3382,15 @@
 		if (!metaWrapper) return;
 		await updateMetaFields(metaWrapper, meta);
 		let newTotal = reqDiv.querySelector("div.gringo.listRowTotal");
-		let { total, currencySymbel } = calcPrTotal(await createExpandedCompactPr(createCompactPr(await fetchPr(request.id))));
+		let pr = await fetchPr(request.id);
+		let { total, currencySymbel } = calcPrTotal(await createExpandedCompactPr(createCompactPr(pr)));
 		if (total != 0) {
 			newTotal.textContent = `${currencySymbel}${priceFormatter$1.format(total)}`;
 			newTotal.style.display = "block";
-		} else newTotal.style.display = "none";
+		} else {
+			newTotal.style.display = "none";
+			gringo(`price is 0 for ${request.id}`, request, pr);
+		}
 	}
 	function paintTag(tagElement, tagDef, selected) {
 		tagElement.innerText = tagDef.name;
@@ -3445,7 +3453,7 @@
 		lastField.style.fontSize = ".6rem";
 		let moneyAmount = lastField.querySelector("span.money-amount");
 		emmet.insertAfter(moneyAmount, `
-        div.gringo.blueBlock.listRowTotal{€1.234,56}    
+        div.gringo.blueBlock.listRowTotal{€-.---,--}    
     `);
 	}
 	async function onSelectProjectClick(meta, select) {
