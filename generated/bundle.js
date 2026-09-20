@@ -971,23 +971,30 @@
 	//#endregion
 	//#region typescript/aanvragen/requests.ts
 	let globalBtwTarifs = null;
-	async function fetchRequestList() {
-		let chain = new FetchChain();
-		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
-		let userInfo = chain.getJson();
-		if (!userInfo) console.error("gringo: could not get userInfo.");
-		let nowStr = (/* @__PURE__ */ new Date()).toISOString().replaceAll("T", " ").split(".")[0] + " GMT";
-		await chain.post(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435`, {
+	async function fetchRequestListChunk(chain, userInfo, zSince) {
+		if (!zSince) zSince = (/* @__PURE__ */ new Date()).toISOString().replaceAll("T", " ").split(".")[0] + " GMT";
+		await chain.post(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo.hashedUser}/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435`, {
 			"searchFilters": {
 				"LastUpdatedFromDate": "2026-02-17 23:00:00 GMT",
-				"LastUpdatedToDate": nowStr
+				"LastUpdatedToDate": zSince
 			},
 			"requestTypeFilter": "all",
 			"orderByField": "daterequested",
 			"ascendingOrder": false
 		});
-		let requestList = await chain.getJson();
-		gringo(`fetchRequestList count: ${requestList.requestList.length}`);
+		return await chain.getJson();
+	}
+	async function fetchRequestList() {
+		let chain = new FetchChain();
+		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
+		let userInfo = chain.getJson();
+		if (userInfo == null) throw new Error("gringo: could not get userInfo.");
+		let requestList = await fetchRequestListChunk(chain, userInfo);
+		if (requestList.requestList.length > 0) while (true) {
+			let requestList2 = await fetchRequestListChunk(chain, userInfo, requestList.requestList[requestList.requestList.length - 1].lastModifiedDate + " 00:00:00 GMT");
+			if (requestList2.requestList.length == 0) break;
+			requestList.requestList.push(...requestList2.requestList);
+		}
 		return requestList;
 	}
 	async function fetchFullRequest(prId, ctx) {

@@ -1,3 +1,35 @@
+Access to data for management
+==============================
+Sharepoint
+-------------
+PowerQuery can (online!) read from cloud.
+This means all PR data can be available in excel.
+
+PRs to ebo cloud
+-------------------
+- In one move
+  Just a function/button to copy all prs from ariba to cloud.
+  > compare last_updated dates.
+- One by one
+  > Perhaps not needed if the above doesn't take too long...
+> data needed:
+  - prid
+  - descr
+  - for each line
+    - price
+    - commodity-code
+> If more data is required, force a full update:
+  > delete the whole folder is the easiest.
+
+
+
+
+
+
+
+
+
+
 * Fix setting tarif by user. See PR69922
 
 * Abort grouped fetches on page change.
