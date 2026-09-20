@@ -299,11 +299,13 @@
 	//#region typescript/def.ts
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
 	const JSON_SINCE_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json-since";
-	const GLOBAL_SETTINGS_FILENAME = "gringo/gringo_global_settings.json";
 	const KEY_LAST_FETCHED_METAS = "gringo.lastFetchedMetas";
-	const KEY_CLOUD_METAS_FOLDER = "gringo/pr/meta/";
 	const KEY_CLOUD_GRINGO_FOLDER = "gringo/";
-	const BTW_TARIFS_FILENAME = "gringo/btwTarifs.json";
+	const KEY_CLOUD_PR_FOLDER = KEY_CLOUD_GRINGO_FOLDER + "pr/";
+	const BTW_TARIFS_FILENAME = KEY_CLOUD_GRINGO_FOLDER + "btwTarifs.json";
+	const GLOBAL_SETTINGS_FILENAME = KEY_CLOUD_GRINGO_FOLDER + "gringo_global_settings.json";
+	const KEY_CLOUD_METAS_FOLDER = KEY_CLOUD_PR_FOLDER + "meta/";
+	const KEY_ALL_PRS_FILENAME_NOEXT = KEY_CLOUD_PR_FOLDER + "allPrs";
 	//#endregion
 	//#region typescript/cloud.ts
 	let cloud = { json: {
@@ -1015,7 +1017,22 @@
 			let requestId = r.reqUniqueName;
 			return fetchFullRequest(requestId, ctx);
 		});
-		return await Promise.all(promises);
+		let detailsList = await Promise.all(promises);
+		let jsonList = detailsList.filter((r) => r != null).map((r) => {
+			if (r.lineItems == null) return [];
+			return r.lineItems.map((item) => {
+				let { currency, currencySymbol, ...compactItem } = createCompactReqItem(item);
+				return {
+					prId: r.reqId,
+					status: r.status,
+					title: r.title.value,
+					lineNumber: item.lineNumber,
+					...compactItem
+				};
+			});
+		}).flat();
+		await cloud.json.upload(KEY_ALL_PRS_FILENAME_NOEXT + "_2026.json", jsonList);
+		return detailsList;
 	}
 	async function fetchChangedMetas() {
 		let changedMetas;

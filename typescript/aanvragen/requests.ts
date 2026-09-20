@@ -3,12 +3,13 @@ import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
 import {gringo, InfoBlock} from "../globals";
-import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
+import {BTW_TARIFS_FILENAME, KEY_ALL_PRS_FILENAME_NOEXT, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {LedgerToBudgetCode} from "./budgetCodes";
+import {createCompactReqItem} from "../aanvraag/observer";
 
 export interface ExpandedPrItem {
     pr: PurchaseRequisition;
@@ -151,6 +152,24 @@ export async function fetchRequestListAndDetails(infoBlock: InfoBlock) {
     })
 
     let detailsList = await Promise.all(promises);
+    let jsonList = detailsList
+        .filter(r => r != null)
+        .map(r => {
+            if(r.lineItems == null)
+                return [];
+            return r.lineItems.map(item => {
+                let {currency, currencySymbol, ...compactItem} = createCompactReqItem(item);
+                return {
+                    prId: r.reqId,
+                    status: r.status,
+                    title: r.title.value,
+                    lineNumber: item.lineNumber,
+                    ...compactItem
+                }
+            }
+            );
+    }).flat();
+    await cloud.json.upload(KEY_ALL_PRS_FILENAME_NOEXT+"_2026.json", jsonList);
     return detailsList;
 }
 
