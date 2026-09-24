@@ -1,3 +1,9 @@
+* create a merged.json file in a folder
+  load only the files that have a more recent modified_date than merged.json.
+  - loop all file_meta and index them on file_name.
+  - replace content when it is more recent.
+> eventually, split the data per year (2026,...)
+
 Access to data for management
 ==============================
 Sharepoint

@@ -12,10 +12,13 @@ export class CalcField {
 
     constructor(container: HTMLElement, label: string, postFieldLabel: string, postFieldLabelClass: string[], onRecalculated: (field: CalcField) => void) {
         let postFieldEmmet = "";
+        let postFieldLabelClassString = postFieldLabelClass.join(".");
+        if(postFieldLabelClassString)
+            postFieldLabelClassString = "." + postFieldLabelClassString;
         if(postFieldLabel != "") {
             postFieldEmmet = `+
                 div.postFieldLabel>
-                    div${postFieldLabelClass.join(".")}{${postFieldLabel}}
+                    div${postFieldLabelClassString}{${postFieldLabel}}
             `;
         }
         let fieldDiv = emmet.appendChild(container, `

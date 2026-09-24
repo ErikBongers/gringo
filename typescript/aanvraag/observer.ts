@@ -15,7 +15,7 @@ import {
     getPrItemAsset,
     getPrItemCommodity,
     getPrItemGrant,
-    getPrItemLedger
+    getPrItemLedger, uploadBtwTarifs
 } from "../aanvragen/requests";
 import {getBudgetCode} from "../aanvragen/aggregate";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
@@ -322,52 +322,51 @@ function updatePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index: number,
     } else {
         calcFields.entangledFields.context.btw = 666;
         calcFields.nettoCalcField.postFieldLabelDiv!.textContent = calcFields.entangledFields.context.btw.toString() + "%"; //! suffix label MUST be present.
-        //todo:
-        // btwDif.textContent = "";
-        // let txtSelecteer = "--selecteer--";
-        // emmet.appendChild(btwDif, `
-        //     (
-        //         select>(
-        //             option[value="${txtSelecteer}"]{${txtSelecteer}}+
-        //             option[value="0"]{0%}+
-        //             option[value="6"]{6%}+
-        //             option[value="12"]{12%}+
-        //             option[value="21"]{21%}
-        //         )
-        //     )+
-        //     button.btwSave.m1{Bewaar voor dit artikel}
-        // `);
-        // let select = btwDif.querySelector('select') as HTMLSelectElement;
-        // select.onchange = (ev) => { onBtwSelectChange(pr, index, lineEl, parseInt(select.value));}
-        // let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
-        // button.onclick = async (ev) => {
-        //     await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl);
-        // };
     }
+    let btwDif = calcFields.nettoCalcField.postFieldLabelDiv!;
+    btwDif.textContent = "";
+    let txtSelecteer = "--selecteer--";
+    emmet.indent.appendChild(btwDif, `
+        div
+            select
+                option[value="${txtSelecteer}"]{${txtSelecteer}}+
+                option[value="0"]{0%}+
+                option[value="6"]{6%}+
+                option[value="12"]{12%}+
+                option[value="21"]{21%}
+            button.btwSave.m1{Bewaar voor dit artikel}
+    `);
+    let select = btwDif.querySelector('select') as HTMLSelectElement;
+    select.value = pr.items[index].tarif ?  pr.items[index].tarif.tarif.toString() : txtSelecteer;
+    select.onchange = (ev) => { onBtwSelectChange(pr, index, lineEl, parseInt(select.value));}
+    let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
+    button.onclick = async (ev) => {
+        await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl, calcFields);
+    };
 }
 
 function onBtwSelectChange(pr: ExpandedCompactPr, index: number, lineEl: HTMLElement, tarif: number) {
     //todo: update CalcFields ctx.btw
+    console.log("onBtwSelectChange: todo: update CalcFields ctx.btw");
 }
 
-//todo
-// async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: string, pr: ExpandedCompactPr, index: number, lineEl: HTMLElement) {
-//     let selected = select.value;
-//     if (selected == txtSelecteer)
-//         return;
-//     let commodity = pr.items[index].item.commodityCode;
-//     if(commodity == "") {
-//         alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
-//         return;
-//     }
-//     let tarifs = await getBtwTarifsCachedInSession();
-//     tarifs.set(commodity, {
-//         commodityCode: commodity,
-//         description: "",
-//         tarif: parseInt(selected)
-//     });
-//     await uploadBtwTarifs(tarifs);
-//     pr = await createExpandedCompactPr(pr.pr);
-//     updatePrItem(pr, lineEl, index);
-// }
-//
+async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: string, pr: ExpandedCompactPr, index: number, lineEl: HTMLElement, calcFields: BrutoNettoCalcFields) {
+    let selected = select.value;
+    if (selected == txtSelecteer)
+        return;
+    let commodity = pr.items[index].item.commodityCode;
+    if(commodity == "") {
+        alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
+        return;
+    }
+    let tarifs = await getBtwTarifsCachedInSession();
+    tarifs.set(commodity, {
+        commodityCode: commodity,
+        description: "",
+        tarif: parseInt(selected)
+    });
+    await uploadBtwTarifs(tarifs);
+    pr = await createExpandedCompactPr(pr.pr);
+    updatePrItem(pr, lineEl, index, calcFields);
+}
+
