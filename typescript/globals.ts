@@ -174,8 +174,10 @@ export function getAndSetFlag<T extends string>(el: HTMLElement, flag: StartsWit
     return value;
 }
 
-export function getAndSetDecorated(el: HTMLElement) {
-    return getAndSetFlag(el, "Decorated");
+export function canBeDecoratedAndSet(el: HTMLElement | null) {
+    if (!el)
+        return false;
+    return !getAndSetFlag(el, "Decorated");
 }
 export function createInfoBlock(el: HTMLElement) {
     emmet.appendChild(el, `

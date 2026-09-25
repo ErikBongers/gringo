@@ -1,5 +1,5 @@
 import {PartialUrlObserver} from "../pageObserver";
-import {formatPrice, getAndSetDecorated, priceFormatter} from "../globals";
+import {canBeDecoratedAndSet, formatPrice, priceFormatter} from "../globals";
 import {PurchaseRequisition, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr, fetchReqContext, fetchShoppingCart} from "../sap/api";
 import {emmet} from "../../libs/Emmeter";
@@ -140,16 +140,10 @@ async function getCompactPrFromReq(prId: string) {
 }
 
 async function decorateReqPage(getCompactPr: (prId: string) => Promise<CompactRequisition | null>) {
-    let sectionMain = document.querySelector(`section[role="main"]`) as HTMLElement | null;
-    if(!sectionMain)
-        return;
-
-    if(getAndSetDecorated(sectionMain))
+    if(!canBeDecoratedAndSet(document.querySelector(`section[role="main"]`)))
         return;
 
     let prId = getUrlPrId();
-
-    //---------------------
 
     let compactPr = await getCompactPr(prId);
     if(!compactPr)
@@ -157,14 +151,12 @@ async function decorateReqPage(getCompactPr: (prId: string) => Promise<CompactRe
 
     let totalPriceDiv = document.querySelector("div.block-heading.total-price") as HTMLElement;
     totalPriceDiv.style.display = "none";
-    emmet.insertAfter(totalPriceDiv, `
-        div.newTotal.gringo>(
-            div.newTotal.block-heading.total-price{Totale kosten}+
-            div.blueBlock.flexRow.w100.mbe-1ch>(
-                label{Bruto bedrag}+
+    emmet.indent.insertAfter(totalPriceDiv, `
+        div.newTotal.gringo
+            div.newTotal.block-heading.total-price{Totale kosten}
+            div.blueBlock.flexRow.w100.mbe-1ch
+                label{Bruto bedrag}
                 div.newTotalBruto.pull-end{€---,--- EUR}
-            )
-        )
     `);
 
 
