@@ -3,10 +3,17 @@ import {formatPrice, gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter/html";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {ExpandedCompactPrItem, ExpandedPrItem, getBtwTarif} from "../aanvragen/requests";
+import {
+    ExpandedCompactPr,
+    ExpandedCompactPrItem,
+    ExpandedPrItem,
+    getBtwTarif, getBtwTarifsCachedInSession,
+    uploadBtwTarifs
+} from "../aanvragen/requests";
 import {CalcField} from "../calcField";
 import {Parser} from "../calculator/parser";
 import {EntangledFields} from "../entangledFields";
+import {createExpandedCompactPr} from "../aanvraag/observer";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -130,12 +137,39 @@ export interface BrutoNettoCalcFields {
     entangledFields: EntangledFields<PriceData>;
 }
 
-export function addNettoAndBrutoFields(btw: number, calcFieldsContainer: HTMLElement, expandedPrItem: ExpandedCompactPrItem | null) {
-    let entangledFields = new EntangledFields<PriceData>(new PriceData(btw, expandedPrItem));
+function createTarifDiv(pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
+    let txtSelecteer = "--selecteer--";
+    let btwDif = emmet.indent.createElement(`
+        div
+            label{--%}
+            select
+                option[value="${txtSelecteer}"]{${txtSelecteer}}
+                option[value="0"]{0%}
+                option[value="6"]{6%}
+                option[value="12"]{12%}
+                option[value="21"]{21%}
+            button.btwSave.m1{Bewaar voor dit artikel}
+    `);
+    let select = btwDif.querySelector('select') as HTMLSelectElement;
+    select.value = pr.items[index].tarif ?  pr.items[index].tarif.tarif.toString() : txtSelecteer;
+    select.onchange = () => {
+        entangledFields.context.btw = parseInt(select.value);
+        entangledFields.triggerRecalc();
+        gringo("btw changed");
+    };
+    let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
+    button.onclick = async (ev) => {
+        await btnCreateTarifClick(select, txtSelecteer, pr, index);
+    };
+    return btwDif;
+}
+
+export function addNettoAndBrutoFields(btw: number, calcFieldsContainer: HTMLElement, pr: ExpandedCompactPr | null, index: number) {
+    let entangledFields = new EntangledFields<PriceData>(new PriceData(btw, pr? pr.items[index] : null));
 
     calcFieldsContainer.classList.add("flexRow");
 
-    let nettoCalcField = new CalcField(calcFieldsContainer, "Netto", btw.toString() + "%", ["gringo", "blueBlock"], (field) => {
+    let nettoCalcField = new CalcField(calcFieldsContainer, "Netto", pr? createTarifDiv(pr, index, entangledFields) : "--", ["gringo"], (field) => {
         if (!field.result)
             return;
         entangledFields.context.netto = field.result.result;
@@ -149,19 +183,20 @@ export function addNettoAndBrutoFields(btw: number, calcFieldsContainer: HTMLEle
         entangledFields.updateOtherFields();
     });
 
-    entangledFields.add(brutoCalcField.input, (ctx: PriceData) => {
-        if (!ctx.bruto)
-            return;
-        brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
-        brutoCalcField.reCalc();
-    });
-
     entangledFields.add(nettoCalcField.input, (ctx: PriceData) => {
         if (!ctx.netto)
             return;
         nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
-        nettoCalcField.reCalc();
+        nettoCalcField.reParse();
     });
+
+    entangledFields.add(brutoCalcField.input, (ctx: PriceData) => {
+        if (!ctx.bruto)
+            return;
+        brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
+        brutoCalcField.reParse();
+    });
+
     return {entangledFields, brutoCalcField, nettoCalcField} satisfies BrutoNettoCalcFields as BrutoNettoCalcFields;
 }
 
@@ -187,7 +222,7 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSetRadionButtons(el);
 
     let btw = tarif?.tarif ?? 0;
-    let calcFields = addNettoAndBrutoFields(btw, calcFieldsContainer, null);
+    let calcFields = addNettoAndBrutoFields(btw, calcFieldsContainer, null, 0);
 
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
     fieldQuantityInput.value = "1";
@@ -240,4 +275,22 @@ export function triggerFieldChanged(input: HTMLInputElement) {
     input.dispatchEvent(new Event('blur'));
     input.dispatchEvent(new Event('keyup'));
     input.dispatchEvent(new Event('mouseout'));
+}
+
+async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: string, pr: ExpandedCompactPr, index: number) {
+    let selected = select.value;
+    if (selected == txtSelecteer)
+        return;
+    let commodity = pr.items[index].item.commodityCode;
+    if(commodity == "") {
+        alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
+        return;
+    }
+    let tarifs = await getBtwTarifsCachedInSession();
+    tarifs.set(commodity, {
+        commodityCode: commodity,
+        description: "",
+        tarif: parseInt(selected)
+    });
+    await uploadBtwTarifs(tarifs);
 }

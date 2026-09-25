@@ -288,16 +288,20 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
     let calcFieldsContainer = emmet.appendChild(brutoRow, `
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first as HTMLDivElement;
-    let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer, pr.items[index]);
-    let fieldQuantity = lineEl.querySelector("div.field-quantity") as HTMLDivElement;
-    let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
+    let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer, pr, index);
+    let fieldQuantity = lineEl.querySelector("div.field-quantity") as HTMLDivElement | null;
+    let fieldQuantityInput: HTMLInputElement | null = null;
+    if(fieldQuantity)
+         fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement | null;
 
-    calcFields.entangledFields.add(fieldQuantityInput, (ctx: PriceData) => {
-        if(!ctx.netto)
-            return;
-        fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
-        triggerFieldChanged(fieldQuantityInput);
-    });
+    if(fieldQuantityInput) {
+        calcFields.entangledFields.add(fieldQuantityInput, (ctx: PriceData) => {
+            if (!ctx.netto)
+                return;
+            fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
+            triggerFieldChanged(fieldQuantityInput);
+        });
+    }
 
     //add the general total field, so it gets automatically updated.
     let newTotalDiv = document.querySelector("div.newTotalBruto") as HTMLDivElement;
@@ -305,68 +309,36 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
         updateTotalBruto(pr);
     });
 
-    fieldQuantity.classList.add("hidePlusMinButtons");
+    if(fieldQuantity)
+        fieldQuantity.classList.add("hidePlusMinButtons");
 
     updatePrItem(pr, lineEl, index, calcFields); //todo: this sets btw tarif correctly. The name of the function is also ambiguous. What does it update?
     //initial fill of netto and bruto fields.
-    let parser = new Parser(fieldQuantityInput.value);
+    let quantity = "";
+    if(fieldQuantityInput)
+        quantity = fieldQuantityInput.value;
+    else {
+        let span = lineEl.querySelector("span[ng-if='item.quantity.value']");
+        quantity = span!.textContent!;
+    }
+    let parser = new Parser(quantity);
     calcFields.entangledFields.context.netto = parser.parse().result;
-    calcFields.entangledFields.setCurrentSource(fieldQuantityInput);
+    if(fieldQuantityInput)
+        calcFields.entangledFields.setCurrentSource(fieldQuantityInput);
     calcFields.entangledFields.updateOtherFields();
 }
 
 function updatePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index: number, calcFields: BrutoNettoCalcFields) {
     if (pr.items[index].tarif) {
         calcFields.entangledFields.context.btw = pr.items[index].tarif.tarif;
-        calcFields.nettoCalcField.postFieldLabelDiv!.textContent = calcFields.entangledFields.context.btw.toString() + "%"; //! suffix label MUST be present.
     } else {
         calcFields.entangledFields.context.btw = 666;
-        calcFields.nettoCalcField.postFieldLabelDiv!.textContent = calcFields.entangledFields.context.btw.toString() + "%"; //! suffix label MUST be present.
     }
-    let btwDif = calcFields.nettoCalcField.postFieldLabelDiv!;
-    btwDif.textContent = "";
-    let txtSelecteer = "--selecteer--";
-    emmet.indent.appendChild(btwDif, `
-        div
-            select
-                option[value="${txtSelecteer}"]{${txtSelecteer}}+
-                option[value="0"]{0%}+
-                option[value="6"]{6%}+
-                option[value="12"]{12%}+
-                option[value="21"]{21%}
-            button.btwSave.m1{Bewaar voor dit artikel}
-    `);
-    let select = btwDif.querySelector('select') as HTMLSelectElement;
-    select.value = pr.items[index].tarif ?  pr.items[index].tarif.tarif.toString() : txtSelecteer;
-    select.onchange = (ev) => { onBtwSelectChange(pr, index, lineEl, parseInt(select.value));}
-    let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
-    button.onclick = async (ev) => {
-        await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl, calcFields);
-    };
+    calcFields.entangledFields.updateOtherFields();
 }
 
 function onBtwSelectChange(pr: ExpandedCompactPr, index: number, lineEl: HTMLElement, tarif: number) {
     //todo: update CalcFields ctx.btw
     console.log("onBtwSelectChange: todo: update CalcFields ctx.btw");
-}
-
-async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: string, pr: ExpandedCompactPr, index: number, lineEl: HTMLElement, calcFields: BrutoNettoCalcFields) {
-    let selected = select.value;
-    if (selected == txtSelecteer)
-        return;
-    let commodity = pr.items[index].item.commodityCode;
-    if(commodity == "") {
-        alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
-        return;
-    }
-    let tarifs = await getBtwTarifsCachedInSession();
-    tarifs.set(commodity, {
-        commodityCode: commodity,
-        description: "",
-        tarif: parseInt(selected)
-    });
-    await uploadBtwTarifs(tarifs);
-    pr = await createExpandedCompactPr(pr.pr);
-    updatePrItem(pr, lineEl, index, calcFields);
 }
 

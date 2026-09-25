@@ -1,4 +1,5 @@
 import {CalcField} from "./calcField";
+import {gringo} from "./globals";
 
 interface FieldDef<Ctx> {
     field: HTMLElement;
@@ -31,6 +32,12 @@ export class EntangledFields<Ctx> {
         this.currentSourceField = field;
     }
 
+    triggerRecalc() {
+        if(this.currentSourceField)
+            this.currentSourceField.dispatchEvent(new Event("gringo.recalc"));
+        else
+            this.fields[0].field.dispatchEvent(new Event("gringo.recalc"));
+    }
     updateOtherFields() {
         if(this.isTransfering)
             return;

@@ -1,6 +1,6 @@
 import {emmet} from "../libs/Emmeter/html";
 import {Parser, ParseResult} from "./calculator/parser";
-import {formatPrice} from "./globals";
+import {formatPrice, gringo} from "./globals";
 
 export class CalcField {
     input: HTMLInputElement;
@@ -10,42 +10,40 @@ export class CalcField {
     result: ParseResult | null = null;
     postFieldLabelDiv: HTMLDivElement | null = null;
 
-    constructor(container: HTMLElement, label: string, postFieldLabel: string, postFieldLabelClass: string[], onRecalculated: (field: CalcField) => void) {
+    constructor(container: HTMLElement, label: string, postFieldLabel: string | HTMLElement, postFieldLabelClass: string[], onRecalculated: (field: CalcField) => void) {
         let postFieldEmmet = "";
         let postFieldLabelClassString = postFieldLabelClass.join(".");
         if(postFieldLabelClassString)
             postFieldLabelClassString = "." + postFieldLabelClassString;
-        if(postFieldLabel != "") {
-            postFieldEmmet = `+
-                div.postFieldLabel>
-                    div${postFieldLabelClassString}{${postFieldLabel}}
-            `;
-        }
-        let fieldDiv = emmet.appendChild(container, `
-            div>
-                div.input-wrap>
-                    div.form-group>(
-                        label.editable-field-label{${label}}+
-                        div.field-wrapper>(
-                                (
-                                div.flexRow>(
-                                    input.form-control[type="text"]
-                                    ${postFieldEmmet}
-                                )
-                            )+
-                            div.flexRow.calcResult>(
-                                label+
+        let fieldDiv = emmet.indent.appendChild(container, `
+            div
+                div.input-wrap
+                    div.form-group
+                        label.editable-field-label{${label}}
+                        div.field-wrapper
+                            div.flexRow>
+                                input.form-control[type="text"]
+                                div.postFieldLabel${postFieldLabelClassString}
+                            div.flexRow.calcResult
+                                label
                                 i.fa.fa-triangle-exclamation
-                            )
-                        )                                                    
-                    )
         `).first as HTMLDivElement;
+        let postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel") as HTMLDivElement;
+        if(typeof postFieldLabel == "string")
+            postFieldLabelDiv.innerHTML = postFieldLabel;
+        else
+            postFieldLabelDiv.appendChild(postFieldLabel);
         this.input = fieldDiv.querySelector("input")!;
         this.resultDiv = fieldDiv.querySelector("div.calcResult") as HTMLDivElement;
         this.resultLabel = this.resultDiv.querySelector("label") as HTMLElement;
         this.resultErrorImage = fieldDiv.querySelector("i.fa") as HTMLElement;
         this.input.addEventListener("keyup", (ev) => {
-            this.reCalc();
+            this.reParse();
+            onRecalculated(this);
+        });
+        this.input.addEventListener("gringo.recalc", (ev) => {
+            gringo("recalc");
+            this.reParse();
             onRecalculated(this);
         });
         if(postFieldLabel != "") {
@@ -53,7 +51,7 @@ export class CalcField {
         }
     }
 
-    reCalc() {
+    reParse() {
         if (this.input.value == "") {
             this.result = null;
             this.resultLabel.textContent = "";

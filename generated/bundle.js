@@ -2411,43 +2411,40 @@
 		result = null;
 		postFieldLabelDiv = null;
 		constructor(container, label, postFieldLabel, postFieldLabelClass, onRecalculated) {
-			let postFieldEmmet = "";
 			let postFieldLabelClassString = postFieldLabelClass.join(".");
 			if (postFieldLabelClassString) postFieldLabelClassString = "." + postFieldLabelClassString;
-			if (postFieldLabel != "") postFieldEmmet = `+
-                div.postFieldLabel>
-                    div${postFieldLabelClassString}{${postFieldLabel}}
-            `;
-			let fieldDiv = emmet.appendChild(container, `
-            div>
-                div.input-wrap>
-                    div.form-group>(
-                        label.editable-field-label{${label}}+
-                        div.field-wrapper>(
-                                (
-                                div.flexRow>(
-                                    input.form-control[type="text"]
-                                    ${postFieldEmmet}
-                                )
-                            )+
-                            div.flexRow.calcResult>(
-                                label+
+			let fieldDiv = emmet.indent.appendChild(container, `
+            div
+                div.input-wrap
+                    div.form-group
+                        label.editable-field-label{${label}}
+                        div.field-wrapper
+                            div.flexRow>
+                                input.form-control[type="text"]
+                                div.postFieldLabel${postFieldLabelClassString}
+                            div.flexRow.calcResult
+                                label
                                 i.fa.fa-triangle-exclamation
-                            )
-                        )                                                    
-                    )
         `).first;
+			let postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel");
+			if (typeof postFieldLabel == "string") postFieldLabelDiv.innerHTML = postFieldLabel;
+			else postFieldLabelDiv.appendChild(postFieldLabel);
 			this.input = fieldDiv.querySelector("input");
 			this.resultDiv = fieldDiv.querySelector("div.calcResult");
 			this.resultLabel = this.resultDiv.querySelector("label");
 			this.resultErrorImage = fieldDiv.querySelector("i.fa");
 			this.input.addEventListener("keyup", (ev) => {
-				this.reCalc();
+				this.reParse();
+				onRecalculated(this);
+			});
+			this.input.addEventListener("gringo.recalc", (ev) => {
+				gringo("recalc");
+				this.reParse();
 				onRecalculated(this);
 			});
 			if (postFieldLabel != "") this.postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel");
 		}
-		reCalc() {
+		reParse() {
 			if (this.input.value == "") {
 				this.result = null;
 				this.resultLabel.textContent = "";
@@ -2484,6 +2481,10 @@
 		}
 		setCurrentSource(field) {
 			this.currentSourceField = field;
+		}
+		triggerRecalc() {
+			if (this.currentSourceField) this.currentSourceField.dispatchEvent(new Event("gringo.recalc"));
+			else this.fields[0].field.dispatchEvent(new Event("gringo.recalc"));
 		}
 		updateOtherFields() {
 			if (this.isTransfering) return;
@@ -2591,10 +2592,36 @@
 			this.expandedPrItem = expandedPrItem;
 		}
 	};
-	function addNettoAndBrutoFields(btw, calcFieldsContainer, expandedPrItem) {
-		let entangledFields = new EntangledFields(new PriceData(btw, expandedPrItem));
+	function createTarifDiv(pr, index, entangledFields) {
+		let txtSelecteer = "--selecteer--";
+		let btwDif = emmet.indent.createElement(`
+        div
+            label{--%}
+            select
+                option[value="${txtSelecteer}"]{${txtSelecteer}}
+                option[value="0"]{0%}
+                option[value="6"]{6%}
+                option[value="12"]{12%}
+                option[value="21"]{21%}
+            button.btwSave.m1{Bewaar voor dit artikel}
+    `);
+		let select = btwDif.querySelector("select");
+		select.value = pr.items[index].tarif ? pr.items[index].tarif.tarif.toString() : txtSelecteer;
+		select.onchange = () => {
+			entangledFields.context.btw = parseInt(select.value);
+			entangledFields.triggerRecalc();
+			gringo("btw changed");
+		};
+		let button = btwDif.querySelector("button.btwSave");
+		button.onclick = async (ev) => {
+			await btnCreateTarifClick(select, txtSelecteer, pr, index);
+		};
+		return btwDif;
+	}
+	function addNettoAndBrutoFields(btw, calcFieldsContainer, pr, index) {
+		let entangledFields = new EntangledFields(new PriceData(btw, pr ? pr.items[index] : null));
 		calcFieldsContainer.classList.add("flexRow");
-		let nettoCalcField = new CalcField(calcFieldsContainer, "Netto", btw.toString() + "%", ["gringo", "blueBlock"], (field) => {
+		let nettoCalcField = new CalcField(calcFieldsContainer, "Netto", pr ? createTarifDiv(pr, index, entangledFields) : "--", ["gringo"], (field) => {
 			if (!field.result) return;
 			entangledFields.context.netto = field.result.result;
 			entangledFields.updateOtherFields();
@@ -2604,15 +2631,15 @@
 			entangledFields.context.bruto = field.result.result;
 			entangledFields.updateOtherFields();
 		});
-		entangledFields.add(brutoCalcField.input, (ctx) => {
-			if (!ctx.bruto) return;
-			brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
-			brutoCalcField.reCalc();
-		});
 		entangledFields.add(nettoCalcField.input, (ctx) => {
 			if (!ctx.netto) return;
 			nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
-			nettoCalcField.reCalc();
+			nettoCalcField.reParse();
+		});
+		entangledFields.add(brutoCalcField.input, (ctx) => {
+			if (!ctx.bruto) return;
+			brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
+			brutoCalcField.reParse();
 		});
 		return {
 			entangledFields,
@@ -2638,7 +2665,7 @@
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
-		let calcFields = addNettoAndBrutoFields(tarif?.tarif ?? 0, calcFieldsContainer, null);
+		let calcFields = addNettoAndBrutoFields(tarif?.tarif ?? 0, calcFieldsContainer, null, 0);
 		let fieldQuantityInput = fieldQuantity.querySelector("input");
 		fieldQuantityInput.value = "1";
 		calcFields.entangledFields.add(fieldQuantityInput, (ctx) => {
@@ -2678,6 +2705,22 @@
 		input.dispatchEvent(new Event("blur"));
 		input.dispatchEvent(new Event("keyup"));
 		input.dispatchEvent(new Event("mouseout"));
+	}
+	async function btnCreateTarifClick(select, txtSelecteer, pr, index) {
+		let selected = select.value;
+		if (selected == txtSelecteer) return;
+		let commodity = pr.items[index].item.commodityCode;
+		if (commodity == "") {
+			alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
+			return;
+		}
+		let tarifs = await getBtwTarifsCachedInSession();
+		tarifs.set(commodity, {
+			commodityCode: commodity,
+			description: "",
+			tarif: parseInt(selected)
+		});
+		await uploadBtwTarifs(tarifs);
 	}
 	//#endregion
 	//#region typescript/aanvraag/observer.ts
@@ -2911,10 +2954,11 @@
 		let calcFieldsContainer = emmet.appendChild(brutoRow, `
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first;
-		let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer, pr.items[index]);
+		let calcFields = addNettoAndBrutoFields(45, calcFieldsContainer, pr, index);
 		let fieldQuantity = lineEl.querySelector("div.field-quantity");
-		let fieldQuantityInput = fieldQuantity.querySelector("input");
-		calcFields.entangledFields.add(fieldQuantityInput, (ctx) => {
+		let fieldQuantityInput = null;
+		if (fieldQuantity) fieldQuantityInput = fieldQuantity.querySelector("input");
+		if (fieldQuantityInput) calcFields.entangledFields.add(fieldQuantityInput, (ctx) => {
 			if (!ctx.netto) return;
 			fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
 			triggerFieldChanged(fieldQuantityInput);
@@ -2923,64 +2967,20 @@
 		calcFields.entangledFields.add(newTotalDiv, (ctx) => {
 			updateTotalBruto(pr);
 		});
-		fieldQuantity.classList.add("hidePlusMinButtons");
+		if (fieldQuantity) fieldQuantity.classList.add("hidePlusMinButtons");
 		updatePrItem(pr, lineEl, index, calcFields);
-		let parser = new Parser(fieldQuantityInput.value);
+		let quantity = "";
+		if (fieldQuantityInput) quantity = fieldQuantityInput.value;
+		else quantity = lineEl.querySelector("span[ng-if='item.quantity.value']").textContent;
+		let parser = new Parser(quantity);
 		calcFields.entangledFields.context.netto = parser.parse().result;
-		calcFields.entangledFields.setCurrentSource(fieldQuantityInput);
+		if (fieldQuantityInput) calcFields.entangledFields.setCurrentSource(fieldQuantityInput);
 		calcFields.entangledFields.updateOtherFields();
 	}
 	function updatePrItem(pr, lineEl, index, calcFields) {
-		if (pr.items[index].tarif) {
-			calcFields.entangledFields.context.btw = pr.items[index].tarif.tarif;
-			calcFields.nettoCalcField.postFieldLabelDiv.textContent = calcFields.entangledFields.context.btw.toString() + "%";
-		} else {
-			calcFields.entangledFields.context.btw = 666;
-			calcFields.nettoCalcField.postFieldLabelDiv.textContent = calcFields.entangledFields.context.btw.toString() + "%";
-		}
-		let btwDif = calcFields.nettoCalcField.postFieldLabelDiv;
-		btwDif.textContent = "";
-		let txtSelecteer = "--selecteer--";
-		emmet.indent.appendChild(btwDif, `
-        div
-            select
-                option[value="${txtSelecteer}"]{${txtSelecteer}}+
-                option[value="0"]{0%}+
-                option[value="6"]{6%}+
-                option[value="12"]{12%}+
-                option[value="21"]{21%}
-            button.btwSave.m1{Bewaar voor dit artikel}
-    `);
-		let select = btwDif.querySelector("select");
-		select.value = pr.items[index].tarif ? pr.items[index].tarif.tarif.toString() : txtSelecteer;
-		select.onchange = (ev) => {
-			onBtwSelectChange(pr, index, lineEl, parseInt(select.value));
-		};
-		let button = btwDif.querySelector("button.btwSave");
-		button.onclick = async (ev) => {
-			await btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl, calcFields);
-		};
-	}
-	function onBtwSelectChange(pr, index, lineEl, tarif) {
-		console.log("onBtwSelectChange: todo: update CalcFields ctx.btw");
-	}
-	async function btnCreateTarifClick(select, txtSelecteer, pr, index, lineEl, calcFields) {
-		let selected = select.value;
-		if (selected == txtSelecteer) return;
-		let commodity = pr.items[index].item.commodityCode;
-		if (commodity == "") {
-			alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
-			return;
-		}
-		let tarifs = await getBtwTarifsCachedInSession();
-		tarifs.set(commodity, {
-			commodityCode: commodity,
-			description: "",
-			tarif: parseInt(selected)
-		});
-		await uploadBtwTarifs(tarifs);
-		pr = await createExpandedCompactPr(pr.pr);
-		updatePrItem(pr, lineEl, index, calcFields);
+		if (pr.items[index].tarif) calcFields.entangledFields.context.btw = pr.items[index].tarif.tarif;
+		else calcFields.entangledFields.context.btw = 666;
+		calcFields.entangledFields.updateOtherFields();
 	}
 	//#endregion
 	//#region typescript/tabs.ts
