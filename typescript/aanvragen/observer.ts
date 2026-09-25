@@ -4,10 +4,23 @@ import {createInfoBlock, gringo, priceFormatter} from "../globals";
 import {saveMetasLocal} from "../db/gringoDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchPr} from "../sap/api";
-import {calcPrTotal, createCompactPr, createExpandedCompactPr, createExpandedPr} from "../aanvraag/observer";
-import {fetchChangedMetas, fetchFullRequest, FetchListContext, fetchMetaCached, fetchRequestList, fetchRequestListAndDetails, getGlobalTags, PrMeta, saveMeta, TagDef} from "./requests";
+import {createCompactPr} from "../aanvraag/observer";
+import {
+    calcPrTotal,
+    fetchChangedMetas,
+    fetchFullRequest,
+    FetchListContext,
+    fetchMetaCached,
+    fetchRequestList,
+    fetchRequestListAndDetails,
+    getGlobalTags,
+    PrMeta,
+    saveMeta,
+    TagDef
+} from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
+import {createExpandedCompactPr, createExpandedPr} from "../aanvraag/expand";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {

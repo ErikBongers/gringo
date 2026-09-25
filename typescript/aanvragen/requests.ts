@@ -2,7 +2,7 @@ import {FetchChain} from "../fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
-import {gringo, InfoBlock} from "../globals";
+import {InfoBlock} from "../globals";
 import {BTW_TARIFS_FILENAME, KEY_ALL_PRS_FILENAME_NOEXT, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
@@ -283,3 +283,25 @@ export async function getGlobalTags() {
     return globalTagsMap;
 }
 
+export function calcBrutoLinePrice(item: CompactReqItem, tarif: number) {
+    let bruto: number | null = null;
+    let price = item.price;
+    let quantity = item.quantity;
+    bruto = price * quantity * (100 + tarif);
+    bruto = Math.round(bruto) / 100;
+    return bruto;
+}
+
+export function calcPrTotal(pr: ExpandedCompactPr) {
+    let total: number = 0;
+    let currencySymbel = "€";
+    let currency = "EUR";
+    for (let item of pr.items) {
+        if (!item.tarif) {
+            total = 0;
+            break;
+        }
+        total += calcBrutoLinePrice(item.item, item.tarif.tarif);
+    }
+    return {total, currencySymbel, currency};
+}

@@ -205,3 +205,16 @@ export let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigit
 export function formatPrice(price: number, currencySymbol: string = "€", currency: string = "") {
     return `${currencySymbol} ${priceFormatter.format(price)} ${currency}`.trim();
 }
+
+export function fakeRadioButtonClick(radioButtons: NodeListOf<HTMLInputElement>, index: number) {
+    radioButtons[index].dispatchEvent(new Event("mousedown", {bubbles: true}));
+    radioButtons[index].dispatchEvent(new Event("click", {bubbles: true}));
+    radioButtons[index].dispatchEvent(new Event("change", {bubbles: true}));
+    radioButtons[index].dispatchEvent(new Event("mouseup", {bubbles: true}));
+}
+
+export function fakeAnchorClick(anchorPerEenheid: any) {
+    anchorPerEenheid.dispatchEvent(new Event("mousedown", {bubbles: true}));
+    anchorPerEenheid.dispatchEvent(new Event("click", {bubbles: true}));
+    anchorPerEenheid.dispatchEvent(new Event("mouseup", {bubbles: true}));
+}

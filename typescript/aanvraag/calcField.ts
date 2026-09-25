@@ -1,6 +1,6 @@
-import {emmet} from "../libs/Emmeter/html";
-import {Parser, ParseResult} from "./calculator/parser";
-import {formatPrice, gringo} from "./globals";
+import {emmet} from "../../libs/Emmeter";
+import {Parser, ParseResult} from "../calculator/parser";
+import {formatPrice, gringo} from "../globals";
 
 export class CalcField {
     input: HTMLInputElement;

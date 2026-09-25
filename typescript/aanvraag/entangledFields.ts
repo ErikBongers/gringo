@@ -1,5 +1,5 @@
 import {CalcField} from "./calcField";
-import {gringo} from "./globals";
+import {gringo} from "../globals";
 
 interface FieldDef<Ctx> {
     field: HTMLElement;
@@ -28,7 +28,7 @@ export class EntangledFields<Ctx> {
         });
     }
 
-    setCurrentSource(field: HTMLElement) {
+    setCurrentSource(field: HTMLElement | null) {
         this.currentSourceField = field;
     }
 

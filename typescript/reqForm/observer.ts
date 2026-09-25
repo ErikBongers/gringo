@@ -1,19 +1,11 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
-import {formatPrice, gringo} from "../globals";
-import {emmet} from "../../libs/Emmeter/html";
+import {fakeAnchorClick, fakeRadioButtonClick, formatPrice, gringo} from "../globals";
+import {emmet} from "../../libs/Emmeter";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {
-    ExpandedCompactPr,
-    ExpandedCompactPrItem,
-    ExpandedPrItem,
-    getBtwTarif, getBtwTarifsCachedInSession,
-    uploadBtwTarifs
-} from "../aanvragen/requests";
-import {CalcField} from "../calcField";
+import {getBtwTarif} from "../aanvragen/requests";
 import {Parser} from "../calculator/parser";
-import {EntangledFields} from "../entangledFields";
-import {createExpandedCompactPr} from "../aanvraag/observer";
+import {PriceBlock, PriceData} from "../aanvraag/priceBlock";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -48,9 +40,7 @@ function scanAndSelectPerEenheid(ulUnitOfMeasure: HTMLElement) {
     let anchors = ulUnitOfMeasure.querySelectorAll("a") as NodeListOf<HTMLAnchorElement>;
     let anchorPerEenheid = [...anchors].find(a => a.innerText.includes("Per eenheid"));
     if(anchorPerEenheid) {
-        anchorPerEenheid.dispatchEvent(new Event("mousedown", { bubbles: true}));
-        anchorPerEenheid.dispatchEvent(new Event("click", { bubbles: true}));
-        anchorPerEenheid.dispatchEvent(new Event("mouseup", { bubbles: true}));
+        fakeAnchorClick(anchorPerEenheid);
         ulUnitOfMeasure.style.display = "";
         document.body.dataset.gringoEenheidSet = "true";
         return;
@@ -61,14 +51,9 @@ function scanAndSelectPerEenheid(ulUnitOfMeasure: HTMLElement) {
 function scanAndSetRadionButtons(el: HTMLElement) {
     let radioButtons = el.querySelectorAll(`af-radio-button-group input[type="radio"]`) as NodeListOf<HTMLInputElement>;
     if (radioButtons.length == 3) {
-        radioButtons[0].dispatchEvent(new Event("mousedown", {bubbles: true}));
-        radioButtons[0].dispatchEvent(new Event("click", {bubbles: true}));
-        radioButtons[0].dispatchEvent(new Event("change", {bubbles: true}));
-        radioButtons[0].dispatchEvent(new Event("mouseup", {bubbles: true}));
-        radioButtons[2].dispatchEvent(new Event("mousedown", {bubbles: true}));
-        radioButtons[2].dispatchEvent(new Event("click", {bubbles: true}));
-        radioButtons[2].dispatchEvent(new Event("change", {bubbles: true}));
-        radioButtons[2].dispatchEvent(new Event("mouseup", {bubbles: true}));
+        [0,2].forEach(index => {
+            fakeRadioButtonClick(radioButtons, index);
+        })
         document.body.dataset.gringoRadioButtonsSet = "true";
         return;
     }
@@ -88,116 +73,6 @@ function scanAndSetFirstFieldFocus(el: HTMLElement, btnUnitOfMeasure: HTMLButton
     }
     gringo("waiting to set focus...");
     setTimeout(() => scanAndSetFirstFieldFocus(el, btnUnitOfMeasure), 100);
-}
-
-export class PriceData {
-    get btw(): number {
-        return this._btw;
-    }
-
-    set btw(value: number) {
-        this._btw = value;
-    }
-    get netto(): number | null {
-        return this._netto;
-    }
-
-    set netto(value: number | null) {
-        this._netto = value;
-        if(this.expandedPrItem)
-            this.expandedPrItem.item.quantity = this._netto!;
-        if(this._netto)
-            this._bruto = this._netto * (1 + this._btw / 100);
-    }
-    get bruto(): number | null {
-        return this._bruto;
-    }
-
-    set bruto(value: number | null) {
-        this._bruto = value;
-        if(this._bruto)
-            this._netto = this._bruto / (1 + this._btw / 100);
-            if(this.expandedPrItem)
-                this.expandedPrItem.item.quantity = this._netto!;
-    }
-    private _bruto: number | null = null;
-    private _netto: number | null = null;
-    private _btw: number;
-    private expandedPrItem: ExpandedCompactPrItem | null;
-
-    constructor(btw: number, expandedPrItem: ExpandedCompactPrItem | null) {
-        this._btw = btw;
-        this.expandedPrItem = expandedPrItem;
-    }
-}
-
-export interface BrutoNettoCalcFields {
-    brutoCalcField: CalcField;
-    nettoCalcField: CalcField;
-    entangledFields: EntangledFields<PriceData>;
-}
-
-function createTarifDiv(pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
-    let txtSelecteer = "--selecteer--";
-    let btwDif = emmet.indent.createElement(`
-        div
-            label{--%}
-            select
-                option[value="${txtSelecteer}"]{${txtSelecteer}}
-                option[value="0"]{0%}
-                option[value="6"]{6%}
-                option[value="12"]{12%}
-                option[value="21"]{21%}
-            button.btwSave.m1{Bewaar voor dit artikel}
-    `);
-    let select = btwDif.querySelector('select') as HTMLSelectElement;
-    select.value = pr.items[index].tarif ?  pr.items[index].tarif.tarif.toString() : txtSelecteer;
-    select.onchange = () => {
-        entangledFields.context.btw = parseInt(select.value);
-        entangledFields.triggerRecalc();
-        gringo("btw changed");
-    };
-    let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
-    button.onclick = async (ev) => {
-        await btnCreateTarifClick(select, txtSelecteer, pr, index);
-    };
-    return btwDif;
-}
-
-export function addNettoAndBrutoFields(btw: number, calcFieldsContainer: HTMLElement, pr: ExpandedCompactPr | null, index: number) {
-    let entangledFields = new EntangledFields<PriceData>(new PriceData(btw, pr? pr.items[index] : null));
-
-    calcFieldsContainer.classList.add("flexRow");
-
-    let nettoCalcField = new CalcField(calcFieldsContainer, "Netto", pr? createTarifDiv(pr, index, entangledFields) : "--", ["gringo"], (field) => {
-        if (!field.result)
-            return;
-        entangledFields.context.netto = field.result.result;
-        entangledFields.updateOtherFields();
-    });
-
-    let brutoCalcField = new CalcField(calcFieldsContainer, "Bruto", "", [], (field) => {
-        if (!field.result)
-            return;
-        entangledFields.context.bruto = field.result.result;
-        entangledFields.updateOtherFields();
-    });
-
-    entangledFields.add(nettoCalcField.input, (ctx: PriceData) => {
-        if (!ctx.netto)
-            return;
-        nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
-        nettoCalcField.reParse();
-    });
-
-    entangledFields.add(brutoCalcField.input, (ctx: PriceData) => {
-        if (!ctx.bruto)
-            return;
-        brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
-        brutoCalcField.reParse();
-    });
-
-    return {entangledFields, brutoCalcField, nettoCalcField} satisfies BrutoNettoCalcFields as BrutoNettoCalcFields;
 }
 
 async function decoratePanel(el: HTMLElement) {
@@ -221,13 +96,12 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSelectPerEenheid(ulUnitOfMeasure);
     scanAndSetRadionButtons(el);
 
-    let btw = tarif?.tarif ?? 0;
-    let calcFields = addNettoAndBrutoFields(btw, calcFieldsContainer, null, 0);
+    let priceBlock = new PriceBlock(tarif?.tarif ?? 0, calcFieldsContainer, null, 0);
 
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
     fieldQuantityInput.value = "1";
 
-    calcFields.entangledFields.add(fieldQuantityInput, (ctx: PriceData) => {
+    priceBlock.linkField(fieldQuantityInput, (ctx: PriceData) => {
         if(!ctx.netto)
             return;
         fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
@@ -277,20 +151,3 @@ export function triggerFieldChanged(input: HTMLInputElement) {
     input.dispatchEvent(new Event('mouseout'));
 }
 
-async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: string, pr: ExpandedCompactPr, index: number) {
-    let selected = select.value;
-    if (selected == txtSelecteer)
-        return;
-    let commodity = pr.items[index].item.commodityCode;
-    if(commodity == "") {
-        alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
-        return;
-    }
-    let tarifs = await getBtwTarifsCachedInSession();
-    tarifs.set(commodity, {
-        commodityCode: commodity,
-        description: "",
-        tarif: parseInt(selected)
-    });
-    await uploadBtwTarifs(tarifs);
-}

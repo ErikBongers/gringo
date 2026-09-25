@@ -1,7 +1,8 @@
-import {calcBrutoLinePrice, createCompactReqItem, createExpandedPr} from "../aanvraag/observer";
-import {ExpandedPr, ExpandedPrItem, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
+import {createCompactReqItem} from "../aanvraag/observer";
+import {calcBrutoLinePrice, ExpandedPr, ExpandedPrItem, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
 import {createHtmlTable, InfoBlock} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
+import {createExpandedPr} from "../aanvraag/expand";
 
 let _budgetMap: Map<string, LedgerToBudgetCode> | null = null;
 export function getBudgetCode(ledger: string) {
