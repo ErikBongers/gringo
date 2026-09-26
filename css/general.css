@@ -419,7 +419,8 @@ request-info-item.hidden {
     display: table-cell;
     width: fit-content;
     align-content: center;
-    padding-inline-start: 1ch;
+    padding-inline-start: .3ch;
+    padding-inline-end: 1ch;
 }
 
 .gringo {
