@@ -3000,7 +3000,7 @@
 			quantity = lineEl.querySelector("span[ng-if='item.quantity.value']").textContent;
 			priceBlock.setReadOnly();
 		}
-		let parser = new Parser(quantity);
+		let parser = new Parser(quantity.replaceAll(".", ""));
 		priceBlock.setNetto(parser.parse().result);
 		priceBlock.setCurrentSource(fieldQuantityInput);
 		priceBlock.updateOtherFields();

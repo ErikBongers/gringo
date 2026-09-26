@@ -218,7 +218,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
         quantity = span!.textContent!;
         priceBlock.setReadOnly();
     }
-    let parser = new Parser(quantity);
+    let parser = new Parser(quantity.replaceAll(".", "")); //quantity is sometimes without decimas: "1.200" means "1200".
     priceBlock.setNetto(parser.parse().result);
     priceBlock.setCurrentSource(fieldQuantityInput);
     priceBlock.updateOtherFields();
