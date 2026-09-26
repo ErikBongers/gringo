@@ -25,8 +25,8 @@ export class PriceData {
 
     set netto(value: number | null) {
         this._netto = value;
-        if (this._netto)
-            this._bruto = this._btw ? this._netto * (1 + this._btw / 100) : null;
+        if (this._netto != null)
+            this._bruto = this._btw != null ? this._netto * (1 + this._btw / 100) : null;
         if (this.expandedPrItem)
             this.expandedPrItem.item.quantity = this._netto!;
     }
@@ -37,8 +37,8 @@ export class PriceData {
 
     set bruto(value: number | null) {
         this._bruto = value;
-        if (this._bruto)
-            this._netto = this._btw ? this._bruto / (1 + this._btw / 100) : null;
+        if (this._bruto != null)
+            this._netto = this._btw != null ? this._bruto / (1 + this._btw / 100) : null;
         if (this.expandedPrItem)
             this.expandedPrItem.item.quantity = this._netto!;
     }
