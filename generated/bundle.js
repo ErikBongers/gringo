@@ -1780,7 +1780,7 @@
 		}
 		set netto(value) {
 			this._netto = value;
-			if (this._netto) this._bruto = this._btw ? this._netto * (1 + this._btw / 100) : null;
+			if (this._netto != null) this._bruto = this._btw != null ? this._netto * (1 + this._btw / 100) : null;
 			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
 		}
 		get bruto() {
@@ -1788,7 +1788,7 @@
 		}
 		set bruto(value) {
 			this._bruto = value;
-			if (this._bruto) this._netto = this._btw ? this._bruto / (1 + this._btw / 100) : null;
+			if (this._bruto != null) this._netto = this._btw != null ? this._bruto / (1 + this._btw / 100) : null;
 			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
 		}
 	};
@@ -1841,12 +1841,20 @@
 			this.nettoCalcField.setReadOnly();
 		}
 	};
-	const TXT_NO_TARIF = "--";
 	function createTarifDiv(pr, index, entangledFields) {
-		let btwDif;
-		if (pr.items[index].tarif) btwDif = emmet.createElement(`div>label{${pr.items[index].tarif.tarif.toString()}%}`);
+		let div = emmet.createElement(`div.tarifContainer`);
+		fillTarifDiv(div, pr, index, entangledFields);
+		return div;
+	}
+	function updateTarifDiv(container, pr, index, entangledFields) {
+		container.innerHTML = "";
+		fillTarifDiv(container, pr, index, entangledFields);
+	}
+	const TXT_NO_TARIF = "--";
+	function fillTarifDiv(container, pr, index, entangledFields) {
+		if (pr.items[index].tarif) emmet.appendChild(container, `div>label{${pr.items[index].tarif.tarif.toString()}%}`);
 		else {
-			btwDif = emmet.indent.createElement(`
+			emmet.indent.appendChild(container, `
         div.flexRow
             select
                 option[value="${TXT_NO_TARIF}"]{${TXT_NO_TARIF}%}
@@ -1857,21 +1865,20 @@
             button.btwSave.m1.naked[style="margin-inline-start: .2ch;"]
                 i.far.fa-floppy-disk[style="font-size:1.5em;"]
     `);
-			let select = btwDif.querySelector("select");
+			let select = container.querySelector("select");
 			select.value = TXT_NO_TARIF;
 			select.onchange = () => {
 				entangledFields.context.btw = parseInt(select.value);
 				entangledFields.triggerRecalc();
 				gringo("btw changed");
 			};
-			let button = btwDif.querySelector("button.btwSave");
+			let button = container.querySelector("button.btwSave");
 			button.onclick = async (ev) => {
-				await btnCreateTarifClick(select, pr, index);
+				await onClickCreateTarif(container, select, pr, index, entangledFields);
 			};
 		}
-		return btwDif;
 	}
-	async function btnCreateTarifClick(select, pr, index) {
+	async function onClickCreateTarif(container, select, pr, index, entangledFields) {
 		let txtNewValue = select.value;
 		if (txtNewValue == TXT_NO_TARIF) return;
 		let commodity = pr.items[index].item.commodityCode;
@@ -1885,7 +1892,10 @@
 			description: "",
 			tarif: parseInt(txtNewValue)
 		});
+		pr.items[index].tarif = tarifs.get(commodity);
 		await uploadBtwTarifs(tarifs);
+		updateTarifDiv(container, pr, index, entangledFields);
+		entangledFields.triggerRecalc();
 	}
 	//#endregion
 	//#region typescript/reqForm/observer.ts

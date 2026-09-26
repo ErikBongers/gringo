@@ -68,14 +68,25 @@ export class PriceBlock {
     }
 }
 
-const TXT_NO_TARIF = "--";
+
 function createTarifDiv(pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
-    let btwDif: HTMLElement;
+    let div = emmet.createElement(`div.tarifContainer`);
+    fillTarifDiv(div, pr, index, entangledFields);
+    return div;
+}
+
+function updateTarifDiv(container: HTMLElement, pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
+    container.innerHTML = "";
+    fillTarifDiv(container, pr, index, entangledFields);
+}
+
+const TXT_NO_TARIF = "--";
+function fillTarifDiv(container: HTMLElement, pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
     if(pr.items[index].tarif) {
-        btwDif = emmet.createElement(`div>label{${pr.items[index].tarif.tarif.toString()}%}`);
+        emmet.appendChild(container, `div>label{${pr.items[index].tarif.tarif.toString()}%}`);
     }
     else {
-        btwDif = emmet.indent.createElement(`
+        emmet.indent.appendChild(container, `
         div.flexRow
             select
                 option[value="${TXT_NO_TARIF}"]{${TXT_NO_TARIF}%}
@@ -86,23 +97,22 @@ function createTarifDiv(pr: ExpandedCompactPr, index: number, entangledFields: E
             button.btwSave.m1.naked[style="margin-inline-start: .2ch;"]
                 i.far.fa-floppy-disk[style="font-size:1.5em;"]
     `);
-        let select = btwDif.querySelector('select') as HTMLSelectElement;
+        let select = container.querySelector('select') as HTMLSelectElement;
         select.value = TXT_NO_TARIF;
         select.onchange = () => {
             entangledFields.context.btw = parseInt(select.value);
             entangledFields.triggerRecalc();
             gringo("btw changed");
         };
-        let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
+        let button = container.querySelector("button.btwSave") as HTMLButtonElement;
         button.onclick = async (ev) => {
-            await btnCreateTarifClick(select, pr, index);
+            await onClickCreateTarif(container, select, pr, index, entangledFields);
         };
     }
-    return btwDif;
 }
 
 
-async function btnCreateTarifClick(select: HTMLSelectElement, pr: ExpandedCompactPr, index: number) {
+async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElement, pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
     let txtNewValue = select.value;
     if (txtNewValue == TXT_NO_TARIF)
         return;
@@ -117,5 +127,8 @@ async function btnCreateTarifClick(select: HTMLSelectElement, pr: ExpandedCompac
         description: "",
         tarif: parseInt(txtNewValue)
     });
+    pr.items[index].tarif = tarifs.get(commodity)!; //! just set.
     await uploadBtwTarifs(tarifs);
+    updateTarifDiv(container, pr, index, entangledFields);
+    entangledFields.triggerRecalc();
 }
