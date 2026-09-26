@@ -665,9 +665,10 @@
 		maximumFractionDigits: 2,
 		minimumFractionDigits: 2
 	});
-	function formatPrice(price, currencySymbol = "€", currency = "") {
-		if (!price) return "";
-		return `${currencySymbol} ${priceFormatter.format(price)} ${currency}`.trim();
+	function formatPrice(price, currencySymbol = "€", currency = "", dashedNull = false) {
+		let txtPrice = dashedNull ? "---.--" : "";
+		if (price) txtPrice = priceFormatter.format(price);
+		return `${currencySymbol} ${txtPrice} ${currency}`.trim();
 	}
 	function fakeRadioButtonClick(radioButtons, index) {
 		radioButtons[index].dispatchEvent(new Event("mousedown", { bubbles: true }));
@@ -1394,7 +1395,7 @@
 		let currency = "EUR";
 		for (let item of pr.items) {
 			if (!item.tarif) {
-				total = 0;
+				total = null;
 				break;
 			}
 			total += calcBrutoLinePrice(item.item, item.tarif.tarif);
@@ -1832,13 +1833,13 @@
 			this.entangledFields.updateOtherFields();
 		}
 	};
+	const TXT_NO_TARIF = "--";
 	function createTarifDiv(pr, index, entangledFields) {
-		let txtSelecteer = "--selecteer--";
 		let btwDif = emmet.indent.createElement(`
         div
             label{--%}
             select
-                option[value="${txtSelecteer}"]{${txtSelecteer}}
+                option[value="${TXT_NO_TARIF}"]{${TXT_NO_TARIF}%}
                 option[value="0"]{0%}
                 option[value="6"]{6%}
                 option[value="12"]{12%}
@@ -1846,7 +1847,7 @@
             button.btwSave.m1{Bewaar voor dit artikel}
     `);
 		let select = btwDif.querySelector("select");
-		select.value = pr.items[index].tarif ? pr.items[index].tarif.tarif.toString() : txtSelecteer;
+		select.value = pr.items[index].tarif ? pr.items[index].tarif.tarif.toString() : TXT_NO_TARIF;
 		select.onchange = () => {
 			entangledFields.context.btw = parseInt(select.value);
 			entangledFields.triggerRecalc();
@@ -1854,13 +1855,13 @@
 		};
 		let button = btwDif.querySelector("button.btwSave");
 		button.onclick = async (ev) => {
-			await btnCreateTarifClick(select, txtSelecteer, pr, index);
+			await btnCreateTarifClick(select, pr, index);
 		};
 		return btwDif;
 	}
-	async function btnCreateTarifClick(select, txtSelecteer, pr, index) {
-		let selected = select.value;
-		if (selected == txtSelecteer) return;
+	async function btnCreateTarifClick(select, pr, index) {
+		let txtNewValue = select.value;
+		if (txtNewValue == TXT_NO_TARIF) return;
 		let commodity = pr.items[index].item.commodityCode;
 		if (commodity == "") {
 			alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
@@ -1870,7 +1871,7 @@
 		tarifs.set(commodity, {
 			commodityCode: commodity,
 			description: "",
-			tarif: parseInt(selected)
+			tarif: parseInt(txtNewValue)
 		});
 		await uploadBtwTarifs(tarifs);
 	}
@@ -2934,7 +2935,7 @@
 	function updateTotalBrutoView(pr) {
 		let newTotal = document.querySelector("div.newTotalBruto");
 		let { total, currencySymbel, currency } = calcPrTotal(pr);
-		newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}  ${currency}`;
+		newTotal.textContent = formatPrice(total, currencySymbel, currency, true);
 	}
 	async function updatePrView(pr) {
 		updateTotalBrutoView(pr);
@@ -3692,9 +3693,9 @@
 		await updateMetaFields(metaWrapper, meta);
 		let newTotal = reqDiv.querySelector("div.gringo.listRowTotal");
 		let pr = await fetchPr(request.id);
-		let { total, currencySymbel } = calcPrTotal(await createExpandedCompactPr(createCompactPr(pr)));
+		let { total, currencySymbel, currency } = calcPrTotal(await createExpandedCompactPr(createCompactPr(pr)));
 		if (total != 0) {
-			newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}`;
+			newTotal.textContent = formatPrice(total, currencySymbel, currency);
 			newTotal.style.display = "block";
 		} else {
 			newTotal.style.display = "none";

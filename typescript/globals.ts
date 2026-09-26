@@ -204,10 +204,11 @@ export interface InfoBlock {
 
 export let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, minimumFractionDigits: 2});
 
-export function formatPrice(price: number | null, currencySymbol: string = "€", currency: string = "") {
-    if (!price)
-        return "";
-    return `${currencySymbol} ${priceFormatter.format(price)} ${currency}`.trim();
+export function formatPrice(price: number | null, currencySymbol: string = "€", currency: string = "", dashedNull: boolean = false) {
+    let txtPrice = dashedNull ? "---.--" : "";
+    if (price)
+        txtPrice = priceFormatter.format(price);
+    return `${currencySymbol} ${txtPrice} ${currency}`.trim();
 }
 
 export function fakeRadioButtonClick(radioButtons: NodeListOf<HTMLInputElement>, index: number) {

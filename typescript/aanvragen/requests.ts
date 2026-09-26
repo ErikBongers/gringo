@@ -293,12 +293,12 @@ export function calcBrutoLinePrice(item: CompactReqItem, tarif: number) {
 }
 
 export function calcPrTotal(pr: ExpandedCompactPr) {
-    let total: number = 0;
+    let total: number | null = 0 ;
     let currencySymbel = "€";
     let currency = "EUR";
     for (let item of pr.items) {
         if (!item.tarif) {
-            total = 0;
+            total = null;
             break;
         }
         total += calcBrutoLinePrice(item.item, item.tarif.tarif);

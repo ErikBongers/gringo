@@ -1,6 +1,6 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter/html";
-import {createInfoBlock, gringo, priceFormatter} from "../globals";
+import {createInfoBlock, formatPrice, gringo, priceFormatter} from "../globals";
 import {saveMetasLocal} from "../db/gringoDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchPr} from "../sap/api";
@@ -496,10 +496,10 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     let pr = await fetchPr(request.id);
     let compactPr = createCompactPr(pr);
     let expPr = await createExpandedCompactPr(compactPr);
-    let {total, currencySymbel} = calcPrTotal(expPr);
+    let {total, currencySymbel, currency} = calcPrTotal(expPr);
 
     if(total != 0) {
-        newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}`; //todo: use formatprice()
+        newTotal.textContent = formatPrice(total, currencySymbel, currency);
         newTotal.style.display = "block";
     }
     else {

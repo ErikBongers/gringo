@@ -169,7 +169,7 @@ function updateTotalBrutoView(pr: ExpandedCompactPr) {
     let newTotal = document.querySelector("div.newTotalBruto")!; //! should be present
     let {total, currencySymbel, currency} = calcPrTotal(pr);
 
-    newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}  ${currency}`;
+    newTotal.textContent = formatPrice(total, currencySymbel, currency, true);
 }
 
 async function updatePrView(pr: ExpandedCompactPr) {
