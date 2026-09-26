@@ -216,6 +216,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
     else {
         let span = lineEl.querySelector("span[ng-if='item.quantity.value']");
         quantity = span!.textContent!;
+        priceBlock.setReadOnly();
     }
     let parser = new Parser(quantity);
     priceBlock.setNetto(parser.parse().result);

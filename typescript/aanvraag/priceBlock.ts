@@ -62,6 +62,10 @@ export class PriceBlock {
         this.entangledFields.updateOtherFields();
     }
 
+    setReadOnly() {
+        this.brutoCalcField.setReadOnly();
+        this.nettoCalcField.setReadOnly();
+    }
 }
 
 const TXT_NO_TARIF = "--";

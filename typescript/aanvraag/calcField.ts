@@ -51,6 +51,11 @@ export class CalcField {
         }
     }
 
+    setReadOnly() {
+        this.input.readOnly = true;
+        this.input.classList.add("readonly");
+    }
+
     reParse() {
         if (this.input.value == "") {
             this.result = null;

@@ -1705,6 +1705,10 @@
 			});
 			if (postFieldLabel != "") this.postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel");
 		}
+		setReadOnly() {
+			this.input.readOnly = true;
+			this.input.classList.add("readonly");
+		}
 		reParse() {
 			if (this.input.value == "") {
 				this.result = null;
@@ -1831,6 +1835,10 @@
 		}
 		updateOtherFields() {
 			this.entangledFields.updateOtherFields();
+		}
+		setReadOnly() {
+			this.brutoCalcField.setReadOnly();
+			this.nettoCalcField.setReadOnly();
 		}
 	};
 	const TXT_NO_TARIF = "--";
@@ -2973,7 +2981,10 @@
 			});
 			fieldQuantityInput.parentElement.classList.add("hidePlusMinButtons");
 			quantity = fieldQuantityInput.value;
-		} else quantity = lineEl.querySelector("span[ng-if='item.quantity.value']").textContent;
+		} else {
+			quantity = lineEl.querySelector("span[ng-if='item.quantity.value']").textContent;
+			priceBlock.setReadOnly();
+		}
 		let parser = new Parser(quantity);
 		priceBlock.setNetto(parser.parse().result);
 		priceBlock.setCurrentSource(fieldQuantityInput);

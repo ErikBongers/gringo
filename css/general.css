@@ -21,6 +21,8 @@
     --almost-light-blue: lch(from var(--dark-blue) calc(l + 30) c h);
     --light-blue: lch(from var(--dark-blue) calc(l + 40) c h);
     --very-light-blue: lch(from var(--dark-blue) calc(l + 60) c h);
+    --blue-block-blue: rgb(29 103 128 / 0.1);
+    --blue-block-blue-read-only: lch(from var(--blue-block-blue) calc(l + 10) c h);
 }
 
 .flexColumn {
@@ -264,7 +266,7 @@ request-info-item.hidden {
 }
 
 .gringo.blueBlock, .gringo .blueBlock {
-    background-color: rgb(29 103 128 / 0.1);
+    background-color: var(--blue-block-blue);
     border-radius: 1ch;
     padding: 1ch;
 }
@@ -456,4 +458,13 @@ request-info-item.hidden {
 details.subGroups {
     margin-block: .7ch;
     margin-inline-start: 3ch;
+}
+
+input[readonly],
+.gringo input[readonly],
+.gringo input.form-control[readonly],
+.gringo input.readonly[readonly],
+section.view-requisition .input-wrap-container .gringo .input-wrap .form-group input.readonly[readonly]
+{
+    background-color: var(--blue-block-blue-read-only);
 }
