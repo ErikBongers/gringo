@@ -64,13 +64,13 @@ export class PriceBlock {
 
 }
 
+const TXT_NO_TARIF = "--";
 function createTarifDiv(pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
-    let txtSelecteer = "--selecteer--";
     let btwDif = emmet.indent.createElement(`
         div
             label{--%}
             select
-                option[value="${txtSelecteer}"]{${txtSelecteer}}
+                option[value="${TXT_NO_TARIF}"]{${TXT_NO_TARIF}%}
                 option[value="0"]{0%}
                 option[value="6"]{6%}
                 option[value="12"]{12%}
@@ -78,7 +78,7 @@ function createTarifDiv(pr: ExpandedCompactPr, index: number, entangledFields: E
             button.btwSave.m1{Bewaar voor dit artikel}
     `);
     let select = btwDif.querySelector('select') as HTMLSelectElement;
-    select.value = pr.items[index].tarif ? pr.items[index].tarif.tarif.toString() : txtSelecteer;
+    select.value = pr.items[index].tarif ? pr.items[index].tarif.tarif.toString() : TXT_NO_TARIF;
     select.onchange = () => {
         entangledFields.context.btw = parseInt(select.value);
         entangledFields.triggerRecalc();
@@ -86,15 +86,15 @@ function createTarifDiv(pr: ExpandedCompactPr, index: number, entangledFields: E
     };
     let button = btwDif.querySelector("button.btwSave") as HTMLButtonElement;
     button.onclick = async (ev) => {
-        await btnCreateTarifClick(select, txtSelecteer, pr, index);
+        await btnCreateTarifClick(select, pr, index);
     };
     return btwDif;
 }
 
 
-async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: string, pr: ExpandedCompactPr, index: number) {
-    let selected = select.value;
-    if (selected == txtSelecteer)
+async function btnCreateTarifClick(select: HTMLSelectElement, pr: ExpandedCompactPr, index: number) {
+    let txtNewValue = select.value;
+    if (txtNewValue == TXT_NO_TARIF)
         return;
     let commodity = pr.items[index].item.commodityCode;
     if (commodity == "") {
@@ -105,7 +105,7 @@ async function btnCreateTarifClick(select: HTMLSelectElement, txtSelecteer: stri
     tarifs.set(commodity, {
         commodityCode: commodity,
         description: "",
-        tarif: parseInt(selected)
+        tarif: parseInt(txtNewValue)
     });
     await uploadBtwTarifs(tarifs);
 }
