@@ -1,64 +1,16 @@
 import {CalcField} from "./calcField";
 import {EntangledFields} from "./entangledFields";
-import {
-    ExpandedCompactPr,
-    ExpandedCompactPrItem,
-    getBtwTarifsCachedInSession,
-    uploadBtwTarifs
-} from "../aanvragen/requests";
+import {ExpandedCompactPr, getBtwTarifsCachedInSession, uploadBtwTarifs} from "../aanvragen/requests";
 import {emmet} from "../../libs/Emmeter";
 import {formatPrice, gringo} from "../globals";
-
-export class PriceData {
-    get btw(): number {
-        return this._btw;
-    }
-
-    set btw(value: number) {
-        this._btw = value;
-    }
-
-    get netto(): number | null {
-        return this._netto;
-    }
-
-    set netto(value: number | null) {
-        this._netto = value;
-        if (this.expandedPrItem)
-            this.expandedPrItem.item.quantity = this._netto!;
-        if (this._netto)
-            this._bruto = this._netto * (1 + this._btw / 100);
-    }
-
-    get bruto(): number | null {
-        return this._bruto;
-    }
-
-    set bruto(value: number | null) {
-        this._bruto = value;
-        if (this._bruto)
-            this._netto = this._bruto / (1 + this._btw / 100);
-        if (this.expandedPrItem)
-            this.expandedPrItem.item.quantity = this._netto!;
-    }
-
-    private _bruto: number | null = null;
-    private _netto: number | null = null;
-    private _btw: number;
-    private readonly expandedPrItem: ExpandedCompactPrItem | null;
-
-    constructor(btw: number, expandedPrItem: ExpandedCompactPrItem | null) {
-        this._btw = btw;
-        this.expandedPrItem = expandedPrItem;
-    }
-}
+import {PriceData} from "./priceData";
 
 export class PriceBlock {
     brutoCalcField: CalcField;
     nettoCalcField: CalcField;
     entangledFields: EntangledFields<PriceData>;
 
-    constructor(btw: number, container: HTMLElement, pr: ExpandedCompactPr | null, index: number) {
+    constructor(btw: number | null, container: HTMLElement, pr: ExpandedCompactPr | null, index: number) {
         this.entangledFields = new EntangledFields<PriceData>(new PriceData(btw, pr ? pr.items[index] : null));
 
         container.classList.add("flexRow");
@@ -78,15 +30,11 @@ export class PriceBlock {
         });
 
         this.entangledFields.add(this.nettoCalcField.input, (ctx: PriceData) => {
-            if (!ctx.netto)
-                return;
             this.nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
             this.nettoCalcField.reParse();
         });
 
         this.entangledFields.add(this.brutoCalcField.input, (ctx: PriceData) => {
-            if (!ctx.bruto)
-                return;
             this.brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
             this.brutoCalcField.reParse();
         });
@@ -97,7 +45,7 @@ export class PriceBlock {
             this.entangledFields.add(field, updateCallback);
     }
 
-    setTarif(tarif: number) {
+    setTarif(tarif: number | null) {
         this.entangledFields.context.btw = tarif;
         this.entangledFields.updateOtherFields();
     }

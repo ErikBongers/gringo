@@ -13,8 +13,9 @@ import {
 import {RequisitionItem} from "../sap/ShoppingCart";
 import {triggerFieldChanged} from "../reqForm/observer";
 import {Parser} from "../calculator/parser";
-import {PriceBlock, PriceData} from "./priceBlock";
+import {PriceBlock} from "./priceBlock";
 import {createExpandedCompactPr} from "./expand";
+import {PriceData} from "./priceData";
 
 class RequisitionObserver extends PartialUrlObserver {
     constructor() {
@@ -194,11 +195,11 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first as HTMLDivElement;
 
-    let priceBlock = new PriceBlock(45, calcFieldsContainer, pr, index);
+    let priceBlock = new PriceBlock(null, calcFieldsContainer, pr, index);
     priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx: PriceData)=> {
         updateTotalBrutoView(pr);
     });
-    priceBlock.setTarif(pr.items[index].tarif?.tarif??666);
+    priceBlock.setTarif(pr.items[index].tarif?.tarif??null);
 
     let quantity = "";
     let fieldQuantityInput = lineEl.querySelector("div.field-quantity input") as HTMLInputElement | null;

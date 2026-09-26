@@ -5,7 +5,8 @@ import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {getBtwTarif} from "../aanvragen/requests";
 import {Parser} from "../calculator/parser";
-import {PriceBlock, PriceData} from "../aanvraag/priceBlock";
+import {PriceBlock} from "../aanvraag/priceBlock";
+import {PriceData} from "../aanvraag/priceData";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -90,7 +91,7 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSelectPerEenheid(ulUnitOfMeasure);
     scanAndSetRadionButtons(el);
 
-    let priceBlock = new PriceBlock(tarif?.tarif ?? 0, calcFieldsContainer, null, 0);
+    let priceBlock = new PriceBlock(tarif?.tarif??null, calcFieldsContainer, null, 0);
 
     let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
     let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group") as HTMLDivElement;

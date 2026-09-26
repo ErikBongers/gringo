@@ -204,7 +204,9 @@ export interface InfoBlock {
 
 export let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, minimumFractionDigits: 2});
 
-export function formatPrice(price: number, currencySymbol: string = "€", currency: string = "") {
+export function formatPrice(price: number | null, currencySymbol: string = "€", currency: string = "") {
+    if (!price)
+        return "";
     return `${currencySymbol} ${priceFormatter.format(price)} ${currency}`.trim();
 }
 

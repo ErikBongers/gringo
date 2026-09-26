@@ -666,6 +666,7 @@
 		minimumFractionDigits: 2
 	});
 	function formatPrice(price, currencySymbol = "€", currency = "") {
+		if (!price) return "";
 		return `${currencySymbol} ${priceFormatter.format(price)} ${currency}`.trim();
 	}
 	function fakeRadioButtonClick(radioButtons, index) {
@@ -1753,8 +1754,16 @@
 		}
 	};
 	//#endregion
-	//#region typescript/aanvraag/priceBlock.ts
+	//#region typescript/aanvraag/priceData.ts
 	var PriceData = class {
+		_bruto = null;
+		_netto = null;
+		_btw = null;
+		expandedPrItem;
+		constructor(btw, expandedPrItem) {
+			this._btw = btw;
+			this.expandedPrItem = expandedPrItem;
+		}
 		get btw() {
 			return this._btw;
 		}
@@ -1766,26 +1775,20 @@
 		}
 		set netto(value) {
 			this._netto = value;
+			if (this._netto) this._bruto = this._btw ? this._netto * (1 + this._btw / 100) : null;
 			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
-			if (this._netto) this._bruto = this._netto * (1 + this._btw / 100);
 		}
 		get bruto() {
 			return this._bruto;
 		}
 		set bruto(value) {
 			this._bruto = value;
-			if (this._bruto) this._netto = this._bruto / (1 + this._btw / 100);
+			if (this._bruto) this._netto = this._btw ? this._bruto / (1 + this._btw / 100) : null;
 			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
 		}
-		_bruto = null;
-		_netto = null;
-		_btw;
-		expandedPrItem;
-		constructor(btw, expandedPrItem) {
-			this._btw = btw;
-			this.expandedPrItem = expandedPrItem;
-		}
 	};
+	//#endregion
+	//#region typescript/aanvraag/priceBlock.ts
 	var PriceBlock = class {
 		brutoCalcField;
 		nettoCalcField;
@@ -1804,12 +1807,10 @@
 				this.entangledFields.updateOtherFields();
 			});
 			this.entangledFields.add(this.nettoCalcField.input, (ctx) => {
-				if (!ctx.netto) return;
 				this.nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
 				this.nettoCalcField.reParse();
 			});
 			this.entangledFields.add(this.brutoCalcField.input, (ctx) => {
-				if (!ctx.bruto) return;
 				this.brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
 				this.brutoCalcField.reParse();
 			});
@@ -1946,7 +1947,7 @@
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
-		let priceBlock = new PriceBlock(tarif?.tarif ?? 0, calcFieldsContainer, null, 0);
+		let priceBlock = new PriceBlock(tarif?.tarif ?? null, calcFieldsContainer, null, 0);
 		let fieldQuantity = el.querySelector("div.field-quantity");
 		let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group");
 		emmet.appendChild(fieldQuantityInputGroup, `
@@ -2952,11 +2953,11 @@
 		let calcFieldsContainer = emmet.appendChild(brutoRow, `
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first;
-		let priceBlock = new PriceBlock(45, calcFieldsContainer, pr, index);
+		let priceBlock = new PriceBlock(null, calcFieldsContainer, pr, index);
 		priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx) => {
 			updateTotalBrutoView(pr);
 		});
-		priceBlock.setTarif(pr.items[index].tarif?.tarif ?? 666);
+		priceBlock.setTarif(pr.items[index].tarif?.tarif ?? null);
 		let quantity = "";
 		let fieldQuantityInput = lineEl.querySelector("div.field-quantity input");
 		if (fieldQuantityInput) {
