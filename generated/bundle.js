@@ -1835,28 +1835,32 @@
 	};
 	const TXT_NO_TARIF = "--";
 	function createTarifDiv(pr, index, entangledFields) {
-		let btwDif = emmet.indent.createElement(`
+		let btwDif;
+		if (pr.items[index].tarif) btwDif = emmet.createElement(`div>label{${pr.items[index].tarif.tarif.toString()}%}`);
+		else {
+			btwDif = emmet.indent.createElement(`
         div
-            label{--%}
             select
                 option[value="${TXT_NO_TARIF}"]{${TXT_NO_TARIF}%}
                 option[value="0"]{0%}
                 option[value="6"]{6%}
                 option[value="12"]{12%}
                 option[value="21"]{21%}
-            button.btwSave.m1{Bewaar voor dit artikel}
+            button.btwSave.m1
+                i.far.fa-floppy-disk[style="font-size:1.5em;"]
     `);
-		let select = btwDif.querySelector("select");
-		select.value = pr.items[index].tarif ? pr.items[index].tarif.tarif.toString() : TXT_NO_TARIF;
-		select.onchange = () => {
-			entangledFields.context.btw = parseInt(select.value);
-			entangledFields.triggerRecalc();
-			gringo("btw changed");
-		};
-		let button = btwDif.querySelector("button.btwSave");
-		button.onclick = async (ev) => {
-			await btnCreateTarifClick(select, pr, index);
-		};
+			let select = btwDif.querySelector("select");
+			select.value = TXT_NO_TARIF;
+			select.onchange = () => {
+				entangledFields.context.btw = parseInt(select.value);
+				entangledFields.triggerRecalc();
+				gringo("btw changed");
+			};
+			let button = btwDif.querySelector("button.btwSave");
+			button.onclick = async (ev) => {
+				await btnCreateTarifClick(select, pr, index);
+			};
+		}
 		return btwDif;
 	}
 	async function btnCreateTarifClick(select, pr, index) {
