@@ -206,7 +206,7 @@ export let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigit
 
 export function formatPrice(price: number | null, currencySymbol: string = "€", currency: string = "", dashedNull: boolean = false) {
     let txtPrice = dashedNull ? "---.--" : "";
-    if (price)
+    if (price != null)
         txtPrice = priceFormatter.format(price);
     return `${currencySymbol} ${txtPrice} ${currency}`.trim();
 }

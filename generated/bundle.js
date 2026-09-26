@@ -667,7 +667,7 @@
 	});
 	function formatPrice(price, currencySymbol = "€", currency = "", dashedNull = false) {
 		let txtPrice = dashedNull ? "---.--" : "";
-		if (price) txtPrice = priceFormatter.format(price);
+		if (price != null) txtPrice = priceFormatter.format(price);
 		return `${currencySymbol} ${txtPrice} ${currency}`.trim();
 	}
 	function fakeRadioButtonClick(radioButtons, index) {
