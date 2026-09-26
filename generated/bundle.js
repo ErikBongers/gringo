@@ -641,8 +641,9 @@
 		el.dataset["gringo" + flag] = "true";
 		return value;
 	}
-	function getAndSetDecorated(el) {
-		return getAndSetFlag(el, "Decorated");
+	function canBeDecoratedAndSet(el) {
+		if (!el) return false;
+		return !getAndSetFlag(el, "Decorated");
 	}
 	function createInfoBlock(el) {
 		emmet.appendChild(el, `
@@ -660,12 +661,12 @@
 			extra: el.querySelector("div.extra")
 		};
 	}
-	let priceFormatter$1 = new Intl.NumberFormat("nl-BE", {
+	let priceFormatter = new Intl.NumberFormat("nl-BE", {
 		maximumFractionDigits: 2,
 		minimumFractionDigits: 2
 	});
 	function formatPrice(price, currencySymbol = "€", currency = "") {
-		return `${currencySymbol} ${priceFormatter$1.format(price)} ${currency}`.trim();
+		return `${currencySymbol} ${priceFormatter.format(price)} ${currency}`.trim();
 	}
 	function fakeRadioButtonClick(radioButtons, index) {
 		radioButtons[index].dispatchEvent(new Event("mousedown", { bubbles: true }));
@@ -1380,6 +1381,29 @@
 		if (!globalTagsMap) globalTagsMap = new Map(globalSettings.tagDefs.map((t) => [t.name, t]));
 		return globalTagsMap;
 	}
+	function calcBrutoLinePrice(item, tarif) {
+		let bruto = null;
+		bruto = item.price * item.quantity * (100 + tarif);
+		bruto = Math.round(bruto) / 100;
+		return bruto;
+	}
+	function calcPrTotal(pr) {
+		let total = 0;
+		let currencySymbel = "€";
+		let currency = "EUR";
+		for (let item of pr.items) {
+			if (!item.tarif) {
+				total = 0;
+				break;
+			}
+			total += calcBrutoLinePrice(item.item, item.tarif.tarif);
+		}
+		return {
+			total,
+			currencySymbel,
+			currency
+		};
+	}
 	//#endregion
 	//#region typescript/sap/SapUserInfo.ts
 	async function getUserInfo() {
@@ -1914,12 +1938,7 @@
 		let calcFieldsContainer = emmet.appendChild(ul, `
         div.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
     `).first;
-		let fieldQuantity = el.querySelector("div.field-quantity");
 		let tarif = await getBtwTarif((await fetchReqFormInfo()).commodityCode);
-		let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group");
-		emmet.appendChild(fieldQuantityInputGroup, `
-        span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
-    `);
 		let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`);
 		let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`);
 		let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul");
@@ -1928,9 +1947,14 @@
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
 		let priceBlock = new PriceBlock(tarif?.tarif ?? 0, calcFieldsContainer, null, 0);
+		let fieldQuantity = el.querySelector("div.field-quantity");
+		let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group");
+		emmet.appendChild(fieldQuantityInputGroup, `
+        span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
+    `);
 		let fieldQuantityInput = fieldQuantity.querySelector("input");
 		fieldQuantityInput.value = "1";
-		priceBlock.entangledFields.add(fieldQuantityInput, (ctx) => {
+		priceBlock.linkField(fieldQuantityInput, (ctx) => {
 			if (!ctx.netto) return;
 			fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
 			triggerFieldChanged(fieldQuantityInput);
@@ -2810,60 +2834,25 @@
 		requisitionObserver: new RequisitionObserver()
 	};
 	function onReqPageRefreshed() {
-		gringo("page Aanvraag refreshed.");
-		decorateReqPage();
+		decorateReqPage(getCompactPrFromReq);
 	}
 	function onViewReqPageRefreshed() {
-		gringo("page Aanvraag refreshed.");
-		decorateViewReqPage();
+		decorateReqPage(getCompactPrFromViewReq);
 	}
 	function isPageProbablyLoaded$1() {
 		return true;
 	}
 	function onMutation$1(mutation) {
-		decorateReqPage().then(() => {});
+		decorateReqPage(getCompactPrFromReq).then(() => {});
 		return false;
 	}
 	function onViewMutation(mutation) {
-		decorateViewReqPage().then(() => {});
+		decorateReqPage(getCompactPrFromViewReq).then(() => {});
 		return false;
 	}
 	let pr = null;
 	function getUrlPrId() {
 		return location.pathname.split("/").pop();
-	}
-	async function decorateViewReqPage() {
-		let sectionMain = document.querySelector(`section[role="main"]`);
-		if (!sectionMain) return;
-		if (getAndSetDecorated(sectionMain)) return;
-		gringo("Decorating view aanvraag page...");
-		location.pathname.includes("viewRequisition");
-		pr = await fetchPr(getUrlPrId());
-		if (!pr) return;
-		let compactPr = {
-			prId: pr.reqId,
-			items: pr.lineItems.map((item) => {
-				return {
-					commodityCode: getPrItemCommodity(item)?.code ?? "",
-					price: item.price.value.amount,
-					quantity: item.quantity.value,
-					currency: item.price.value.currency,
-					currencySymbol: item.price.value.currencySymbol
-				};
-			})
-		};
-		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
-		totalPriceDiv.style.display = "none";
-		emmet.insertAfter(totalPriceDiv, `
-        div.newTotal.gringo>(
-            div.newTotal.block-heading.total-price{Totale kosten}+
-            div.blueBlock.flexRow.w100.mbe-1ch>(
-                label{Bruto bedrag}+
-                div.newTotalBruto.pull-end{€---,--- EUR}
-            )
-        )
-    `);
-		await updatePr(await createExpandedCompactPr(compactPr));
 	}
 	function createCompactReqItem(item) {
 		return {
@@ -2893,12 +2882,23 @@
 			currencySymbol: item.unitPriceMoney.currencySymbol
 		};
 	}
-	async function decorateReqPage() {
-		let sectionMain = document.querySelector(`section[role="main"]`);
-		if (!sectionMain) return;
-		if (getAndSetDecorated(sectionMain)) return;
-		gringo("Decorating aanvraag page...");
-		let prId = getUrlPrId();
+	async function getCompactPrFromViewReq(prId) {
+		pr = await fetchPr(prId);
+		if (!pr) return null;
+		return {
+			prId: pr.reqId,
+			items: pr.lineItems.map((item) => {
+				return {
+					commodityCode: getPrItemCommodity(item)?.code ?? "",
+					price: item.price.value.amount,
+					quantity: item.quantity.value,
+					currency: item.price.value.currency,
+					currencySymbol: item.price.value.currencySymbol
+				};
+			})
+		};
+	}
+	async function getCompactPrFromReq(prId) {
 		let contextPrId = (await fetchReqContext()).requisitionId;
 		let cart = await fetchShoppingCart();
 		let compactPr;
@@ -2910,61 +2910,38 @@
 		};
 		else {
 			pr = await fetchPr(prId);
-			if (!pr) return;
+			if (!pr) return null;
 			compactPr = createCompactPr(pr);
 		}
+		return compactPr;
+	}
+	async function decorateReqPage(getCompactPr) {
+		if (!canBeDecoratedAndSet(document.querySelector(`section[role="main"]`))) return;
+		let compactPr = await getCompactPr(getUrlPrId());
+		if (!compactPr) return;
 		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
 		totalPriceDiv.style.display = "none";
-		emmet.insertAfter(totalPriceDiv, `
-        div.newTotal.gringo>(
-            div.newTotal.block-heading.total-price{Totale kosten}+
-            div.blueBlock.flexRow.w100.mbe-1ch>(
-                label{Bruto bedrag}+
+		emmet.indent.insertAfter(totalPriceDiv, `
+        div.newTotal.gringo
+            div.newTotal.block-heading.total-price{Totale kosten}
+            div.blueBlock.flexRow.w100.mbe-1ch
+                label{Bruto bedrag}
                 div.newTotalBruto.pull-end{€---,--- EUR}
-            )
-        )
     `);
-		await updatePr(await createExpandedCompactPr(compactPr));
+		await updatePrView(await createExpandedCompactPr(compactPr));
 	}
-	function calcPrTotal(pr) {
-		let total = 0;
-		let currencySymbel = "€";
-		let currency = "EUR";
-		for (let item of pr.items) {
-			if (!item.tarif) {
-				total = 0;
-				break;
-			}
-			total += calcBrutoLinePrice(item.item, item.tarif.tarif);
-		}
-		return {
-			total,
-			currencySymbel,
-			currency
-		};
-	}
-	function updateTotalBruto(pr) {
+	function updateTotalBrutoView(pr) {
 		let newTotal = document.querySelector("div.newTotalBruto");
 		let { total, currencySymbel, currency } = calcPrTotal(pr);
 		newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}  ${currency}`;
 	}
-	async function updatePr(pr) {
-		updateTotalBruto(pr);
+	async function updatePrView(pr) {
+		updateTotalBrutoView(pr);
 		let nonDecoratedItems = [...document.querySelectorAll(`line-item-new:not([data-gringo-decorated="true"])`)];
 		for (let index = 0; index < nonDecoratedItems.length; index++) {
 			let itemEl = nonDecoratedItems[index];
 			await decoratePrItem(pr, itemEl, index);
 		}
-	}
-	let priceFormatter = new Intl.NumberFormat("nl-BE", {
-		maximumFractionDigits: 2,
-		minimumFractionDigits: 2
-	});
-	function calcBrutoLinePrice(item, tarif) {
-		let bruto = null;
-		bruto = item.price * item.quantity * (100 + tarif);
-		bruto = Math.round(bruto) / 100;
-		return bruto;
 	}
 	async function decoratePrItem(pr, lineEl, index) {
 		let rows = lineEl.querySelectorAll("div.price-section div.row");
@@ -2977,7 +2954,7 @@
     `).first;
 		let priceBlock = new PriceBlock(45, calcFieldsContainer, pr, index);
 		priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx) => {
-			updateTotalBruto(pr);
+			updateTotalBrutoView(pr);
 		});
 		priceBlock.setTarif(pr.items[index].tarif?.tarif ?? 666);
 		let quantity = "";
@@ -3716,7 +3693,7 @@
 		let pr = await fetchPr(request.id);
 		let { total, currencySymbel } = calcPrTotal(await createExpandedCompactPr(createCompactPr(pr)));
 		if (total != 0) {
-			newTotal.textContent = `${currencySymbel}${priceFormatter$1.format(total)}`;
+			newTotal.textContent = `${currencySymbel}${priceFormatter.format(total)}`;
 			newTotal.style.display = "block";
 		} else {
 			newTotal.style.display = "none";

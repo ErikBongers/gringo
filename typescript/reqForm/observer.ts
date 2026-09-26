@@ -80,14 +80,8 @@ async function decoratePanel(el: HTMLElement) {
     let calcFieldsContainer = emmet.appendChild(ul, `
         div.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
     `).first as HTMLDivElement;
-    let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
     let prForm = await fetchReqFormInfo();
     let tarif =  await getBtwTarif(prForm.commodityCode);
-    let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group") as HTMLDivElement;
-    emmet.appendChild(fieldQuantityInputGroup, `
-        span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
-    `);
-
     let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`) as HTMLElement;
     let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`) as HTMLButtonElement;
     let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul") as HTMLUListElement;
@@ -98,6 +92,11 @@ async function decoratePanel(el: HTMLElement) {
 
     let priceBlock = new PriceBlock(tarif?.tarif ?? 0, calcFieldsContainer, null, 0);
 
+    let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
+    let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group") as HTMLDivElement;
+    emmet.appendChild(fieldQuantityInputGroup, `
+        span.percentSpan>div.gringo.blueBlock{${tarif?.tarif}%}
+    `);
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
     fieldQuantityInput.value = "1";
 
