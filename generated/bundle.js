@@ -1852,7 +1852,12 @@
 	}
 	const TXT_NO_TARIF = "--";
 	function fillTarifDiv(container, pr, index, entangledFields) {
-		if (pr.items[index].tarif) emmet.appendChild(container, `div>label{${pr.items[index].tarif.tarif.toString()}%}`);
+		if (pr.items[index].tarif) emmet.appendChild(container, `div>label{${pr.items[index].tarif.tarif.toString()}%}`).last.addEventListener("mousedown", (ev) => {
+			if (ev.getModifierState("Alt") || ev.getModifierState("Control")) {
+				pr.items[index].tarif = null;
+				updateTarifDiv(container, pr, index, entangledFields);
+			}
+		});
 		else {
 			emmet.indent.appendChild(container, `
         div.flexRow

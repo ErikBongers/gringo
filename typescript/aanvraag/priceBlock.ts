@@ -83,7 +83,13 @@ function updateTarifDiv(container: HTMLElement, pr: ExpandedCompactPr, index: nu
 const TXT_NO_TARIF = "--";
 function fillTarifDiv(container: HTMLElement, pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
     if(pr.items[index].tarif) {
-        emmet.appendChild(container, `div>label{${pr.items[index].tarif.tarif.toString()}%}`);
+        let label = emmet.appendChild(container, `div>label{${pr.items[index].tarif.tarif.toString()}%}`).last as HTMLLabelElement;
+        label.addEventListener("mousedown", (ev) => {
+            if(ev.getModifierState("Alt") || ev.getModifierState("Control")){
+                pr.items[index].tarif = null;
+                updateTarifDiv(container, pr, index, entangledFields);
+            }
+        });
     }
     else {
         emmet.indent.appendChild(container, `
