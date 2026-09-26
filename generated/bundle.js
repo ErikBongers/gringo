@@ -1680,7 +1680,7 @@
                     div.form-group
                         label.editable-field-label{${label}}
                         div.field-wrapper
-                            div.flexRow>
+                            div.flexRow
                                 input.form-control[type="text"]
                                 div.postFieldLabel${postFieldLabelClassString}
                             div.flexRow.calcResult
@@ -1839,14 +1839,14 @@
 		if (pr.items[index].tarif) btwDif = emmet.createElement(`div>label{${pr.items[index].tarif.tarif.toString()}%}`);
 		else {
 			btwDif = emmet.indent.createElement(`
-        div
+        div.flexRow
             select
                 option[value="${TXT_NO_TARIF}"]{${TXT_NO_TARIF}%}
                 option[value="0"]{0%}
                 option[value="6"]{6%}
                 option[value="12"]{12%}
                 option[value="21"]{21%}
-            button.btwSave.m1
+            button.btwSave.m1.naked[style="margin-inline-start: .2ch;"]
                 i.far.fa-floppy-disk[style="font-size:1.5em;"]
     `);
 			let select = btwDif.querySelector("select");

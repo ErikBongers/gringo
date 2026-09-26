@@ -21,7 +21,7 @@ export class CalcField {
                     div.form-group
                         label.editable-field-label{${label}}
                         div.field-wrapper
-                            div.flexRow>
+                            div.flexRow
                                 input.form-control[type="text"]
                                 div.postFieldLabel${postFieldLabelClassString}
                             div.flexRow.calcResult

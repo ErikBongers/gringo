@@ -72,14 +72,14 @@ function createTarifDiv(pr: ExpandedCompactPr, index: number, entangledFields: E
     }
     else {
         btwDif = emmet.indent.createElement(`
-        div
+        div.flexRow
             select
                 option[value="${TXT_NO_TARIF}"]{${TXT_NO_TARIF}%}
                 option[value="0"]{0%}
                 option[value="6"]{6%}
                 option[value="12"]{12%}
                 option[value="21"]{21%}
-            button.btwSave.m1
+            button.btwSave.m1.naked[style="margin-inline-start: .2ch;"]
                 i.far.fa-floppy-disk[style="font-size:1.5em;"]
     `);
         let select = btwDif.querySelector('select') as HTMLSelectElement;
