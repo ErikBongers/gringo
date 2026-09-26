@@ -1,4 +1,4 @@
-import {emmet} from "../../libs/Emmeter/html";
+import {emmet} from "../../libs/Emmeter";
 import {createInfoBlock, formatPrice} from "../globals";
 import {getBudgetDscr, getExpenses, getItemsPerGroup, JsonPrItem} from "./aggregate";
 import {displayMetaFields, displayTags, hideFloatingHelp, paintTag, updateMetaFields} from "./observer";
