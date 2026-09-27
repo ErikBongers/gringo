@@ -403,10 +403,12 @@ request-info-item.hidden {
     }
 }
 
-.hidePlusMinButtons {
+.hidePlusMinButtons,
+.input-wrap-container .input-wrap .form-group .field-quantity .hidePlusMinButtons input {
     & span.input-group-btn {
         display: none;
     }
+    text-align: left;
 }
 
 .percentSpan {
