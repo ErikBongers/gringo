@@ -15,14 +15,14 @@ export class PriceBlock {
 
         container.classList.add("flexRow");
 
-        this.nettoCalcField = new CalcField(container, "Netto", pr ? createTarifDiv(pr, index, this.entangledFields) : "--", ["gringo"], (field) => {
+        this.nettoCalcField = new CalcField(container, "Netto", pr ? createTarifDiv(pr, index, this.entangledFields) : "--", ["gringo", "pre"], (field) => {
             if (!field.result)
                 return;
             this.entangledFields.context.netto = field.result.result;
             this.entangledFields.updateOtherFields();
         });
 
-        this.brutoCalcField = new CalcField(container, "Bruto", "", [], (field) => {
+        this.brutoCalcField = new CalcField(container, "Bruto", "", ["pre"], (field) => {
             if (!field.result)
                 return;
             this.entangledFields.context.bruto = field.result.result;

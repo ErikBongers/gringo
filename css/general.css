@@ -471,3 +471,7 @@ section.view-requisition .input-wrap-container .gringo .input-wrap .form-group i
 {
     background-color: var(--blue-block-blue-read-only);
 }
+
+.pre {
+    white-space: pre;
+}
