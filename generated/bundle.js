@@ -2880,8 +2880,18 @@
 		return false;
 	}
 	let pr = null;
-	function getUrlPrId() {
-		return location.pathname.split("/").pop();
+	function findPrId() {
+		let prId = location.pathname.split("/").pop();
+		if (!prId.startsWith("PR")) {
+			let prElText = document.querySelector("gb-action-bar div.req-info ").textContent;
+			let rx = /* @__PURE__ */ new RegExp("PR\\d+");
+			let match = prElText.match(rx);
+			debugger;
+			console.log(match);
+			if (match) return match[0];
+			return null;
+		}
+		return prId;
 	}
 	function createCompactReqItem(item) {
 		return {
@@ -2946,7 +2956,12 @@
 	}
 	async function decorateReqPage(getCompactPr) {
 		if (!canBeDecoratedAndSet(document.querySelector(`section[role="main"]`))) return;
-		let compactPr = await getCompactPr(getUrlPrId());
+		let prId = findPrId();
+		if (prId === null) {
+			console.error("Could not find prId");
+			return;
+		}
+		let compactPr = await getCompactPr(prId);
 		if (!compactPr) return;
 		let totalPriceDiv = document.querySelector("div.block-heading.total-price");
 		totalPriceDiv.style.display = "none";

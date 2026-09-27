@@ -269,6 +269,7 @@ request-info-item.hidden {
     background-color: var(--blue-block-blue);
     border-radius: 1ch;
     padding: 1ch;
+    margin-block-end: 1em;
 }
 .flexRow .pull-end {
     margin-inline-start: auto;

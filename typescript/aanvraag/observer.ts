@@ -61,8 +61,19 @@ function onViewMutation(mutation: MutationRecord) {
 
 let pr: PurchaseRequisition | null = null;
 
-function getUrlPrId() {
-    return location.pathname.split("/").pop()!;
+function findPrId() {
+    let prId = location.pathname.split("/").pop()!;
+    if(!(prId.startsWith("PR"))) {
+        let prElText = document.querySelector("gb-action-bar div.req-info ")!.textContent!;
+        let rx = new RegExp("PR\\d+");
+        let match = prElText.match(rx);
+        debugger
+        console.log(match);
+        if(match)
+            return match[0];
+        return null;
+    }
+    return prId;
 }
 
 
@@ -144,7 +155,11 @@ async function decorateReqPage(getCompactPr: (prId: string) => Promise<CompactRe
     if(!canBeDecoratedAndSet(document.querySelector(`section[role="main"]`)))
         return;
 
-    let prId = getUrlPrId();
+    let prId = findPrId();
+    if(prId === null) {
+        console.error("Could not find prId");
+        return;
+    }
 
     let compactPr = await getCompactPr(prId);
     if(!compactPr)
