@@ -3,7 +3,7 @@ import {fakeAnchorClick, fakeRadioButtonClick, formatPrice, gringo} from "../glo
 import {emmet} from "../../libs/Emmeter";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {getBtwTarif} from "../aanvragen/requests";
+import {ExpandedProcurementForm, getBtwTarif} from "../aanvragen/requests";
 import {Parser} from "../calculator/parser";
 import {PriceBlock} from "../aanvraag/priceBlock";
 import {PriceData} from "../aanvraag/priceData";
@@ -91,7 +91,13 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSelectPerEenheid(ulUnitOfMeasure);
     scanAndSetRadionButtons(el);
 
-    let priceBlock = new PriceBlock(tarif?.tarif??null, calcFieldsContainer, null, 0);
+    let expandedPf: ExpandedProcurementForm = {
+        pf: prForm,
+        tarif: tarif,
+        quantity: 1,
+    };
+
+    let priceBlock = new PriceBlock(tarif?.tarif??null, calcFieldsContainer, expandedPf);
 
     let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
     let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group") as HTMLDivElement;

@@ -210,7 +210,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first as HTMLDivElement;
 
-    let priceBlock = new PriceBlock(null, calcFieldsContainer, pr, index);
+    let priceBlock = new PriceBlock(null, calcFieldsContainer, pr.items[index]);
     priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx: PriceData)=> {
         updateTotalBrutoView(pr);
     });

@@ -1,12 +1,12 @@
-import {ExpandedCompactPrItem} from "../aanvragen/requests";
+import {ExpandedCompactPrItem, HasTarifAndQuantity} from "../aanvragen/requests";
 
 export class PriceData {
     private _bruto: number | null = null;
     private _netto: number | null = null;
     private _btw: number | null = null;
-    private readonly expandedPrItem: ExpandedCompactPrItem | null;
+    private readonly expandedPrItem: HasTarifAndQuantity | null;
 
-    constructor(btw: number | null, expandedPrItem: ExpandedCompactPrItem | null) {
+    constructor(btw: number | null, expandedPrItem: HasTarifAndQuantity | null) {
         this._btw = btw;
         this.expandedPrItem = expandedPrItem;
     }
@@ -28,7 +28,7 @@ export class PriceData {
         if (this._netto != null)
             this._bruto = this._btw != null ? this._netto * (1 + this._btw / 100) : null;
         if (this.expandedPrItem)
-            this.expandedPrItem.item.quantity = this._netto!;
+            this.expandedPrItem.quantity = this._netto!;
     }
 
     get bruto(): number | null {
@@ -40,7 +40,7 @@ export class PriceData {
         if (this._bruto != null)
             this._netto = this._btw != null ? this._bruto / (1 + this._btw / 100) : null;
         if (this.expandedPrItem)
-            this.expandedPrItem.item.quantity = this._netto!;
+            this.expandedPrItem.quantity = this._netto!;
     }
 
 }

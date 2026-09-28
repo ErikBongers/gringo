@@ -10,19 +10,27 @@ import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {LedgerToBudgetCode} from "./budgetCodes";
 import {createCompactReqItem} from "../aanvraag/observer";
+import {ProcurementForm} from "../sap/ProcurementForm";
 
-export interface ExpandedPrItem {
+export interface HasTarifAndQuantity {
+    tarif: Btw | null;
+    quantity: number;
+}
+
+export interface ExpandedPrItem extends HasTarifAndQuantity {
     pr: PurchaseRequisition;
     item: SapLineItem;
-    tarif: Btw | null;
     ledger: AccountingField | null;
     budget: LedgerToBudgetCode | null;
     grant: AccountingField | null;
 }
 
-export interface ExpandedCompactPrItem {
+export interface ExpandedProcurementForm extends HasTarifAndQuantity {
+    pf: ProcurementForm;
+}
+
+export interface ExpandedCompactPrItem  extends HasTarifAndQuantity {
     item: CompactReqItem;
-    tarif: Btw | null;
 }
 
 export interface CompactReqItem {

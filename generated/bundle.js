@@ -1781,7 +1781,7 @@
 		set netto(value) {
 			this._netto = value;
 			if (this._netto != null) this._bruto = this._btw != null ? this._netto * (1 + this._btw / 100) : null;
-			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
+			if (this.expandedPrItem) this.expandedPrItem.quantity = this._netto;
 		}
 		get bruto() {
 			return this._bruto;
@@ -1789,7 +1789,7 @@
 		set bruto(value) {
 			this._bruto = value;
 			if (this._bruto != null) this._netto = this._btw != null ? this._bruto / (1 + this._btw / 100) : null;
-			if (this.expandedPrItem) this.expandedPrItem.item.quantity = this._netto;
+			if (this.expandedPrItem) this.expandedPrItem.quantity = this._netto;
 		}
 	};
 	//#endregion
@@ -1798,10 +1798,10 @@
 		brutoCalcField;
 		nettoCalcField;
 		entangledFields;
-		constructor(btw, container, pr, index) {
-			this.entangledFields = new EntangledFields(new PriceData(btw, pr ? pr.items[index] : null));
+		constructor(btw, container, pr_or_pf) {
+			this.entangledFields = new EntangledFields(new PriceData(btw, pr_or_pf));
 			container.classList.add("flexRow");
-			this.nettoCalcField = new CalcField(container, "Netto", pr ? createTarifDiv(pr, index, this.entangledFields) : "--", ["gringo", "pre"], (field) => {
+			this.nettoCalcField = new CalcField(container, "Netto", pr_or_pf ? createTarifDiv(pr_or_pf, this.entangledFields) : "--", ["gringo", "pre"], (field) => {
 				if (!field.result) return;
 				this.entangledFields.context.netto = field.result.result;
 				this.entangledFields.updateOtherFields();
@@ -1841,21 +1841,21 @@
 			this.nettoCalcField.setReadOnly();
 		}
 	};
-	function createTarifDiv(pr, index, entangledFields) {
+	function createTarifDiv(pr, entangledFields) {
 		let div = emmet.createElement(`div.tarifContainer`);
-		fillTarifDiv(div, pr, index, entangledFields);
+		fillTarifDiv(div, pr, entangledFields);
 		return div;
 	}
-	function updateTarifDiv(container, pr, index, entangledFields) {
+	function updateTarifDiv(container, prItem, entangledFields) {
 		container.innerHTML = "";
-		fillTarifDiv(container, pr, index, entangledFields);
+		fillTarifDiv(container, prItem, entangledFields);
 	}
 	const TXT_NO_TARIF = "--";
-	function fillTarifDiv(container, pr, index, entangledFields) {
-		if (pr.items[index].tarif) emmet.appendChild(container, `div>label{${pr.items[index].tarif.tarif.toString()}%}`).last.addEventListener("mousedown", (ev) => {
+	function fillTarifDiv(container, prItem, entangledFields) {
+		if (prItem.tarif) emmet.appendChild(container, `div>label{${prItem.tarif.tarif.toString()}%}`).last.addEventListener("mousedown", (ev) => {
 			if (ev.getModifierState("Alt") || ev.getModifierState("Control")) {
-				pr.items[index].tarif = null;
-				updateTarifDiv(container, pr, index, entangledFields);
+				prItem.tarif = null;
+				updateTarifDiv(container, prItem, entangledFields);
 			}
 		});
 		else {
@@ -1879,14 +1879,14 @@
 			};
 			let button = container.querySelector("button.btwSave");
 			button.onclick = async (ev) => {
-				await onClickCreateTarif(container, select, pr, index, entangledFields);
+				await onClickCreateTarif(container, select, prItem, entangledFields);
 			};
 		}
 	}
-	async function onClickCreateTarif(container, select, pr, index, entangledFields) {
+	async function onClickCreateTarif(container, select, prItem, entangledFields) {
 		let txtNewValue = select.value;
 		if (txtNewValue == TXT_NO_TARIF) return;
-		let commodity = pr.items[index].item.commodityCode;
+		let commodity = prItem.tarif?.commodityCode ?? "";
 		if (commodity == "") {
 			alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
 			return;
@@ -1897,9 +1897,9 @@
 			description: "",
 			tarif: parseInt(txtNewValue)
 		});
-		pr.items[index].tarif = tarifs.get(commodity);
+		prItem.tarif = tarifs.get(commodity);
 		await uploadBtwTarifs(tarifs);
-		updateTarifDiv(container, pr, index, entangledFields);
+		updateTarifDiv(container, prItem, entangledFields);
 		entangledFields.triggerRecalc();
 	}
 	//#endregion
@@ -1967,7 +1967,8 @@
 		let calcFieldsContainer = emmet.appendChild(ul, `
         div.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
     `).first;
-		let tarif = await getBtwTarif((await fetchReqFormInfo()).commodityCode);
+		let prForm = await fetchReqFormInfo();
+		let tarif = await getBtwTarif(prForm.commodityCode);
 		let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`);
 		let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`);
 		let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul");
@@ -1975,7 +1976,12 @@
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
-		let priceBlock = new PriceBlock(tarif?.tarif ?? null, calcFieldsContainer, null, 0);
+		let expandedPf = {
+			pf: prForm,
+			tarif,
+			quantity: 1
+		};
+		let priceBlock = new PriceBlock(tarif?.tarif ?? null, calcFieldsContainer, expandedPf);
 		let fieldQuantity = el.querySelector("div.field-quantity");
 		let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group");
 		emmet.appendChild(fieldQuantityInputGroup, `
@@ -2817,7 +2823,8 @@
 				tarif,
 				ledger,
 				budget,
-				grant
+				grant,
+				quantity: item.quantity.value
 			});
 		}
 		return {
@@ -2832,7 +2839,8 @@
 			tarif = (await getBtwTarifsCachedInSession()).get(item.commodityCode) ?? null;
 			items.push({
 				item,
-				tarif
+				tarif,
+				quantity: item.quantity
 			});
 		}
 		return {
@@ -2996,7 +3004,7 @@
 		let calcFieldsContainer = emmet.appendChild(brutoRow, `
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first;
-		let priceBlock = new PriceBlock(null, calcFieldsContainer, pr, index);
+		let priceBlock = new PriceBlock(null, calcFieldsContainer, pr.items[index]);
 		priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx) => {
 			updateTotalBrutoView(pr);
 		});

@@ -1,6 +1,12 @@
 import {CalcField} from "./calcField";
 import {EntangledFields} from "./entangledFields";
-import {ExpandedCompactPr, getBtwTarifsCachedInSession, uploadBtwTarifs} from "../aanvragen/requests";
+import {
+    ExpandedCompactPr,
+    ExpandedCompactPrItem,
+    getBtwTarifsCachedInSession,
+    HasTarifAndQuantity,
+    uploadBtwTarifs
+} from "../aanvragen/requests";
 import {emmet} from "../../libs/Emmeter";
 import {formatPrice, gringo} from "../globals";
 import {PriceData} from "./priceData";
@@ -10,12 +16,12 @@ export class PriceBlock {
     nettoCalcField: CalcField;
     entangledFields: EntangledFields<PriceData>;
 
-    constructor(btw: number | null, container: HTMLElement, pr: ExpandedCompactPr | null, index: number) {
-        this.entangledFields = new EntangledFields<PriceData>(new PriceData(btw, pr ? pr.items[index] : null));
+    constructor(btw: number | null, container: HTMLElement, pr_or_pf: HasTarifAndQuantity | null) {
+        this.entangledFields = new EntangledFields<PriceData>(new PriceData(btw, pr_or_pf));
 
         container.classList.add("flexRow");
 
-        this.nettoCalcField = new CalcField(container, "Netto", pr ? createTarifDiv(pr, index, this.entangledFields) : "--", ["gringo", "pre"], (field) => {
+        this.nettoCalcField = new CalcField(container, "Netto", pr_or_pf ? createTarifDiv(pr_or_pf, this.entangledFields) : "--", ["gringo", "pre"], (field) => {
             if (!field.result)
                 return;
             this.entangledFields.context.netto = field.result.result;
@@ -69,25 +75,25 @@ export class PriceBlock {
 }
 
 
-function createTarifDiv(pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
+function createTarifDiv(pr: HasTarifAndQuantity, entangledFields: EntangledFields<PriceData>) {
     let div = emmet.createElement(`div.tarifContainer`);
-    fillTarifDiv(div, pr, index, entangledFields);
+    fillTarifDiv(div, pr, entangledFields);
     return div;
 }
 
-function updateTarifDiv(container: HTMLElement, pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
+function updateTarifDiv(container: HTMLElement, prItem: HasTarifAndQuantity, entangledFields: EntangledFields<PriceData>) {
     container.innerHTML = "";
-    fillTarifDiv(container, pr, index, entangledFields);
+    fillTarifDiv(container, prItem, entangledFields);
 }
 
 const TXT_NO_TARIF = "--";
-function fillTarifDiv(container: HTMLElement, pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
-    if(pr.items[index].tarif) {
-        let label = emmet.appendChild(container, `div>label{${pr.items[index].tarif.tarif.toString()}%}`).last as HTMLLabelElement;
+function fillTarifDiv(container: HTMLElement, prItem: HasTarifAndQuantity, entangledFields: EntangledFields<PriceData>) {
+    if(prItem.tarif) {
+        let label = emmet.appendChild(container, `div>label{${prItem.tarif.tarif.toString()}%}`).last as HTMLLabelElement;
         label.addEventListener("mousedown", (ev) => {
             if(ev.getModifierState("Alt") || ev.getModifierState("Control")){
-                pr.items[index].tarif = null;
-                updateTarifDiv(container, pr, index, entangledFields);
+                prItem.tarif = null;
+                updateTarifDiv(container, prItem, entangledFields);
             }
         });
     }
@@ -112,17 +118,17 @@ function fillTarifDiv(container: HTMLElement, pr: ExpandedCompactPr, index: numb
         };
         let button = container.querySelector("button.btwSave") as HTMLButtonElement;
         button.onclick = async (ev) => {
-            await onClickCreateTarif(container, select, pr, index, entangledFields);
+            await onClickCreateTarif(container, select, prItem, entangledFields);
         };
     }
 }
 
 
-async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElement, pr: ExpandedCompactPr, index: number, entangledFields: EntangledFields<PriceData>) {
+async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElement, prItem: HasTarifAndQuantity, entangledFields: EntangledFields<PriceData>) {
     let txtNewValue = select.value;
     if (txtNewValue == TXT_NO_TARIF)
         return;
-    let commodity = pr.items[index].item.commodityCode;
+    let commodity = prItem.tarif?.commodityCode??"";
     if (commodity == "") {
         alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
         return;
@@ -133,8 +139,8 @@ async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElem
         description: "",
         tarif: parseInt(txtNewValue)
     });
-    pr.items[index].tarif = tarifs.get(commodity)!; //! just set.
+    prItem.tarif = tarifs.get(commodity)!; //! just set.
     await uploadBtwTarifs(tarifs);
-    updateTarifDiv(container, pr, index, entangledFields);
+    updateTarifDiv(container, prItem, entangledFields);
     entangledFields.triggerRecalc();
 }
