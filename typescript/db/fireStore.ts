@@ -2,6 +2,7 @@ import {initializeApp} from "firebase/app";
 import {
     collection,
     doc,
+    DocumentData,
     FirestoreDataConverter,
     getDoc,
     getDocs,
@@ -67,29 +68,29 @@ async function fetchSinglePrMeta(id: string): Promise<PrMeta | null> {
 export async function testIt() {
     // await fetchSinglePrMeta("PR12345");
     // await fetchPrMetas("2023-01-01T00:00:00Z");
-    // await fetchPrMetas(null);
+    gringo("Fetching all metas...");
+    let metas = await fetchPrMetas(null);
+    gringo("Done fetching all metas.");
+    gringo(metas);
     // await copyCloudtoFireStore();
 }
 
 
 async function fetchPrMetas(changedDateZ: string | null) {
-    try {
-        const prMetaRef = collection(db, "pr_meta");
+    const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
 
-        let querySnapshot;
-        if(changedDateZ) {
-            const q = query(prMetaRef, where("changed_date", ">=", changedDateZ));
-            querySnapshot = await getDocs(q);
-        }
-        else
-            querySnapshot = await getDocs(prMetaRef);
+    let querySnapshot;
+    if (changedDateZ) {
+        const q = query(prMetaRef, where("changed_date", ">=", changedDateZ));
+        querySnapshot = await getDocs(q);
+    } else
+        querySnapshot = await getDocs(prMetaRef);
 
-        querySnapshot.forEach((doc) => {
-            gringo(`Document ID (${doc.id}):`, doc.data());
-        });
-    } catch (error) {
-        console.error("Failed to query Firestore:", error);
-    }
+    let metas: PrMeta[] = [];
+    querySnapshot.forEach((doc) => {
+        metas.push(doc.data());
+    });
+    return metas;
 }
 
 export async function savePrMetaToFireStore(prMeta: PrMeta) {
