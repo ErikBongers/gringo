@@ -765,250 +765,6 @@
 		}
 	}
 	//#endregion
-	//#region node_modules/idb/build/index.js
-	const instanceOfAny$1 = (object, constructors) => constructors.some((c) => object instanceof c);
-	let idbProxyableTypes$1;
-	let cursorAdvanceMethods$1;
-	function getIdbProxyableTypes$1() {
-		return idbProxyableTypes$1 || (idbProxyableTypes$1 = [
-			IDBDatabase,
-			IDBObjectStore,
-			IDBIndex,
-			IDBCursor,
-			IDBTransaction
-		]);
-	}
-	function getCursorAdvanceMethods$1() {
-		return cursorAdvanceMethods$1 || (cursorAdvanceMethods$1 = [
-			IDBCursor.prototype.advance,
-			IDBCursor.prototype.continue,
-			IDBCursor.prototype.continuePrimaryKey
-		]);
-	}
-	const transactionDoneMap$1 = /* @__PURE__ */ new WeakMap();
-	const transformCache$1 = /* @__PURE__ */ new WeakMap();
-	const reverseTransformCache$1 = /* @__PURE__ */ new WeakMap();
-	function promisifyRequest$1(request) {
-		const promise = new Promise((resolve, reject) => {
-			const unlisten = () => {
-				request.removeEventListener("success", success);
-				request.removeEventListener("error", error);
-			};
-			const success = () => {
-				resolve(wrap$1(request.result));
-				unlisten();
-			};
-			const error = () => {
-				reject(request.error);
-				unlisten();
-			};
-			request.addEventListener("success", success);
-			request.addEventListener("error", error);
-		});
-		reverseTransformCache$1.set(promise, request);
-		return promise;
-	}
-	function cacheDonePromiseForTransaction$1(tx) {
-		if (transactionDoneMap$1.has(tx)) return;
-		const done = new Promise((resolve, reject) => {
-			const unlisten = () => {
-				tx.removeEventListener("complete", complete);
-				tx.removeEventListener("error", error);
-				tx.removeEventListener("abort", error);
-			};
-			const complete = () => {
-				resolve();
-				unlisten();
-			};
-			const error = () => {
-				reject(tx.error || new DOMException("AbortError", "AbortError"));
-				unlisten();
-			};
-			tx.addEventListener("complete", complete);
-			tx.addEventListener("error", error);
-			tx.addEventListener("abort", error);
-		});
-		transactionDoneMap$1.set(tx, done);
-	}
-	let idbProxyTraps$1 = {
-		get(target, prop, receiver) {
-			if (target instanceof IDBTransaction) {
-				if (prop === "done") return transactionDoneMap$1.get(target);
-				if (prop === "store") return receiver.objectStoreNames[1] ? void 0 : receiver.objectStore(receiver.objectStoreNames[0]);
-			}
-			return wrap$1(target[prop]);
-		},
-		set(target, prop, value) {
-			target[prop] = value;
-			return true;
-		},
-		has(target, prop) {
-			if (target instanceof IDBTransaction && (prop === "done" || prop === "store")) return true;
-			return prop in target;
-		}
-	};
-	function replaceTraps$1(callback) {
-		idbProxyTraps$1 = callback(idbProxyTraps$1);
-	}
-	function wrapFunction$1(func) {
-		if (getCursorAdvanceMethods$1().includes(func)) return function(...args) {
-			func.apply(unwrap$1(this), args);
-			return wrap$1(this.request);
-		};
-		return function(...args) {
-			return wrap$1(func.apply(unwrap$1(this), args));
-		};
-	}
-	function transformCachableValue$1(value) {
-		if (typeof value === "function") return wrapFunction$1(value);
-		if (value instanceof IDBTransaction) cacheDonePromiseForTransaction$1(value);
-		if (instanceOfAny$1(value, getIdbProxyableTypes$1())) return new Proxy(value, idbProxyTraps$1);
-		return value;
-	}
-	function wrap$1(value) {
-		if (value instanceof IDBRequest) return promisifyRequest$1(value);
-		if (transformCache$1.has(value)) return transformCache$1.get(value);
-		const newValue = transformCachableValue$1(value);
-		if (newValue !== value) {
-			transformCache$1.set(value, newValue);
-			reverseTransformCache$1.set(newValue, value);
-		}
-		return newValue;
-	}
-	const unwrap$1 = (value) => reverseTransformCache$1.get(value);
-	/**
-	* Open a database.
-	*
-	* @param name Name of the database.
-	* @param version Schema version.
-	* @param callbacks Additional callbacks.
-	*/
-	function openDB$1(name, version, { blocked, upgrade, blocking, terminated } = {}) {
-		const request = indexedDB.open(name, version);
-		const openPromise = wrap$1(request);
-		if (upgrade) request.addEventListener("upgradeneeded", (event) => {
-			upgrade(wrap$1(request.result), event.oldVersion, event.newVersion, wrap$1(request.transaction), event);
-		});
-		if (blocked) request.addEventListener("blocked", (event) => blocked(event.oldVersion, event.newVersion, event));
-		openPromise.then((db) => {
-			if (terminated) db.addEventListener("close", () => terminated());
-			if (blocking) db.addEventListener("versionchange", (event) => blocking(event.oldVersion, event.newVersion, event));
-		}).catch(() => {});
-		return openPromise;
-	}
-	const readMethods$1 = [
-		"get",
-		"getKey",
-		"getAll",
-		"getAllKeys",
-		"count"
-	];
-	const writeMethods$1 = [
-		"put",
-		"add",
-		"delete",
-		"clear"
-	];
-	const cachedMethods$1 = /* @__PURE__ */ new Map();
-	function getMethod$1(target, prop) {
-		if (!(target instanceof IDBDatabase && !(prop in target) && typeof prop === "string")) return;
-		if (cachedMethods$1.get(prop)) return cachedMethods$1.get(prop);
-		const targetFuncName = prop.replace(/FromIndex$/, "");
-		const useIndex = prop !== targetFuncName;
-		const isWrite = writeMethods$1.includes(targetFuncName);
-		if (!(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) || !(isWrite || readMethods$1.includes(targetFuncName))) return;
-		const method = async function(storeName, ...args) {
-			const tx = this.transaction(storeName, isWrite ? "readwrite" : "readonly");
-			let target = tx.store;
-			if (useIndex) target = target.index(args.shift());
-			return (await Promise.all([target[targetFuncName](...args), isWrite && tx.done]))[0];
-		};
-		cachedMethods$1.set(prop, method);
-		return method;
-	}
-	replaceTraps$1((oldTraps) => ({
-		...oldTraps,
-		get: (target, prop, receiver) => getMethod$1(target, prop) || oldTraps.get(target, prop, receiver),
-		has: (target, prop) => !!getMethod$1(target, prop) || oldTraps.has(target, prop)
-	}));
-	const advanceMethodProps = [
-		"continue",
-		"continuePrimaryKey",
-		"advance"
-	];
-	const methodMap = {};
-	const advanceResults = /* @__PURE__ */ new WeakMap();
-	const ittrProxiedCursorToOriginalProxy = /* @__PURE__ */ new WeakMap();
-	const cursorIteratorTraps = { get(target, prop) {
-		if (!advanceMethodProps.includes(prop)) return target[prop];
-		let cachedFunc = methodMap[prop];
-		if (!cachedFunc) cachedFunc = methodMap[prop] = function(...args) {
-			advanceResults.set(this, ittrProxiedCursorToOriginalProxy.get(this)[prop](...args));
-		};
-		return cachedFunc;
-	} };
-	async function* iterate(...args) {
-		let cursor = this;
-		if (!(cursor instanceof IDBCursor)) cursor = await cursor.openCursor(...args);
-		if (!cursor) return;
-		cursor = cursor;
-		const proxiedCursor = new Proxy(cursor, cursorIteratorTraps);
-		ittrProxiedCursorToOriginalProxy.set(proxiedCursor, cursor);
-		reverseTransformCache$1.set(proxiedCursor, unwrap$1(cursor));
-		while (cursor) {
-			yield proxiedCursor;
-			cursor = await (advanceResults.get(proxiedCursor) || cursor.continue());
-			advanceResults.delete(proxiedCursor);
-		}
-	}
-	function isIteratorProp(target, prop) {
-		return prop === Symbol.asyncIterator && instanceOfAny$1(target, [
-			IDBIndex,
-			IDBObjectStore,
-			IDBCursor
-		]) || prop === "iterate" && instanceOfAny$1(target, [IDBIndex, IDBObjectStore]);
-	}
-	replaceTraps$1((oldTraps) => ({
-		...oldTraps,
-		get(target, prop, receiver) {
-			if (isIteratorProp(target, prop)) return iterate;
-			return oldTraps.get(target, prop, receiver);
-		},
-		has(target, prop) {
-			return isIteratorProp(target, prop) || oldTraps.has(target, prop);
-		}
-	}));
-	//#endregion
-	//#region typescript/db/gringoDb.ts
-	const dbGringo = openDB$1("gringo", 1, { upgrade(db) {
-		db.createObjectStore("PrMetas", { keyPath: "prId" });
-	} });
-	async function get(key) {
-		return (await dbGringo).get("PrMetas", key);
-	}
-	async function set(val) {
-		return (await dbGringo).put("PrMetas", val);
-	}
-	async function clear() {
-		return (await dbGringo).clear("PrMetas");
-	}
-	async function setAll(prMetas) {
-		let tx = (await dbGringo).transaction("PrMetas", "readwrite");
-		await Promise.all(prMetas.map((meta) => tx.store.put(meta)));
-	}
-	async function clearMetasLocal() {
-		return clear();
-	}
-	async function getMetaLocal(prId) {
-		return get(prId);
-	}
-	async function saveMetaLocal(meta) {
-		return set(meta);
-	}
-	async function saveMetasLocal(prMetas) {
-		return setAll(prMetas);
-	}
-	//#endregion
 	//#region typescript/sap/api.ts
 	async function fetchUserInfoCached() {
 		return await (await fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false")).json();
@@ -2365,11 +2121,11 @@
 	};
 	//#endregion
 	//#region node_modules/@firebase/app/node_modules/idb/build/wrap-idb-value.js
-	const instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
-	let idbProxyableTypes;
-	let cursorAdvanceMethods;
-	function getIdbProxyableTypes() {
-		return idbProxyableTypes || (idbProxyableTypes = [
+	const instanceOfAny$1 = (object, constructors) => constructors.some((c) => object instanceof c);
+	let idbProxyableTypes$1;
+	let cursorAdvanceMethods$1;
+	function getIdbProxyableTypes$1() {
+		return idbProxyableTypes$1 || (idbProxyableTypes$1 = [
 			IDBDatabase,
 			IDBObjectStore,
 			IDBIndex,
@@ -2377,26 +2133,26 @@
 			IDBTransaction
 		]);
 	}
-	function getCursorAdvanceMethods() {
-		return cursorAdvanceMethods || (cursorAdvanceMethods = [
+	function getCursorAdvanceMethods$1() {
+		return cursorAdvanceMethods$1 || (cursorAdvanceMethods$1 = [
 			IDBCursor.prototype.advance,
 			IDBCursor.prototype.continue,
 			IDBCursor.prototype.continuePrimaryKey
 		]);
 	}
 	const cursorRequestMap = /* @__PURE__ */ new WeakMap();
-	const transactionDoneMap = /* @__PURE__ */ new WeakMap();
+	const transactionDoneMap$1 = /* @__PURE__ */ new WeakMap();
 	const transactionStoreNamesMap = /* @__PURE__ */ new WeakMap();
-	const transformCache = /* @__PURE__ */ new WeakMap();
-	const reverseTransformCache = /* @__PURE__ */ new WeakMap();
-	function promisifyRequest(request) {
+	const transformCache$1 = /* @__PURE__ */ new WeakMap();
+	const reverseTransformCache$1 = /* @__PURE__ */ new WeakMap();
+	function promisifyRequest$1(request) {
 		const promise = new Promise((resolve, reject) => {
 			const unlisten = () => {
 				request.removeEventListener("success", success);
 				request.removeEventListener("error", error);
 			};
 			const success = () => {
-				resolve(wrap(request.result));
+				resolve(wrap$1(request.result));
 				unlisten();
 			};
 			const error = () => {
@@ -2409,11 +2165,11 @@
 		promise.then((value) => {
 			if (value instanceof IDBCursor) cursorRequestMap.set(value, request);
 		}).catch(() => {});
-		reverseTransformCache.set(promise, request);
+		reverseTransformCache$1.set(promise, request);
 		return promise;
 	}
-	function cacheDonePromiseForTransaction(tx) {
-		if (transactionDoneMap.has(tx)) return;
+	function cacheDonePromiseForTransaction$1(tx) {
+		if (transactionDoneMap$1.has(tx)) return;
 		const done = new Promise((resolve, reject) => {
 			const unlisten = () => {
 				tx.removeEventListener("complete", complete);
@@ -2432,16 +2188,16 @@
 			tx.addEventListener("error", error);
 			tx.addEventListener("abort", error);
 		});
-		transactionDoneMap.set(tx, done);
+		transactionDoneMap$1.set(tx, done);
 	}
-	let idbProxyTraps = {
+	let idbProxyTraps$1 = {
 		get(target, prop, receiver) {
 			if (target instanceof IDBTransaction) {
-				if (prop === "done") return transactionDoneMap.get(target);
+				if (prop === "done") return transactionDoneMap$1.get(target);
 				if (prop === "objectStoreNames") return target.objectStoreNames || transactionStoreNamesMap.get(target);
 				if (prop === "store") return receiver.objectStoreNames[1] ? void 0 : receiver.objectStore(receiver.objectStoreNames[0]);
 			}
-			return wrap(target[prop]);
+			return wrap$1(target[prop]);
 		},
 		set(target, prop, value) {
 			target[prop] = value;
@@ -2452,40 +2208,40 @@
 			return prop in target;
 		}
 	};
-	function replaceTraps(callback) {
-		idbProxyTraps = callback(idbProxyTraps);
+	function replaceTraps$1(callback) {
+		idbProxyTraps$1 = callback(idbProxyTraps$1);
 	}
-	function wrapFunction(func) {
+	function wrapFunction$1(func) {
 		if (func === IDBDatabase.prototype.transaction && !("objectStoreNames" in IDBTransaction.prototype)) return function(storeNames, ...args) {
-			const tx = func.call(unwrap(this), storeNames, ...args);
+			const tx = func.call(unwrap$1(this), storeNames, ...args);
 			transactionStoreNamesMap.set(tx, storeNames.sort ? storeNames.sort() : [storeNames]);
-			return wrap(tx);
+			return wrap$1(tx);
 		};
-		if (getCursorAdvanceMethods().includes(func)) return function(...args) {
-			func.apply(unwrap(this), args);
-			return wrap(cursorRequestMap.get(this));
+		if (getCursorAdvanceMethods$1().includes(func)) return function(...args) {
+			func.apply(unwrap$1(this), args);
+			return wrap$1(cursorRequestMap.get(this));
 		};
 		return function(...args) {
-			return wrap(func.apply(unwrap(this), args));
+			return wrap$1(func.apply(unwrap$1(this), args));
 		};
 	}
-	function transformCachableValue(value) {
-		if (typeof value === "function") return wrapFunction(value);
-		if (value instanceof IDBTransaction) cacheDonePromiseForTransaction(value);
-		if (instanceOfAny(value, getIdbProxyableTypes())) return new Proxy(value, idbProxyTraps);
+	function transformCachableValue$1(value) {
+		if (typeof value === "function") return wrapFunction$1(value);
+		if (value instanceof IDBTransaction) cacheDonePromiseForTransaction$1(value);
+		if (instanceOfAny$1(value, getIdbProxyableTypes$1())) return new Proxy(value, idbProxyTraps$1);
 		return value;
 	}
-	function wrap(value) {
-		if (value instanceof IDBRequest) return promisifyRequest(value);
-		if (transformCache.has(value)) return transformCache.get(value);
-		const newValue = transformCachableValue(value);
+	function wrap$1(value) {
+		if (value instanceof IDBRequest) return promisifyRequest$1(value);
+		if (transformCache$1.has(value)) return transformCache$1.get(value);
+		const newValue = transformCachableValue$1(value);
 		if (newValue !== value) {
-			transformCache.set(value, newValue);
-			reverseTransformCache.set(newValue, value);
+			transformCache$1.set(value, newValue);
+			reverseTransformCache$1.set(newValue, value);
 		}
 		return newValue;
 	}
-	const unwrap = (value) => reverseTransformCache.get(value);
+	const unwrap$1 = (value) => reverseTransformCache$1.get(value);
 	//#endregion
 	//#region node_modules/@firebase/app/node_modules/idb/build/index.js
 	/**
@@ -2495,11 +2251,11 @@
 	* @param version Schema version.
 	* @param callbacks Additional callbacks.
 	*/
-	function openDB(name, version, { blocked, upgrade, blocking, terminated } = {}) {
+	function openDB$1(name, version, { blocked, upgrade, blocking, terminated } = {}) {
 		const request = indexedDB.open(name, version);
-		const openPromise = wrap(request);
+		const openPromise = wrap$1(request);
 		if (upgrade) request.addEventListener("upgradeneeded", (event) => {
-			upgrade(wrap(request.result), event.oldVersion, event.newVersion, wrap(request.transaction), event);
+			upgrade(wrap$1(request.result), event.oldVersion, event.newVersion, wrap$1(request.transaction), event);
 		});
 		if (blocked) request.addEventListener("blocked", (event) => blocked(event.oldVersion, event.newVersion, event));
 		openPromise.then((db) => {
@@ -2508,40 +2264,40 @@
 		}).catch(() => {});
 		return openPromise;
 	}
-	const readMethods = [
+	const readMethods$1 = [
 		"get",
 		"getKey",
 		"getAll",
 		"getAllKeys",
 		"count"
 	];
-	const writeMethods = [
+	const writeMethods$1 = [
 		"put",
 		"add",
 		"delete",
 		"clear"
 	];
-	const cachedMethods = /* @__PURE__ */ new Map();
-	function getMethod(target, prop) {
+	const cachedMethods$1 = /* @__PURE__ */ new Map();
+	function getMethod$1(target, prop) {
 		if (!(target instanceof IDBDatabase && !(prop in target) && typeof prop === "string")) return;
-		if (cachedMethods.get(prop)) return cachedMethods.get(prop);
+		if (cachedMethods$1.get(prop)) return cachedMethods$1.get(prop);
 		const targetFuncName = prop.replace(/FromIndex$/, "");
 		const useIndex = prop !== targetFuncName;
-		const isWrite = writeMethods.includes(targetFuncName);
-		if (!(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) || !(isWrite || readMethods.includes(targetFuncName))) return;
+		const isWrite = writeMethods$1.includes(targetFuncName);
+		if (!(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) || !(isWrite || readMethods$1.includes(targetFuncName))) return;
 		const method = async function(storeName, ...args) {
 			const tx = this.transaction(storeName, isWrite ? "readwrite" : "readonly");
 			let target = tx.store;
 			if (useIndex) target = target.index(args.shift());
 			return (await Promise.all([target[targetFuncName](...args), isWrite && tx.done]))[0];
 		};
-		cachedMethods.set(prop, method);
+		cachedMethods$1.set(prop, method);
 		return method;
 	}
-	replaceTraps((oldTraps) => ({
+	replaceTraps$1((oldTraps) => ({
 		...oldTraps,
-		get: (target, prop, receiver) => getMethod(target, prop) || oldTraps.get(target, prop, receiver),
-		has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop)
+		get: (target, prop, receiver) => getMethod$1(target, prop) || oldTraps.get(target, prop, receiver),
+		has: (target, prop) => !!getMethod$1(target, prop) || oldTraps.has(target, prop)
 	}));
 	//#endregion
 	//#region node_modules/@firebase/app/dist/esm/index.esm.js
@@ -2980,11 +2736,11 @@
 	* limitations under the License.
 	*/
 	const DB_NAME = "firebase-heartbeat-database";
-	const DB_VERSION = 1;
+	const DB_VERSION$1 = 1;
 	const STORE_NAME = "firebase-heartbeat-store";
 	let dbPromise = null;
 	function getDbPromise() {
-		if (!dbPromise) dbPromise = openDB(DB_NAME, DB_VERSION, { upgrade: (db, oldVersion) => {
+		if (!dbPromise) dbPromise = openDB$1(DB_NAME, DB_VERSION$1, { upgrade: (db, oldVersion) => {
 			switch (oldVersion) {
 				case 0: try {
 					db.createObjectStore(STORE_NAME);
@@ -26895,6 +26651,282 @@ Total Duration: ${a - u}ms`);
 		}), "PUBLIC").setMultipleInstances(true)), registerVersion(Be, Me, s), registerVersion(Be, Me, "esm2020");
 	})();
 	//#endregion
+	//#region node_modules/idb/build/index.js
+	const instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
+	let idbProxyableTypes;
+	let cursorAdvanceMethods;
+	function getIdbProxyableTypes() {
+		return idbProxyableTypes || (idbProxyableTypes = [
+			IDBDatabase,
+			IDBObjectStore,
+			IDBIndex,
+			IDBCursor,
+			IDBTransaction
+		]);
+	}
+	function getCursorAdvanceMethods() {
+		return cursorAdvanceMethods || (cursorAdvanceMethods = [
+			IDBCursor.prototype.advance,
+			IDBCursor.prototype.continue,
+			IDBCursor.prototype.continuePrimaryKey
+		]);
+	}
+	const transactionDoneMap = /* @__PURE__ */ new WeakMap();
+	const transformCache = /* @__PURE__ */ new WeakMap();
+	const reverseTransformCache = /* @__PURE__ */ new WeakMap();
+	function promisifyRequest(request) {
+		const promise = new Promise((resolve, reject) => {
+			const unlisten = () => {
+				request.removeEventListener("success", success);
+				request.removeEventListener("error", error);
+			};
+			const success = () => {
+				resolve(wrap(request.result));
+				unlisten();
+			};
+			const error = () => {
+				reject(request.error);
+				unlisten();
+			};
+			request.addEventListener("success", success);
+			request.addEventListener("error", error);
+		});
+		reverseTransformCache.set(promise, request);
+		return promise;
+	}
+	function cacheDonePromiseForTransaction(tx) {
+		if (transactionDoneMap.has(tx)) return;
+		const done = new Promise((resolve, reject) => {
+			const unlisten = () => {
+				tx.removeEventListener("complete", complete);
+				tx.removeEventListener("error", error);
+				tx.removeEventListener("abort", error);
+			};
+			const complete = () => {
+				resolve();
+				unlisten();
+			};
+			const error = () => {
+				reject(tx.error || new DOMException("AbortError", "AbortError"));
+				unlisten();
+			};
+			tx.addEventListener("complete", complete);
+			tx.addEventListener("error", error);
+			tx.addEventListener("abort", error);
+		});
+		transactionDoneMap.set(tx, done);
+	}
+	let idbProxyTraps = {
+		get(target, prop, receiver) {
+			if (target instanceof IDBTransaction) {
+				if (prop === "done") return transactionDoneMap.get(target);
+				if (prop === "store") return receiver.objectStoreNames[1] ? void 0 : receiver.objectStore(receiver.objectStoreNames[0]);
+			}
+			return wrap(target[prop]);
+		},
+		set(target, prop, value) {
+			target[prop] = value;
+			return true;
+		},
+		has(target, prop) {
+			if (target instanceof IDBTransaction && (prop === "done" || prop === "store")) return true;
+			return prop in target;
+		}
+	};
+	function replaceTraps(callback) {
+		idbProxyTraps = callback(idbProxyTraps);
+	}
+	function wrapFunction(func) {
+		if (getCursorAdvanceMethods().includes(func)) return function(...args) {
+			func.apply(unwrap(this), args);
+			return wrap(this.request);
+		};
+		return function(...args) {
+			return wrap(func.apply(unwrap(this), args));
+		};
+	}
+	function transformCachableValue(value) {
+		if (typeof value === "function") return wrapFunction(value);
+		if (value instanceof IDBTransaction) cacheDonePromiseForTransaction(value);
+		if (instanceOfAny(value, getIdbProxyableTypes())) return new Proxy(value, idbProxyTraps);
+		return value;
+	}
+	function wrap(value) {
+		if (value instanceof IDBRequest) return promisifyRequest(value);
+		if (transformCache.has(value)) return transformCache.get(value);
+		const newValue = transformCachableValue(value);
+		if (newValue !== value) {
+			transformCache.set(value, newValue);
+			reverseTransformCache.set(newValue, value);
+		}
+		return newValue;
+	}
+	const unwrap = (value) => reverseTransformCache.get(value);
+	/**
+	* Open a database.
+	*
+	* @param name Name of the database.
+	* @param version Schema version.
+	* @param callbacks Additional callbacks.
+	*/
+	function openDB(name, version, { blocked, upgrade, blocking, terminated } = {}) {
+		const request = indexedDB.open(name, version);
+		const openPromise = wrap(request);
+		if (upgrade) request.addEventListener("upgradeneeded", (event) => {
+			upgrade(wrap(request.result), event.oldVersion, event.newVersion, wrap(request.transaction), event);
+		});
+		if (blocked) request.addEventListener("blocked", (event) => blocked(event.oldVersion, event.newVersion, event));
+		openPromise.then((db) => {
+			if (terminated) db.addEventListener("close", () => terminated());
+			if (blocking) db.addEventListener("versionchange", (event) => blocking(event.oldVersion, event.newVersion, event));
+		}).catch(() => {});
+		return openPromise;
+	}
+	const readMethods = [
+		"get",
+		"getKey",
+		"getAll",
+		"getAllKeys",
+		"count"
+	];
+	const writeMethods = [
+		"put",
+		"add",
+		"delete",
+		"clear"
+	];
+	const cachedMethods = /* @__PURE__ */ new Map();
+	function getMethod(target, prop) {
+		if (!(target instanceof IDBDatabase && !(prop in target) && typeof prop === "string")) return;
+		if (cachedMethods.get(prop)) return cachedMethods.get(prop);
+		const targetFuncName = prop.replace(/FromIndex$/, "");
+		const useIndex = prop !== targetFuncName;
+		const isWrite = writeMethods.includes(targetFuncName);
+		if (!(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) || !(isWrite || readMethods.includes(targetFuncName))) return;
+		const method = async function(storeName, ...args) {
+			const tx = this.transaction(storeName, isWrite ? "readwrite" : "readonly");
+			let target = tx.store;
+			if (useIndex) target = target.index(args.shift());
+			return (await Promise.all([target[targetFuncName](...args), isWrite && tx.done]))[0];
+		};
+		cachedMethods.set(prop, method);
+		return method;
+	}
+	replaceTraps((oldTraps) => ({
+		...oldTraps,
+		get: (target, prop, receiver) => getMethod(target, prop) || oldTraps.get(target, prop, receiver),
+		has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop)
+	}));
+	const advanceMethodProps = [
+		"continue",
+		"continuePrimaryKey",
+		"advance"
+	];
+	const methodMap = {};
+	const advanceResults = /* @__PURE__ */ new WeakMap();
+	const ittrProxiedCursorToOriginalProxy = /* @__PURE__ */ new WeakMap();
+	const cursorIteratorTraps = { get(target, prop) {
+		if (!advanceMethodProps.includes(prop)) return target[prop];
+		let cachedFunc = methodMap[prop];
+		if (!cachedFunc) cachedFunc = methodMap[prop] = function(...args) {
+			advanceResults.set(this, ittrProxiedCursorToOriginalProxy.get(this)[prop](...args));
+		};
+		return cachedFunc;
+	} };
+	async function* iterate(...args) {
+		let cursor = this;
+		if (!(cursor instanceof IDBCursor)) cursor = await cursor.openCursor(...args);
+		if (!cursor) return;
+		cursor = cursor;
+		const proxiedCursor = new Proxy(cursor, cursorIteratorTraps);
+		ittrProxiedCursorToOriginalProxy.set(proxiedCursor, cursor);
+		reverseTransformCache.set(proxiedCursor, unwrap(cursor));
+		while (cursor) {
+			yield proxiedCursor;
+			cursor = await (advanceResults.get(proxiedCursor) || cursor.continue());
+			advanceResults.delete(proxiedCursor);
+		}
+	}
+	function isIteratorProp(target, prop) {
+		return prop === Symbol.asyncIterator && instanceOfAny(target, [
+			IDBIndex,
+			IDBObjectStore,
+			IDBCursor
+		]) || prop === "iterate" && instanceOfAny(target, [IDBIndex, IDBObjectStore]);
+	}
+	replaceTraps((oldTraps) => ({
+		...oldTraps,
+		get(target, prop, receiver) {
+			if (isIteratorProp(target, prop)) return iterate;
+			return oldTraps.get(target, prop, receiver);
+		},
+		has(target, prop) {
+			return isIteratorProp(target, prop) || oldTraps.has(target, prop);
+		}
+	}));
+	//#endregion
+	//#region typescript/db/idb/repository.ts
+	var Repository = class {
+		constructor(db, storeName) {
+			this.db = db;
+			this.storeName = storeName;
+		}
+		async get(id) {
+			return this.db.get(this.storeName, id);
+		}
+		async put(data, key) {
+			return this.db.put(this.storeName, data, key);
+		}
+		async clear() {
+			return this.db.clear(this.storeName);
+		}
+		async bulkPut(items) {
+			let tx = this.db.transaction(this.storeName, "readwrite");
+			let putPromises = items.map((item) => tx.store.put(item));
+			await Promise.all([...putPromises, tx.done]);
+		}
+		async findMatches(match) {
+			return (await this.db.getAll(this.storeName)).filter(match);
+		}
+	};
+	//#endregion
+	//#region typescript/db/idb/localDb.ts
+	const DB_VERSION = 1;
+	const LOCAL_DB_PREFIX = "LocalGringoDb";
+	let cacheMap = /* @__PURE__ */ new Map();
+	async function getLocalCache(schoolId = "Berchem") {
+		let cache = cacheMap.get(schoolId);
+		if (!cache) {
+			cache = await LocalCache.get(schoolId);
+			cacheMap.set(schoolId, cache);
+		}
+		return cache;
+	}
+	var LocalCache = class LocalCache {
+		get PrMetas() {
+			return this._PrMetas;
+		}
+		get KeyValues() {
+			return this._KeyValues;
+		}
+		_KeyValues;
+		_PrMetas;
+		constructor(db) {
+			this.db = db;
+			this._KeyValues = new Repository(this.db, "KeyValues");
+			this._PrMetas = new Repository(this.db, "PrMetas");
+		}
+		static getDbName(schoolId) {
+			return `${LOCAL_DB_PREFIX}_${schoolId}`;
+		}
+		static async get(schoolId) {
+			return new LocalCache(await openDB(LocalCache.getDbName(schoolId), DB_VERSION, { upgrade(db) {
+				db.createObjectStore("KeyValues", { keyPath: "key" });
+				db.createObjectStore("PrMetas", { keyPath: "prId" });
+			} }));
+		}
+	};
+	//#endregion
 	//#region typescript/db/fireStore.ts
 	const db = getFirestore(initializeApp({ projectId: "ebo-tain" }), "gringo-store");
 	const prMetaConverter = {
@@ -26915,7 +26947,7 @@ Total Duration: ${a - u}ms`);
 		gringo("Fetching all metas...");
 		let metas = await fetchPrMetas(null);
 		gringo("Done fetching all metas.");
-		await saveMetasLocal(metas);
+		await (await getLocalCache()).PrMetas.bulkPut(metas);
 		gringo("Done saving metas locally.");
 	}
 	async function fetchPrMetas(changedDateZ) {
@@ -27010,7 +27042,7 @@ Total Duration: ${a - u}ms`);
 		let changedMetas;
 		let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
 		if (!zSince) {
-			await clearMetasLocal();
+			await (await getLocalCache()).PrMetas.clear();
 			changedMetas = [];
 		} else changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
 		let fetchedDate = /* @__PURE__ */ new Date();
@@ -27020,7 +27052,7 @@ Total Duration: ${a - u}ms`);
 		return changedMetas;
 	}
 	async function fetchMetaCached(prId) {
-		let localMeta = await getMetaLocal(prId);
+		let localMeta = await (await getLocalCache()).PrMetas.get(prId);
 		if (localMeta) return localMeta;
 		let meta = {
 			prId,
@@ -27031,13 +27063,13 @@ Total Duration: ${a - u}ms`);
 		} catch {
 			await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
 		}
-		await saveMetaLocal(meta);
+		await (await getLocalCache()).PrMetas.put(meta);
 		await savePrMetaToFireStore(meta);
 		return meta;
 	}
 	async function saveMeta(prId, meta, what) {
 		if (what == "localStorage and cloud") await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
-		await saveMetaLocal(meta);
+		await (await getLocalCache()).PrMetas.put(meta);
 		await savePrMetaToFireStore(meta);
 	}
 	async function getBtwTarifsCachedInSession() {
@@ -29231,7 +29263,7 @@ Total Duration: ${a - u}ms`);
 		let requests = scrapePRs();
 		fetchChangedMetas().then(async (changedFiles) => {
 			gringo(changedFiles);
-			await saveMetasLocal(changedFiles.map((f) => f.data));
+			await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map((f) => f.data));
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
 		});

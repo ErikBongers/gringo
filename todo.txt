@@ -1,5 +1,31 @@
-* At startup, fetch all metas and store them in local DB.
-  >
+Convert meta storage
+========================
+1.Preload
+  Copy every meta from cloud to Firestore.
+  > can be re-run at any time, because >> 2. Run double
+  > done?
+
+2.Run double
+  Every meta update gets saved in both cloud and Firestore.
+  > done?
+
+3.Update local cache from Firestore instead of cloud.
+  > currently fetches ALL metas. Very fast, but still...
+  > update last changed only.
+      > Store last-fetch in IndexedDb.
+        > "key_values"
+
+4.Drop cloud
+
+
+
+
+
+
+* At startup, fetch all changed metas and store them in Firestore DB.
+  > First time, long query.
+  > Give indicator of background job running?
+  -
 
 * Save PrLines to FireStore
   - for quick fetch of commidity codes for bruto calc.

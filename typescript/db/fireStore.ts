@@ -2,7 +2,6 @@ import {initializeApp} from "firebase/app";
 import {
     collection,
     doc,
-    DocumentData,
     FirestoreDataConverter,
     getDoc,
     getDocs,
@@ -15,7 +14,7 @@ import {gringo} from "../globals";
 import {ChangedFile, PrMeta} from "../aanvragen/requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_METAS_FOLDER} from "../def";
-import {saveMetaLocal, saveMetasLocal} from "./gringoDb";
+import {getLocalCache} from "./idb/localDb";
 
 const firebaseConfig = {
     projectId: "ebo-tain",
@@ -70,7 +69,7 @@ export async function testIt() {
     gringo("Fetching all metas...");
     let metas = await fetchPrMetas(null);
     gringo("Done fetching all metas.");
-    await saveMetasLocal(metas);
+    await (await getLocalCache()).PrMetas.bulkPut(metas);
     gringo("Done saving metas locally.");
     // await copyCloudtoFireStore();
 }

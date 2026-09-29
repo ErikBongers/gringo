@@ -1,7 +1,6 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
-import {emmet} from "../../libs/Emmeter/html";
-import {createInfoBlock, formatPrice, gringo, priceFormatter} from "../globals";
-import {saveMetasLocal} from "../db/gringoDb";
+import {emmet} from "../../libs/Emmeter";
+import {createInfoBlock, formatPrice, gringo} from "../globals";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchPr} from "../sap/api";
 import {createCompactPr} from "../aanvraag/observer";
@@ -20,7 +19,8 @@ import {
 } from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
-import {createExpandedCompactPr, createExpandedPr} from "../aanvraag/expand";
+import {createExpandedCompactPr} from "../aanvraag/expand";
+import {getLocalCache} from "../db/idb/localDb";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -186,7 +186,7 @@ function decorateRequestList() {
 
     fetchChangedMetas().then(async (changedFiles) => {
         gringo(changedFiles);
-        await saveMetasLocal(changedFiles.map(f => f.data));
+        await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map(f => f.data));
         requests.forEach(decoratePr);
         await applyFilters(requests);
     });

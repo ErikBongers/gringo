@@ -4,7 +4,6 @@ import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
 import {InfoBlock} from "../globals";
 import {BTW_TARIFS_FILENAME, KEY_ALL_PRS_FILENAME_NOEXT, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
-import {clearMetasLocal, getMetaLocal, saveMetaLocal} from "../db/gringoDb";
 import {cloud} from "../cloud";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {getGlobalSettingsCached} from "../plugin_options/options";
@@ -12,6 +11,7 @@ import {LedgerToBudgetCode} from "./budgetCodes";
 import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {savePrMetaToFireStore} from "../db/fireStore";
+import {getLocalCache} from "../db/idb/localDb";
 
 export interface HasTarifAndQuantity {
     tarif: Btw | null;
@@ -187,7 +187,7 @@ export async function fetchChangedMetas() {
     let changedMetas: ChangedFile<PrMeta>[];
     let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
     if (!zSince) {
-        await clearMetasLocal(); //clear, since we have no idea if they are up-to-date.
+        await (await getLocalCache()).PrMetas.clear(); //clear, since we have no idea if they are up-to-date.
         changedMetas = [];
     } else {
         changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
@@ -200,7 +200,7 @@ export async function fetchChangedMetas() {
 }
 
 export async function fetchMetaCached(prId: string) {
-    let localMeta = await getMetaLocal(prId);
+    let localMeta = await (await getLocalCache()).PrMetas.get(prId);
     if (localMeta)
         return localMeta
 
@@ -210,7 +210,7 @@ export async function fetchMetaCached(prId: string) {
     } catch {
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     }
-    await saveMetaLocal(meta);
+    await (await getLocalCache()).PrMetas.put(meta);
     await savePrMetaToFireStore(meta);
     return meta;
 }
@@ -218,7 +218,7 @@ export async function fetchMetaCached(prId: string) {
 export async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" | "localStorage and cloud") {
     if (what == "localStorage and cloud")
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
-    await saveMetaLocal(meta);
+    await (await getLocalCache()).PrMetas.put(meta);
     await savePrMetaToFireStore(meta);
 }
 
