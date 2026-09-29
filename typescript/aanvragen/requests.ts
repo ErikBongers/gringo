@@ -54,6 +54,7 @@ export interface PrMeta {
     prId: string,
     tags: string[],
     project?: string,
+    changed_date?: string;
 }
 
 export interface ExpandedPr {

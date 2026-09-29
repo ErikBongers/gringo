@@ -2,6 +2,7 @@ import {getOptions, observers, registerObserver, settingsObservers} from "./glob
 import requestObservers from "./aanvragen/observer";
 import aanvraagObservers from "./aanvraag/observer";
 import reqFormObserver from "./reqForm/observer";
+import { testIt } from "./db/fireStore";
 
 init();
 
@@ -42,6 +43,7 @@ function init() {
             });
         }
     });
+    testIt();
 }
 
 let lastCheckTime = Date.now();
