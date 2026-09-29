@@ -1,3 +1,9 @@
+* create function to update localDb.
+  > see testIt() function.
+  - get last_fetched date
+  - get changed since PrMetas
+  - update last_fetched date
+
 Convert meta storage
 ========================
 1.Preload
