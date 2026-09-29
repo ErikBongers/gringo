@@ -11,6 +11,7 @@ import {getGlobalSettingsCached} from "../plugin_options/options";
 import {LedgerToBudgetCode} from "./budgetCodes";
 import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
+import {savePrMetaToFireStore} from "../db/fireStore";
 
 export interface HasTarifAndQuantity {
     tarif: Btw | null;
@@ -210,6 +211,7 @@ export async function fetchMetaCached(prId: string) {
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     }
     await saveMetaLocal(meta);
+    await savePrMetaToFireStore(meta);
     return meta;
 }
 
@@ -217,6 +219,7 @@ export async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" 
     if (what == "localStorage and cloud")
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     await saveMetaLocal(meta);
+    await savePrMetaToFireStore(meta);
 }
 
 export async function getBtwTarifsCachedInSession(): Promise<Map<string, Btw>> {

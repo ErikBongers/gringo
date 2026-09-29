@@ -1,5 +1,15 @@
 import {initializeApp} from "firebase/app";
-import {collection, doc, FirestoreDataConverter, getDoc, getDocs, getFirestore, query, QueryDocumentSnapshot, where} from "firebase/firestore";
+import {
+    collection,
+    doc,
+    FirestoreDataConverter,
+    getDoc,
+    getDocs,
+    getFirestore,
+    query,
+    QueryDocumentSnapshot,
+    where
+} from "firebase/firestore";
 import {gringo} from "../globals";
 import {ChangedFile, PrMeta} from "../aanvragen/requests";
 import {cloud} from "../cloud";
@@ -82,7 +92,8 @@ async function fetchPrMetas(changedDateZ: string | null) {
     }
 }
 
-async function savePrMetaToFireStore(prMeta: PrMeta) {
+export async function savePrMetaToFireStore(prMeta: PrMeta) {
+    prMeta.changed_date = new Date().toISOString();
     let url = "https://europe-west1-ebo-tain.cloudfunctions.net/save_pr_meta";
     let data = {
         id: prMeta.prId,
