@@ -26915,7 +26915,8 @@ Total Duration: ${a - u}ms`);
 		gringo("Fetching all metas...");
 		let metas = await fetchPrMetas(null);
 		gringo("Done fetching all metas.");
-		gringo(metas);
+		await saveMetasLocal(metas);
+		gringo("Done saving metas locally.");
 	}
 	async function fetchPrMetas(changedDateZ) {
 		const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);

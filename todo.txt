@@ -1,5 +1,5 @@
-* save metas to Firestore when saving to cloud (for now)
-
+* At startup, fetch all metas and store them in local DB.
+  >
 
 * create a merged.json file in a folder
   load only the files that have a more recent modified_date than merged.json.

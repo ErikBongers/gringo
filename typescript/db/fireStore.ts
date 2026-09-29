@@ -15,6 +15,7 @@ import {gringo} from "../globals";
 import {ChangedFile, PrMeta} from "../aanvragen/requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_METAS_FOLDER} from "../def";
+import {saveMetaLocal, saveMetasLocal} from "./gringoDb";
 
 const firebaseConfig = {
     projectId: "ebo-tain",
@@ -71,7 +72,8 @@ export async function testIt() {
     gringo("Fetching all metas...");
     let metas = await fetchPrMetas(null);
     gringo("Done fetching all metas.");
-    gringo(metas);
+    await saveMetasLocal(metas);
+    gringo("Done saving metas locally.");
     // await copyCloudtoFireStore();
 }
 
@@ -114,6 +116,7 @@ async function copyCloudtoFireStore() {
     gringo(`Found ${changedMetas.length} changed metas`);
     for(const changedMeta of changedMetas) {
         gringo(`Saving `);
+        changedMeta.data.changed_date = (new Date()).toISOString();
         await savePrMetaToFireStore(changedMeta.data);
     }
 }
