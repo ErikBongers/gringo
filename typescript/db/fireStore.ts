@@ -67,8 +67,6 @@ async function fetchSinglePrMeta(id: string): Promise<PrMeta | null> {
 }
 
 export async function testIt() {
-    // await fetchSinglePrMeta("PR12345");
-    // await fetchPrMetas("2023-01-01T00:00:00Z");
     gringo("Fetching all metas...");
     let metas = await fetchPrMetas(null);
     gringo("Done fetching all metas.");
