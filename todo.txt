@@ -1,3 +1,8 @@
+* TODO: test changes to PriceBlock.
+  > test overal
+    > handling of callbacks/listeners is slightly modified.
+  > test when tarif set/changed if grand total is updated as well.
+
 * create function to update localDb.
   > see testIt() function.
   - get last_fetched date

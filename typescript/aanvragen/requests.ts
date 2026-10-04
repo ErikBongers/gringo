@@ -13,12 +13,13 @@ import {ProcurementForm} from "../sap/ProcurementForm";
 import {savePrMetaToFireStore} from "../db/fireStore";
 import {getLocalCache} from "../db/idb/localDb";
 
-export interface HasTarifAndQuantity {
+export interface HasTarifQuantityCommodity {
     tarif: Btw | null;
     quantity: number;
+    commodityCode: string;
 }
 
-export interface ExpandedPrItem extends HasTarifAndQuantity {
+export interface ExpandedPrItem extends HasTarifQuantityCommodity {
     pr: PurchaseRequisition;
     item: SapLineItem;
     ledger: AccountingField | null;
@@ -26,11 +27,11 @@ export interface ExpandedPrItem extends HasTarifAndQuantity {
     grant: AccountingField | null;
 }
 
-export interface ExpandedProcurementForm extends HasTarifAndQuantity {
+export interface ExpandedProcurementForm extends HasTarifQuantityCommodity {
     pf: ProcurementForm;
 }
 
-export interface ExpandedCompactPrItem  extends HasTarifAndQuantity {
+export interface ExpandedCompactPrItem  extends HasTarifQuantityCommodity {
     item: CompactReqItem;
 }
 

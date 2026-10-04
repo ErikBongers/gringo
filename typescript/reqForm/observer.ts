@@ -95,6 +95,7 @@ async function decoratePanel(el: HTMLElement) {
         pf: prForm,
         tarif: tarif,
         quantity: 1,
+        commodityCode: prForm.commodityCode,
     };
 
     let priceBlock = new PriceBlock(tarif?.tarif??null, calcFieldsContainer, expandedPf);

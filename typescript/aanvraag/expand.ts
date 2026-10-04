@@ -30,7 +30,7 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
             if (ledger)
                 budget = getBudgetCode(ledger.code);
             tarif = tarifs.get(commodity?.code ?? '') ?? null;
-            items.push({pr, item, tarif, ledger, budget, grant, quantity: item.quantity.value} satisfies ExpandedPrItem);
+            items.push({pr, item, tarif, ledger, budget, grant, quantity: item.quantity.value, commodityCode: commodity?.code??""} satisfies ExpandedPrItem);
         }
     }
     return {pr, items} satisfies ExpandedPr;
@@ -42,7 +42,7 @@ export async function createExpandedCompactPr(pr: CompactRequisition) {
         let tarif: Btw | null = null;
         let tarifs = await getBtwTarifsCachedInSession();
         tarif = tarifs.get(item.commodityCode) ?? null;
-        items.push({item, tarif, quantity: item.quantity} satisfies ExpandedCompactPrItem);
+        items.push({item, tarif, quantity: item.quantity, commodityCode: item.commodityCode} satisfies ExpandedCompactPrItem);
     }
     return {pr, items} satisfies ExpandedCompactPr as ExpandedCompactPr;
 }

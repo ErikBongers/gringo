@@ -27547,6 +27547,7 @@ Total Duration: ${a - u}ms`);
 		brutoCalcField;
 		nettoCalcField;
 		entangledFields;
+		changeListeners = [];
 		constructor(btw, container, pr_or_pf) {
 			this.entangledFields = new EntangledFields(new PriceData(btw, pr_or_pf));
 			container.classList.add("flexRow");
@@ -27575,9 +27576,14 @@ Total Duration: ${a - u}ms`);
 		setTarif(tarif) {
 			this.entangledFields.context.btw = tarif;
 			this.entangledFields.updateOtherFields();
+			this.notifyChangeListeners();
 		}
-		setNetto(netto) {
+		setNetto(netto, noUpdate = false) {
 			this.entangledFields.context.netto = netto;
+			if (!noUpdate) {
+				this.updateOtherFields();
+				this.notifyChangeListeners();
+			}
 		}
 		setCurrentSource(field) {
 			this.entangledFields.setCurrentSource(field);
@@ -27588,6 +27594,12 @@ Total Duration: ${a - u}ms`);
 		setReadOnly() {
 			this.brutoCalcField.setReadOnly();
 			this.nettoCalcField.setReadOnly();
+		}
+		addChangeListener(listener) {
+			this.changeListeners.push(listener);
+		}
+		notifyChangeListeners() {
+			for (let listener of this.changeListeners) listener(this);
 		}
 	};
 	function createTarifDiv(pr, entangledFields) {
@@ -27635,8 +27647,10 @@ Total Duration: ${a - u}ms`);
 	async function onClickCreateTarif(container, select, prItem, entangledFields) {
 		let txtNewValue = select.value;
 		if (txtNewValue == TXT_NO_TARIF) return;
-		let commodity = prItem.tarif?.commodityCode ?? "";
+		if (prItem.commodityCode && prItem.tarif && prItem.tarif.commodityCode != prItem.commodityCode) throw new Error("Commodity code mismatch");
+		let commodity = prItem.tarif?.commodityCode ?? prItem.commodityCode;
 		if (commodity == "") {
+			debugger;
 			alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
 			return;
 		}
@@ -27728,7 +27742,8 @@ Total Duration: ${a - u}ms`);
 		let expandedPf = {
 			pf: prForm,
 			tarif,
-			quantity: 1
+			quantity: 1,
+			commodityCode: prForm.commodityCode
 		};
 		let priceBlock = new PriceBlock(tarif?.tarif ?? null, calcFieldsContainer, expandedPf);
 		let fieldQuantity = el.querySelector("div.field-quantity");
@@ -28573,7 +28588,8 @@ Total Duration: ${a - u}ms`);
 				ledger,
 				budget,
 				grant,
-				quantity: item.quantity.value
+				quantity: item.quantity.value,
+				commodityCode: commodity?.code ?? ""
 			});
 		}
 		return {
@@ -28589,7 +28605,8 @@ Total Duration: ${a - u}ms`);
 			items.push({
 				item,
 				tarif,
-				quantity: item.quantity
+				quantity: item.quantity,
+				commodityCode: item.commodityCode
 			});
 		}
 		return {
@@ -28643,7 +28660,6 @@ Total Duration: ${a - u}ms`);
 			let prElText = document.querySelector("gb-action-bar div.req-info ").textContent;
 			let rx = /* @__PURE__ */ new RegExp("PR\\d+");
 			let match = prElText.match(rx);
-			debugger;
 			console.log(match);
 			if (match) return match[0];
 			return null;
@@ -28757,7 +28773,9 @@ Total Duration: ${a - u}ms`);
 		priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx) => {
 			updateTotalBrutoView(pr);
 		});
-		priceBlock.setTarif(pr.items[index].tarif?.tarif ?? null);
+		priceBlock.addChangeListener(() => {
+			updateTotalBrutoView(pr);
+		});
 		let quantity = "";
 		let fieldQuantityInput = lineEl.querySelector("div.field-quantity input");
 		if (fieldQuantityInput) {
@@ -28773,7 +28791,7 @@ Total Duration: ${a - u}ms`);
 			priceBlock.setReadOnly();
 		}
 		let parser = new Parser(quantity.replaceAll(".", ""));
-		priceBlock.setNetto(parser.parse().result);
+		priceBlock.setNetto(parser.parse().result, true);
 		priceBlock.setCurrentSource(fieldQuantityInput);
 		priceBlock.updateOtherFields();
 	}

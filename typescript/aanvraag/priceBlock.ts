@@ -4,7 +4,7 @@ import {
     ExpandedCompactPr,
     ExpandedCompactPrItem,
     getBtwTarifsCachedInSession,
-    HasTarifAndQuantity,
+    HasTarifQuantityCommodity,
     uploadBtwTarifs
 } from "../aanvragen/requests";
 import {emmet} from "../../libs/Emmeter";
@@ -15,8 +15,9 @@ export class PriceBlock {
     brutoCalcField: CalcField;
     nettoCalcField: CalcField;
     entangledFields: EntangledFields<PriceData>;
+    changeListeners: ((priceBlock: PriceBlock) => void)[] = [];
 
-    constructor(btw: number | null, container: HTMLElement, pr_or_pf: HasTarifAndQuantity | null) {
+    constructor(btw: number | null, container: HTMLElement, pr_or_pf: HasTarifQuantityCommodity | null) {
         this.entangledFields = new EntangledFields<PriceData>(new PriceData(btw, pr_or_pf));
 
         container.classList.add("flexRow");
@@ -54,10 +55,16 @@ export class PriceBlock {
     setTarif(tarif: number | null) {
         this.entangledFields.context.btw = tarif;
         this.entangledFields.updateOtherFields();
+        this.notifyChangeListeners();
     }
 
-    setNetto(netto: number) {
+    setNetto(netto: number, noUpdate: boolean = false) {
         this.entangledFields.context.netto = netto;
+        if (!noUpdate) {
+            this.updateOtherFields();
+            this.notifyChangeListeners();
+        }
+
     }
 
     setCurrentSource(field: HTMLInputElement | null) {
@@ -72,22 +79,33 @@ export class PriceBlock {
         this.brutoCalcField.setReadOnly();
         this.nettoCalcField.setReadOnly();
     }
+
+    //Change listeners are notified AFTER all the linked fields are updated.
+    addChangeListener(listener: (priceBlock: PriceBlock) => void) {
+        this.changeListeners.push(listener);
+    }
+
+    notifyChangeListeners() {
+        for(let listener of this.changeListeners) {
+            listener(this);
+        }
+    }
 }
 
 
-function createTarifDiv(pr: HasTarifAndQuantity, entangledFields: EntangledFields<PriceData>) {
+function createTarifDiv(pr: HasTarifQuantityCommodity, entangledFields: EntangledFields<PriceData>) {
     let div = emmet.createElement(`div.tarifContainer`);
     fillTarifDiv(div, pr, entangledFields);
     return div;
 }
 
-function updateTarifDiv(container: HTMLElement, prItem: HasTarifAndQuantity, entangledFields: EntangledFields<PriceData>) {
+function updateTarifDiv(container: HTMLElement, prItem: HasTarifQuantityCommodity, entangledFields: EntangledFields<PriceData>) {
     container.innerHTML = "";
     fillTarifDiv(container, prItem, entangledFields);
 }
 
 const TXT_NO_TARIF = "--";
-function fillTarifDiv(container: HTMLElement, prItem: HasTarifAndQuantity, entangledFields: EntangledFields<PriceData>) {
+function fillTarifDiv(container: HTMLElement, prItem: HasTarifQuantityCommodity, entangledFields: EntangledFields<PriceData>) {
     if(prItem.tarif) {
         let label = emmet.appendChild(container, `div>label{${prItem.tarif.tarif.toString()}%}`).last as HTMLLabelElement;
         label.addEventListener("mousedown", (ev) => {
@@ -124,12 +142,16 @@ function fillTarifDiv(container: HTMLElement, prItem: HasTarifAndQuantity, entan
 }
 
 
-async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElement, prItem: HasTarifAndQuantity, entangledFields: EntangledFields<PriceData>) {
+async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElement, prItem: HasTarifQuantityCommodity, entangledFields: EntangledFields<PriceData>) {
     let txtNewValue = select.value;
     if (txtNewValue == TXT_NO_TARIF)
         return;
-    let commodity = prItem.tarif?.commodityCode??"";
+    if (prItem.commodityCode && prItem.tarif && prItem.tarif.commodityCode != prItem.commodityCode)
+        throw new Error("Commodity code mismatch");
+
+    let commodity = prItem.tarif?.commodityCode??prItem.commodityCode;
     if (commodity == "") {
+        debugger
         alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
         return;
     }

@@ -67,7 +67,6 @@ function findPrId() {
         let prElText = document.querySelector("gb-action-bar div.req-info ")!.textContent!;
         let rx = new RegExp("PR\\d+");
         let match = prElText.match(rx);
-        debugger
         console.log(match);
         if(match)
             return match[0];
@@ -175,7 +174,6 @@ async function decorateReqPage(getCompactPr: (prId: string) => Promise<CompactRe
                 div.newTotalBruto.pull-end{€---,--- EUR}
     `);
 
-
     let expandedPr = await createExpandedCompactPr(compactPr);
     await updatePrView(expandedPr);
 }
@@ -214,7 +212,10 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
     priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx: PriceData)=> {
         updateTotalBrutoView(pr);
     });
-    priceBlock.setTarif(pr.items[index].tarif?.tarif??null);
+    //needed for tarif change...unless we make tarif change a linked field?
+    priceBlock.addChangeListener(() => {
+        updateTotalBrutoView(pr);
+    });
 
     let quantity = "";
     let fieldQuantityInput = lineEl.querySelector("div.field-quantity input") as HTMLInputElement | null;
@@ -234,7 +235,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
         priceBlock.setReadOnly();
     }
     let parser = new Parser(quantity.replaceAll(".", "")); //quantity is sometimes without decimas: "1.200" means "1200".
-    priceBlock.setNetto(parser.parse().result);
+    priceBlock.setNetto(parser.parse().result, true);
     priceBlock.setCurrentSource(fieldQuantityInput);
     priceBlock.updateOtherFields();
 }
