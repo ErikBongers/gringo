@@ -1,5 +1,5 @@
 import {PartialUrlObserver} from "../pageObserver";
-import {canBeDecoratedAndSet, formatPrice, priceFormatter} from "../globals";
+import {canBeDecoratedAndSet, formatPrice} from "../globals";
 import {PurchaseRequisition, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr, fetchReqContext, fetchShoppingCart} from "../sap/api";
 import {emmet} from "../../libs/Emmeter";
@@ -16,6 +16,7 @@ import {Parser} from "../calculator/parser";
 import {PriceBlock} from "./priceBlock";
 import {createExpandedCompactPr} from "./expand";
 import {PriceData} from "./priceData";
+import {sessionCache} from "../sessionCache";
 
 class RequisitionObserver extends PartialUrlObserver {
     constructor() {
@@ -208,7 +209,8 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first as HTMLDivElement;
 
-    let priceBlock = new PriceBlock(null, calcFieldsContainer, pr.items[index]);
+    let tarifDef = await sessionCache.getTarifDef(pr.items[index].commodityCode);
+    let priceBlock = new PriceBlock(tarifDef?.tarif??null, calcFieldsContainer, pr.items[index]);
     priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx: PriceData)=> {
         updateTotalBrutoView(pr);
     });

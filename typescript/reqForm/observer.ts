@@ -3,10 +3,11 @@ import {fakeAnchorClick, fakeRadioButtonClick, formatPrice, gringo} from "../glo
 import {emmet} from "../../libs/Emmeter";
 import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {ExpandedProcurementForm, getBtwTarif} from "../aanvragen/requests";
+import {ExpandedProcurementForm} from "../aanvragen/requests";
 import {Parser} from "../calculator/parser";
 import {PriceBlock} from "../aanvraag/priceBlock";
 import {PriceData} from "../aanvraag/priceData";
+import {sessionCache} from "../sessionCache";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -82,7 +83,7 @@ async function decoratePanel(el: HTMLElement) {
         div.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
     `).first as HTMLDivElement;
     let prForm = await fetchReqFormInfo();
-    let tarif =  await getBtwTarif(prForm.commodityCode);
+    let tarif =  await sessionCache.getTarifDef(prForm.commodityCode);
     let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`) as HTMLElement;
     let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`) as HTMLButtonElement;
     let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul") as HTMLUListElement;

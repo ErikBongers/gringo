@@ -1,10 +1,10 @@
 import {CalcField} from "./calcField";
 import {EntangledFields} from "./entangledFields";
-import {getBtwTarifsCachedInSession, HasTarifQuantityCommodity} from "../aanvragen/requests";
+import {HasTarifQuantityCommodity} from "../aanvragen/requests";
 import {emmet} from "../../libs/Emmeter";
 import {formatPrice, gringo} from "../globals";
 import {PriceData} from "./priceData";
-import {saveTarifDefToFireStore} from "../db/fireStore";
+import {sessionCache} from "../sessionCache";
 
 export class PriceBlock {
     brutoCalcField: CalcField;
@@ -150,15 +150,13 @@ async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElem
         alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
         return;
     }
-    let tarifs = await getBtwTarifsCachedInSession();
     let newTarif = {
         commodityCode: commodity,
         description: "",
         tarif: parseInt(txtNewValue)
     };
-    tarifs.set(commodity, newTarif);
-    prItem.tarif = tarifs.get(commodity)!; //! just set.
-    await saveTarifDefToFireStore(newTarif);
+    await sessionCache.saveTarifDef(newTarif);
+    prItem.tarif = newTarif;
     updateTarifDiv(container, prItem, entangledFields);
     entangledFields.triggerRecalc();
 }

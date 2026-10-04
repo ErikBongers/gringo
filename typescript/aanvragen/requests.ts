@@ -79,8 +79,6 @@ export interface TarifDefs {
     tarifs: TarifDef[];
 }
 
-let globalBtwTarifs: Map<string, TarifDef> | null = null;
-
 export interface AccountingField {
     code: string;
     dscr: string;
@@ -221,26 +219,6 @@ export async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" 
         await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
     await (await getLocalCache()).PrMetas.put(meta);
     await savePrMetaToFireStore(meta);
-}
-
-export async function getBtwTarifsCachedInSession(): Promise<Map<string, TarifDef>> {
-    if (globalBtwTarifs)
-        return globalBtwTarifs;
-
-    globalBtwTarifs = new Map<string, TarifDef>();
-    let tarifs: TarifDef[];
-    try {
-        tarifs = await fetchTarifDefs();
-    } catch {
-        tarifs = [];
-    }
-    tarifs.forEach(t => globalBtwTarifs!.set(t.commodityCode, t));
-    return globalBtwTarifs;
-}
-
-export async function getBtwTarif(commodityCode: string) {
-    let tarifs = await getBtwTarifsCachedInSession();
-    return tarifs.get(commodityCode) ?? null;
 }
 
 function getAccountingField(prItem: SapLineItem, idIncludes: string) {

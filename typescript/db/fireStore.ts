@@ -108,7 +108,7 @@ async function fetchPrMetas(changedDateZ: string | null) {
 }
 
 export async function fetchTarifDefs(): Promise<TarifDef[]> {
-    const tarifDefRef = collection(db, "tarif_def").withConverter(tarifDefConverter);
+    const tarifDefRef = collection(db, "tarif_defs").withConverter(tarifDefConverter);
     const querySnapshot = await getDocs(tarifDefRef);
     let tarifDefs: TarifDef[] = [];
     querySnapshot.forEach((doc) => {

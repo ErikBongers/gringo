@@ -545,7 +545,7 @@
 	const KEY_LAST_FETCHED_METAS = "gringo.lastFetchedMetas";
 	const KEY_CLOUD_GRINGO_FOLDER = "gringo/";
 	const KEY_CLOUD_PR_FOLDER = KEY_CLOUD_GRINGO_FOLDER + "pr/";
-	const BTW_TARIFS_FILENAME = KEY_CLOUD_GRINGO_FOLDER + "btwTarifs.json";
+	KEY_CLOUD_GRINGO_FOLDER + "";
 	const GLOBAL_SETTINGS_FILENAME = KEY_CLOUD_GRINGO_FOLDER + "gringo_global_settings.json";
 	const KEY_CLOUD_METAS_FOLDER = KEY_CLOUD_PR_FOLDER + "meta/";
 	const KEY_ALL_PRS_FILENAME_NOEXT = KEY_CLOUD_PR_FOLDER + "allPrs";
@@ -26943,13 +26943,25 @@ Total Duration: ${a - u}ms`);
 			};
 		}
 	};
+	const tarifDefConverter = {
+		toFirestore(tarifDef) {
+			return tarifDef;
+		},
+		fromFirestore(snapshot) {
+			const data = snapshot.data();
+			return {
+				commodityCode: data.commodityCode,
+				tarif: data.tarif,
+				description: data.description
+			};
+		}
+	};
 	async function testIt() {
 		gringo("Fetching all metas...");
 		let metas = await fetchPrMetas(null);
 		gringo("Done fetching all metas.");
 		await (await getLocalCache()).PrMetas.bulkPut(metas);
 		gringo("Done saving metas locally.");
-		await copyTarifDefsCloudtoFireStore();
 	}
 	async function fetchPrMetas(changedDateZ) {
 		const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
@@ -26961,6 +26973,14 @@ Total Duration: ${a - u}ms`);
 			metas.push(doc.data());
 		});
 		return metas;
+	}
+	async function fetchTarifDefs() {
+		const querySnapshot = await getDocs(collection(db, "tarif_defs").withConverter(tarifDefConverter));
+		let tarifDefs = [];
+		querySnapshot.forEach((doc) => {
+			tarifDefs.push(doc.data());
+		});
+		return tarifDefs;
 	}
 	async function savePrMetaToFireStore(prMeta) {
 		prMeta.changed_date = (/* @__PURE__ */ new Date()).toISOString();
@@ -26987,16 +27007,8 @@ Total Duration: ${a - u}ms`);
 			body: JSON.stringify(data)
 		});
 	}
-	async function copyTarifDefsCloudtoFireStore() {
-		let tarifDefs = await cloud.json.fetch(BTW_TARIFS_FILENAME);
-		for (const tarifDef of tarifDefs.tarifs) {
-			gringo(`Saving tarifDef ${tarifDef.commodityCode}`);
-			await saveTarifDefToFireStore(tarifDef);
-		}
-	}
 	//#endregion
 	//#region typescript/aanvragen/requests.ts
-	let globalBtwTarifs = null;
 	async function fetchRequestListChunk(chain, userInfo, zSince) {
 		if (!zSince) zSince = (/* @__PURE__ */ new Date()).toISOString().replaceAll("T", " ").split(".")[0] + " GMT";
 		await chain.post(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo.hashedUser}/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435`, {
@@ -27091,26 +27103,6 @@ Total Duration: ${a - u}ms`);
 		if (what == "localStorage and cloud") await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
 		await (await getLocalCache()).PrMetas.put(meta);
 		await savePrMetaToFireStore(meta);
-	}
-	async function getBtwTarifsCachedInSession() {
-		if (globalBtwTarifs) return globalBtwTarifs;
-		globalBtwTarifs = /* @__PURE__ */ new Map();
-		let tarifs;
-		try {
-			tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME);
-		} catch {
-			tarifs = { tarifs: [] };
-		}
-		tarifs.tarifs.forEach((t) => globalBtwTarifs.set(t.commodityCode, t));
-		return globalBtwTarifs;
-	}
-	async function uploadBtwTarifs(tarifsMap) {
-		let tarifs = { tarifs: [...tarifsMap.values()] };
-		await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
-		globalBtwTarifs = tarifsMap;
-	}
-	async function getBtwTarif(commodityCode) {
-		return (await getBtwTarifsCachedInSession()).get(commodityCode) ?? null;
 	}
 	function getAccountingField(prItem, idIncludes) {
 		let field = prItem.accounting.fields?.find((f) => f.id.endsWith(idIncludes));
@@ -27562,6 +27554,32 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	//#endregion
+	//#region typescript/sessionCache.ts
+	let sessionCache = {
+		getTarifDef: getTarifDefCached,
+		saveTarifDef: saveTarifDefCached
+	};
+	let globalBtwTarifs = null;
+	async function getBtwTarifsCachedInSession() {
+		if (globalBtwTarifs) return globalBtwTarifs;
+		globalBtwTarifs = /* @__PURE__ */ new Map();
+		let tarifs;
+		try {
+			tarifs = await fetchTarifDefs();
+		} catch {
+			tarifs = [];
+		}
+		tarifs.forEach((t) => globalBtwTarifs.set(t.commodityCode, t));
+		return globalBtwTarifs;
+	}
+	async function getTarifDefCached(commodityCode) {
+		return (await getBtwTarifsCachedInSession()).get(commodityCode) ?? null;
+	}
+	async function saveTarifDefCached(tarifDef) {
+		(await getBtwTarifsCachedInSession()).set(tarifDef.commodityCode, tarifDef);
+		await saveTarifDefToFireStore(tarifDef);
+	}
+	//#endregion
 	//#region typescript/aanvraag/priceBlock.ts
 	var PriceBlock = class {
 		brutoCalcField;
@@ -27674,14 +27692,13 @@ Total Duration: ${a - u}ms`);
 			alert("Er is geen 'Commodity-code' (zie sectie Overig) voor dit artikel.");
 			return;
 		}
-		let tarifs = await getBtwTarifsCachedInSession();
-		tarifs.set(commodity, {
+		let newTarif = {
 			commodityCode: commodity,
 			description: "",
 			tarif: parseInt(txtNewValue)
-		});
-		prItem.tarif = tarifs.get(commodity);
-		await uploadBtwTarifs(tarifs);
+		};
+		await sessionCache.saveTarifDef(newTarif);
+		prItem.tarif = newTarif;
 		updateTarifDiv(container, prItem, entangledFields);
 		entangledFields.triggerRecalc();
 	}
@@ -27751,7 +27768,7 @@ Total Duration: ${a - u}ms`);
         div.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
     `).first;
 		let prForm = await fetchReqFormInfo();
-		let tarif = await getBtwTarif(prForm.commodityCode);
+		let tarif = await sessionCache.getTarifDef(prForm.commodityCode);
 		let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`);
 		let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`);
 		let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul");
@@ -28593,14 +28610,13 @@ Total Duration: ${a - u}ms`);
 		let items = [];
 		if (pr.lineItems != null) for (let item of pr.lineItems) {
 			let tarif = null;
-			let tarifs = await getBtwTarifsCachedInSession();
 			let commodity = getPrItemCommodity(item);
 			let grant = getPrItemGrant(item);
 			let ledger = getPrItemLedger(item);
 			if (!ledger) ledger = getPrItemAsset(item);
 			let budget = null;
 			if (ledger) budget = getBudgetCode(ledger.code);
-			tarif = tarifs.get(commodity?.code ?? "") ?? null;
+			tarif = await sessionCache.getTarifDef(commodity?.code ?? "");
 			items.push({
 				pr,
 				item,
@@ -28621,7 +28637,7 @@ Total Duration: ${a - u}ms`);
 		let items = [];
 		for (let item of pr.items) {
 			let tarif = null;
-			tarif = (await getBtwTarifsCachedInSession()).get(item.commodityCode) ?? null;
+			tarif = await sessionCache.getTarifDef(item.commodityCode);
 			items.push({
 				item,
 				tarif,
@@ -28789,7 +28805,7 @@ Total Duration: ${a - u}ms`);
 		let calcFieldsContainer = emmet.appendChild(brutoRow, `
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first;
-		let priceBlock = new PriceBlock(null, calcFieldsContainer, pr.items[index]);
+		let priceBlock = new PriceBlock((await sessionCache.getTarifDef(pr.items[index].commodityCode))?.tarif ?? null, calcFieldsContainer, pr.items[index]);
 		priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx) => {
 			updateTotalBrutoView(pr);
 		});

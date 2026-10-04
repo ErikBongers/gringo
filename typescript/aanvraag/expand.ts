@@ -6,7 +6,6 @@ import {
     ExpandedCompactPrItem,
     ExpandedPr,
     ExpandedPrItem,
-    getBtwTarifsCachedInSession,
     getPrItemAsset,
     getPrItemCommodity,
     getPrItemGrant,
@@ -14,13 +13,13 @@ import {
 } from "../aanvragen/requests";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 import {getBudgetCode} from "../aanvragen/aggregate";
+import {sessionCache} from "../sessionCache";
 
 export async function createExpandedPr(pr: PurchaseRequisition) {
     let items: ExpandedPrItem[] = [];
     if (pr.lineItems != null) {
         for (let item of pr.lineItems) {
             let tarif: TarifDef | null = null;
-            let tarifs = await getBtwTarifsCachedInSession();
             let commodity = getPrItemCommodity(item);
             let grant = getPrItemGrant(item);
             let ledger = getPrItemLedger(item);
@@ -29,7 +28,7 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
             let budget: LedgerToBudgetCode | null = null;
             if (ledger)
                 budget = getBudgetCode(ledger.code);
-            tarif = tarifs.get(commodity?.code ?? '') ?? null;
+            tarif = await sessionCache.getTarifDef(commodity?.code ?? '');
             items.push({pr, item, tarif, ledger, budget, grant, quantity: item.quantity.value, commodityCode: commodity?.code??""} satisfies ExpandedPrItem);
         }
     }
@@ -40,8 +39,7 @@ export async function createExpandedCompactPr(pr: CompactRequisition) {
     let items: ExpandedCompactPrItem[] = [];
     for (let item of pr.items) {
         let tarif: TarifDef | null = null;
-        let tarifs = await getBtwTarifsCachedInSession();
-        tarif = tarifs.get(item.commodityCode) ?? null;
+        tarif = await sessionCache.getTarifDef(item.commodityCode);
         items.push({item, tarif, quantity: item.quantity, commodityCode: item.commodityCode} satisfies ExpandedCompactPrItem);
     }
     return {pr, items} satisfies ExpandedCompactPr as ExpandedCompactPr;
