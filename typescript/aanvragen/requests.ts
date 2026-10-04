@@ -3,14 +3,14 @@ import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
 import {InfoBlock} from "../globals";
-import {BTW_TARIFS_FILENAME, KEY_ALL_PRS_FILENAME_NOEXT, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
+import {KEY_ALL_PRS_FILENAME_NOEXT, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {cloud} from "../cloud";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {LedgerToBudgetCode} from "./budgetCodes";
 import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {savePrMetaToFireStore} from "../db/fireStore";
+import {fetchTarifDefs, savePrMetaToFireStore} from "../db/fireStore";
 import {getLocalCache} from "../db/idb/localDb";
 
 export interface HasTarifQuantityCommodity {
@@ -228,20 +228,14 @@ export async function getBtwTarifsCachedInSession(): Promise<Map<string, TarifDe
         return globalBtwTarifs;
 
     globalBtwTarifs = new Map<string, TarifDef>();
-    let tarifs: TarifDefs;
+    let tarifs: TarifDef[];
     try {
-        tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as TarifDefs;
+        tarifs = await fetchTarifDefs();
     } catch {
-        tarifs = {tarifs: []};
+        tarifs = [];
     }
-    tarifs.tarifs.forEach(t => globalBtwTarifs!.set(t.commodityCode, t));
+    tarifs.forEach(t => globalBtwTarifs!.set(t.commodityCode, t));
     return globalBtwTarifs;
-}
-
-export async function uploadBtwTarifs(tarifsMap: Map<string, TarifDef>) {
-    let tarifs: TarifDefs = {tarifs: [...tarifsMap.values()]};
-    await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
-    globalBtwTarifs = tarifsMap;
 }
 
 export async function getBtwTarif(commodityCode: string) {

@@ -1,15 +1,10 @@
 import {CalcField} from "./calcField";
 import {EntangledFields} from "./entangledFields";
-import {
-    ExpandedCompactPr,
-    ExpandedCompactPrItem,
-    getBtwTarifsCachedInSession,
-    HasTarifQuantityCommodity,
-    uploadBtwTarifs
-} from "../aanvragen/requests";
+import {getBtwTarifsCachedInSession, HasTarifQuantityCommodity} from "../aanvragen/requests";
 import {emmet} from "../../libs/Emmeter";
 import {formatPrice, gringo} from "../globals";
 import {PriceData} from "./priceData";
+import {saveTarifDefToFireStore} from "../db/fireStore";
 
 export class PriceBlock {
     brutoCalcField: CalcField;
@@ -156,13 +151,14 @@ async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElem
         return;
     }
     let tarifs = await getBtwTarifsCachedInSession();
-    tarifs.set(commodity, {
+    let newTarif = {
         commodityCode: commodity,
         description: "",
         tarif: parseInt(txtNewValue)
-    });
+    };
+    tarifs.set(commodity, newTarif);
     prItem.tarif = tarifs.get(commodity)!; //! just set.
-    await uploadBtwTarifs(tarifs);
+    await saveTarifDefToFireStore(newTarif);
     updateTarifDiv(container, prItem, entangledFields);
     entangledFields.triggerRecalc();
 }

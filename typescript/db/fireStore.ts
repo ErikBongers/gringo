@@ -86,7 +86,7 @@ export async function testIt() {
     await (await getLocalCache()).PrMetas.bulkPut(metas);
     gringo("Done saving metas locally.");
     // await copyCloudtoFireStore();
-    await copyTarifDefsCloudtoFireStore();
+    // await copyTarifDefsCloudtoFireStore();
 }
 
 
@@ -107,7 +107,7 @@ async function fetchPrMetas(changedDateZ: string | null) {
     return metas;
 }
 
-async function fetchTarifDefs(): Promise<TarifDef[]> {
+export async function fetchTarifDefs(): Promise<TarifDef[]> {
     const tarifDefRef = collection(db, "tarif_def").withConverter(tarifDefConverter);
     const querySnapshot = await getDocs(tarifDefRef);
     let tarifDefs: TarifDef[] = [];
