@@ -1,6 +1,6 @@
 import {PurchaseRequisition} from "../sap/SapPrInfo";
 import {
-    Btw,
+    TarifDef,
     CompactRequisition,
     ExpandedCompactPr,
     ExpandedCompactPrItem,
@@ -19,7 +19,7 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
     let items: ExpandedPrItem[] = [];
     if (pr.lineItems != null) {
         for (let item of pr.lineItems) {
-            let tarif: Btw | null = null;
+            let tarif: TarifDef | null = null;
             let tarifs = await getBtwTarifsCachedInSession();
             let commodity = getPrItemCommodity(item);
             let grant = getPrItemGrant(item);
@@ -39,7 +39,7 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
 export async function createExpandedCompactPr(pr: CompactRequisition) {
     let items: ExpandedCompactPrItem[] = [];
     for (let item of pr.items) {
-        let tarif: Btw | null = null;
+        let tarif: TarifDef | null = null;
         let tarifs = await getBtwTarifsCachedInSession();
         tarif = tarifs.get(item.commodityCode) ?? null;
         items.push({item, tarif, quantity: item.quantity, commodityCode: item.commodityCode} satisfies ExpandedCompactPrItem);

@@ -11,9 +11,9 @@ import {
     where
 } from "firebase/firestore";
 import {gringo} from "../globals";
-import {ChangedFile, PrMeta} from "../aanvragen/requests";
+import {ChangedFile, PrMeta, TarifDef, TarifDefs} from "../aanvragen/requests";
 import {cloud} from "../cloud";
-import {KEY_CLOUD_METAS_FOLDER} from "../def";
+import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER} from "../def";
 import {getLocalCache} from "./idb/localDb";
 
 const firebaseConfig = {
@@ -39,6 +39,20 @@ const prMetaConverter: FirestoreDataConverter<PrMeta> = {
         };
     }
 };
+
+const tarifDefConverter: FirestoreDataConverter<TarifDef> = {
+    toFirestore(tarifDef: TarifDef) {
+        return tarifDef;
+    },
+    fromFirestore(snapshot: QueryDocumentSnapshot): TarifDef {
+        const data = snapshot.data();
+        return {
+            commodityCode: data.commodityCode,
+            tarif: data.tarif,
+            description: data.description
+        };
+    }
+}
 
 async function fetchSinglePrMeta(id: string): Promise<PrMeta | null> {
     try {
@@ -72,6 +86,7 @@ export async function testIt() {
     await (await getLocalCache()).PrMetas.bulkPut(metas);
     gringo("Done saving metas locally.");
     // await copyCloudtoFireStore();
+    await copyTarifDefsCloudtoFireStore();
 }
 
 
@@ -92,6 +107,16 @@ async function fetchPrMetas(changedDateZ: string | null) {
     return metas;
 }
 
+async function fetchTarifDefs(): Promise<TarifDef[]> {
+    const tarifDefRef = collection(db, "tarif_def").withConverter(tarifDefConverter);
+    const querySnapshot = await getDocs(tarifDefRef);
+    let tarifDefs: TarifDef[] = [];
+    querySnapshot.forEach((doc) => {
+        tarifDefs.push(doc.data());
+    });
+    return tarifDefs;
+}
+
 export async function savePrMetaToFireStore(prMeta: PrMeta) {
     prMeta.changed_date = new Date().toISOString();
     let url = "https://europe-west1-ebo-tain.cloudfunctions.net/save_pr_meta";
@@ -108,7 +133,22 @@ export async function savePrMetaToFireStore(prMeta: PrMeta) {
     });
 }
 
-async function copyCloudtoFireStore() {
+export async function saveTarifDefToFireStore(tarifDef: TarifDef) {
+    let url = "https://europe-west1-ebo-tain.cloudfunctions.net/save_tarif_def";
+    let data = {
+        id: tarifDef.commodityCode,
+        def: tarifDef,
+    };
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    });
+}
+
+async function copyPrMetasCloudtoFireStore() {
     let changedMetas: ChangedFile<PrMeta>[] = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, "2000-01-01T00:00:00Z");
     gringo(`Found ${changedMetas.length} changed metas`);
     for(const changedMeta of changedMetas) {
@@ -117,3 +157,12 @@ async function copyCloudtoFireStore() {
         await savePrMetaToFireStore(changedMeta.data);
     }
 }
+
+async function copyTarifDefsCloudtoFireStore() {
+    let tarifDefs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as TarifDefs;
+    for(const tarifDef of tarifDefs.tarifs) {
+        gringo(`Saving tarifDef ${tarifDef.commodityCode}`);
+        await saveTarifDefToFireStore(tarifDef);
+    }
+}
+

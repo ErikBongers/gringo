@@ -14,7 +14,7 @@ import {savePrMetaToFireStore} from "../db/fireStore";
 import {getLocalCache} from "../db/idb/localDb";
 
 export interface HasTarifQuantityCommodity {
-    tarif: Btw | null;
+    tarif: TarifDef | null;
     quantity: number;
     commodityCode: string;
 }
@@ -75,18 +75,18 @@ export interface ChangedFile<T> {
     changed: string
 }
 
-export interface BtwTarifs {
-    tarifs: Btw[];
+export interface TarifDefs {
+    tarifs: TarifDef[];
 }
 
-let globalBtwTarifs: Map<string, Btw> | null = null;
+let globalBtwTarifs: Map<string, TarifDef> | null = null;
 
 export interface AccountingField {
     code: string;
     dscr: string;
 }
 
-export interface Btw {
+export interface TarifDef {
     commodityCode: string;
     description: string;
     tarif: number;
@@ -223,14 +223,14 @@ export async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" 
     await savePrMetaToFireStore(meta);
 }
 
-export async function getBtwTarifsCachedInSession(): Promise<Map<string, Btw>> {
+export async function getBtwTarifsCachedInSession(): Promise<Map<string, TarifDef>> {
     if (globalBtwTarifs)
         return globalBtwTarifs;
 
-    globalBtwTarifs = new Map<string, Btw>();
-    let tarifs: BtwTarifs;
+    globalBtwTarifs = new Map<string, TarifDef>();
+    let tarifs: TarifDefs;
     try {
-        tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as BtwTarifs;
+        tarifs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as TarifDefs;
     } catch {
         tarifs = {tarifs: []};
     }
@@ -238,8 +238,8 @@ export async function getBtwTarifsCachedInSession(): Promise<Map<string, Btw>> {
     return globalBtwTarifs;
 }
 
-export async function uploadBtwTarifs(tarifsMap: Map<string, Btw>) {
-    let tarifs: BtwTarifs = {tarifs: [...tarifsMap.values()]};
+export async function uploadBtwTarifs(tarifsMap: Map<string, TarifDef>) {
+    let tarifs: TarifDefs = {tarifs: [...tarifsMap.values()]};
     await cloud.json.upload(BTW_TARIFS_FILENAME, tarifs);
     globalBtwTarifs = tarifsMap;
 }

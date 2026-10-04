@@ -26949,6 +26949,7 @@ Total Duration: ${a - u}ms`);
 		gringo("Done fetching all metas.");
 		await (await getLocalCache()).PrMetas.bulkPut(metas);
 		gringo("Done saving metas locally.");
+		await copyTarifDefsCloudtoFireStore();
 	}
 	async function fetchPrMetas(changedDateZ) {
 		const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
@@ -26973,6 +26974,25 @@ Total Duration: ${a - u}ms`);
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(data)
 		});
+	}
+	async function saveTarifDefToFireStore(tarifDef) {
+		let url = "https://europe-west1-ebo-tain.cloudfunctions.net/save_tarif_def";
+		let data = {
+			id: tarifDef.commodityCode,
+			def: tarifDef
+		};
+		await fetch(url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(data)
+		});
+	}
+	async function copyTarifDefsCloudtoFireStore() {
+		let tarifDefs = await cloud.json.fetch(BTW_TARIFS_FILENAME);
+		for (const tarifDef of tarifDefs.tarifs) {
+			gringo(`Saving tarifDef ${tarifDef.commodityCode}`);
+			await saveTarifDefToFireStore(tarifDef);
+		}
 	}
 	//#endregion
 	//#region typescript/aanvragen/requests.ts
