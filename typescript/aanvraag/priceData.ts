@@ -1,12 +1,12 @@
-import {ExpandedCompactPrItem, HasTarifQuantityCommodity} from "../aanvragen/requests";
+import {ExpandedCompactPrItem, BaseLineItem} from "../aanvragen/requests";
 
 export class PriceData {
     private _bruto: number | null = null;
     private _netto: number | null = null;
-    private _btw: number | null = null;
-    private readonly expandedPrItem: HasTarifQuantityCommodity | null;
+    private _btw: number | null = null; //todo: rename to tarif
+    private readonly expandedPrItem: BaseLineItem | null;
 
-    constructor(btw: number | null, expandedPrItem: HasTarifQuantityCommodity | null) {
+    constructor(btw: number | null, expandedPrItem: BaseLineItem | null) {
         this._btw = btw;
         this.expandedPrItem = expandedPrItem;
     }

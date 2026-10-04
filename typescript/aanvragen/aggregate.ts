@@ -2,7 +2,7 @@ import {createCompactReqItem} from "../aanvraag/observer";
 import {calcBrutoLinePrice, ExpandedPr, ExpandedPrItem, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
 import {createHtmlTable, InfoBlock} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
-import {createExpandedPr} from "../aanvraag/expand";
+import {createExpandedCompactPrItem, createExpandedPr} from "../aanvraag/expand";
 
 let _budgetMap: Map<string, LedgerToBudgetCode> | null = null;
 export function getBudgetCode(ledger: string) {
@@ -130,10 +130,7 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
             let status = pr.pr.status;
             let itemNo = index.toString();
             let bruto = 0;
-            if(item.tarif)
-                bruto = calcBrutoLinePrice(createCompactReqItem(item.item), item.tarif.tarif);
-            else
-                bruto = calcBrutoLinePrice(createCompactReqItem(item.item), 0); //use netto pri;
+            bruto = calcBrutoLinePrice(await createExpandedCompactPrItem(createCompactReqItem(item.item)));
             let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
             let meta = await fetchMetaCached(pr.pr.reqId);
             let project = meta.project??"";

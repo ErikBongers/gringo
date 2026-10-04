@@ -9,7 +9,7 @@ import {
     getPrItemAsset,
     getPrItemCommodity,
     getPrItemGrant,
-    getPrItemLedger
+    getPrItemLedger, CompactReqItem
 } from "../aanvragen/requests";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 import {getBudgetCode} from "../aanvragen/aggregate";
@@ -29,7 +29,17 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
             if (ledger)
                 budget = getBudgetCode(ledger.code);
             tarif = await sessionCache.getTarifDef(commodity?.code ?? '');
-            items.push({pr, item, tarif, ledger, budget, grant, quantity: item.quantity.value, commodityCode: commodity?.code??""} satisfies ExpandedPrItem);
+            items.push({
+                pr,
+                item,
+                tarif,
+                ledger,
+                budget,
+                grant,
+                quantity: item.quantity.value,
+                commodityCode: commodity?.code??"",
+                price: item.price.value.amount
+            } satisfies ExpandedPrItem);
         }
     }
     return {pr, items} satisfies ExpandedPr;
@@ -38,9 +48,19 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
 export async function createExpandedCompactPr(pr: CompactRequisition) {
     let items: ExpandedCompactPrItem[] = [];
     for (let item of pr.items) {
-        let tarif: TarifDef | null = null;
-        tarif = await sessionCache.getTarifDef(item.commodityCode);
-        items.push({item, tarif, quantity: item.quantity, commodityCode: item.commodityCode} satisfies ExpandedCompactPrItem);
+        items.push(await createExpandedCompactPrItem(item));
     }
     return {pr, items} satisfies ExpandedCompactPr as ExpandedCompactPr;
+}
+
+export async function createExpandedCompactPrItem(item: CompactReqItem): Promise<ExpandedCompactPrItem> {
+    let tarif: TarifDef | null = null;
+    tarif = await sessionCache.getTarifDef(item.commodityCode);
+    return {
+        item,
+        tarif,
+        quantity: item.quantity,
+        commodityCode: item.commodityCode ?? "",
+        price: item.price
+    };
 }

@@ -85,6 +85,7 @@ async function decoratePanel(el: HTMLElement) {
     let prForm = await fetchReqFormInfo();
     let tarif =  await sessionCache.getTarifDef(prForm.commodityCode);
     let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`) as HTMLElement;
+    let fieldUnitPrice = el.querySelector("div.field-money input") as HTMLInputElement;
     let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`) as HTMLButtonElement;
     let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul") as HTMLUListElement;
     ulUnitOfMeasure.style.display = "none";
@@ -92,11 +93,15 @@ async function decoratePanel(el: HTMLElement) {
     scanAndSelectPerEenheid(ulUnitOfMeasure);
     scanAndSetRadionButtons(el);
 
+    let parser = new Parser(fieldUnitPrice.value);
+    let unitPrice = parser.parse();
+
     let expandedPf: ExpandedProcurementForm = {
         pf: prForm,
         tarif: tarif,
         quantity: 1,
         commodityCode: prForm.commodityCode,
+        price: unitPrice.result
     };
 
     let priceBlock = new PriceBlock(tarif?.tarif??null, calcFieldsContainer, expandedPf);

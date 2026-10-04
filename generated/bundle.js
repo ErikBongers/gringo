@@ -27144,27 +27144,17 @@ Total Duration: ${a - u}ms`);
 		if (!globalTagsMap) globalTagsMap = new Map(globalSettings.tagDefs.map((t) => [t.name, t]));
 		return globalTagsMap;
 	}
-	function calcBrutoLinePrice(item, tarif) {
+	function calcBrutoLinePrice(item) {
 		let bruto = null;
-		bruto = item.price * item.quantity * (100 + tarif);
+		bruto = item.price * item.quantity * (100 + (item.tarif?.tarif ?? 0));
 		bruto = Math.round(bruto) / 100;
 		return bruto;
 	}
 	function calcPrTotal(pr) {
-		let total = 0;
-		let currencySymbel = "€";
-		let currency = "EUR";
-		for (let item of pr.items) {
-			if (!item.tarif) {
-				total = null;
-				break;
-			}
-			total += calcBrutoLinePrice(item.item, item.tarif.tarif);
-		}
 		return {
-			total,
-			currencySymbel,
-			currency
+			total: pr.items.reduce((total, item) => total + calcBrutoLinePrice(item), 0),
+			currencySymbel: "€",
+			currency: "EUR"
 		};
 	}
 	//#endregion
@@ -27593,11 +27583,13 @@ Total Duration: ${a - u}ms`);
 				if (!field.result) return;
 				this.entangledFields.context.netto = field.result.result;
 				this.entangledFields.updateOtherFields();
+				this.notifyChangeListeners();
 			});
 			this.brutoCalcField = new CalcField(container, "Bruto", "", ["pre"], (field) => {
 				if (!field.result) return;
 				this.entangledFields.context.bruto = field.result.result;
 				this.entangledFields.updateOtherFields();
+				this.notifyChangeListeners();
 			});
 			this.entangledFields.add(this.nettoCalcField.input, (ctx) => {
 				this.nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
@@ -27770,17 +27762,20 @@ Total Duration: ${a - u}ms`);
 		let prForm = await fetchReqFormInfo();
 		let tarif = await sessionCache.getTarifDef(prForm.commodityCode);
 		let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`);
+		let fieldUnitPrice = el.querySelector("div.field-money input");
 		let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`);
 		let ulUnitOfMeasure = fieldUnitOfMeasure.querySelector("ul");
 		ulUnitOfMeasure.style.display = "none";
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
+		let unitPrice = new Parser(fieldUnitPrice.value).parse();
 		let expandedPf = {
 			pf: prForm,
 			tarif,
 			quantity: 1,
-			commodityCode: prForm.commodityCode
+			commodityCode: prForm.commodityCode,
+			price: unitPrice.result
 		};
 		let priceBlock = new PriceBlock(tarif?.tarif ?? null, calcFieldsContainer, expandedPf);
 		let fieldQuantity = el.querySelector("div.field-quantity");
@@ -28570,8 +28565,7 @@ Total Duration: ${a - u}ms`);
 			let status = pr.pr.status;
 			let itemNo = index.toString();
 			let bruto = 0;
-			if (item.tarif) bruto = calcBrutoLinePrice(createCompactReqItem(item.item), item.tarif.tarif);
-			else bruto = calcBrutoLinePrice(createCompactReqItem(item.item), 0);
+			bruto = calcBrutoLinePrice(await createExpandedCompactPrItem(createCompactReqItem(item.item)));
 			let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
 			let meta = await fetchMetaCached(pr.pr.reqId);
 			meta.project;
@@ -28625,7 +28619,8 @@ Total Duration: ${a - u}ms`);
 				budget,
 				grant,
 				quantity: item.quantity.value,
-				commodityCode: commodity?.code ?? ""
+				commodityCode: commodity?.code ?? "",
+				price: item.price.value.amount
 			});
 		}
 		return {
@@ -28635,19 +28630,21 @@ Total Duration: ${a - u}ms`);
 	}
 	async function createExpandedCompactPr(pr) {
 		let items = [];
-		for (let item of pr.items) {
-			let tarif = null;
-			tarif = await sessionCache.getTarifDef(item.commodityCode);
-			items.push({
-				item,
-				tarif,
-				quantity: item.quantity,
-				commodityCode: item.commodityCode
-			});
-		}
+		for (let item of pr.items) items.push(await createExpandedCompactPrItem(item));
 		return {
 			pr,
 			items
+		};
+	}
+	async function createExpandedCompactPrItem(item) {
+		let tarif = null;
+		tarif = await sessionCache.getTarifDef(item.commodityCode);
+		return {
+			item,
+			tarif,
+			quantity: item.quantity,
+			commodityCode: item.commodityCode ?? "",
+			price: item.price
 		};
 	}
 	//#endregion
@@ -28810,6 +28807,7 @@ Total Duration: ${a - u}ms`);
 			updateTotalBrutoView(pr);
 		});
 		priceBlock.addChangeListener(() => {
+			gringo("priceBlock changed");
 			updateTotalBrutoView(pr);
 		});
 		let quantity = "";

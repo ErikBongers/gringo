@@ -10,16 +10,17 @@ import {getGlobalSettingsCached} from "../plugin_options/options";
 import {LedgerToBudgetCode} from "./budgetCodes";
 import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {fetchTarifDefs, savePrMetaToFireStore} from "../db/fireStore";
+import {savePrMetaToFireStore} from "../db/fireStore";
 import {getLocalCache} from "../db/idb/localDb";
 
-export interface HasTarifQuantityCommodity {
+export interface BaseLineItem {
     tarif: TarifDef | null;
     quantity: number;
+    price: number;
     commodityCode: string;
 }
 
-export interface ExpandedPrItem extends HasTarifQuantityCommodity {
+export interface ExpandedPrItem extends BaseLineItem {
     pr: PurchaseRequisition;
     item: SapLineItem;
     ledger: AccountingField | null;
@@ -27,11 +28,11 @@ export interface ExpandedPrItem extends HasTarifQuantityCommodity {
     grant: AccountingField | null;
 }
 
-export interface ExpandedProcurementForm extends HasTarifQuantityCommodity {
+export interface ExpandedProcurementForm extends BaseLineItem {
     pf: ProcurementForm;
 }
 
-export interface ExpandedCompactPrItem  extends HasTarifQuantityCommodity {
+export interface ExpandedCompactPrItem  extends BaseLineItem {
     item: CompactReqItem;
 }
 
@@ -268,25 +269,21 @@ export async function getGlobalTags() {
     return globalTagsMap;
 }
 
-export function calcBrutoLinePrice(item: CompactReqItem, tarif: number) {
+export function calcBrutoLinePrice(item: BaseLineItem) {
     let bruto: number | null = null;
     let price = item.price;
     let quantity = item.quantity;
-    bruto = price * quantity * (100 + tarif);
+    bruto = price * quantity * (100 + (item.tarif?.tarif??0));
     bruto = Math.round(bruto) / 100;
     return bruto;
 }
 
 export function calcPrTotal(pr: ExpandedCompactPr) {
-    let total: number | null = 0 ;
     let currencySymbel = "€";
     let currency = "EUR";
-    for (let item of pr.items) {
-        if (!item.tarif) {
-            total = null;
-            break;
-        }
-        total += calcBrutoLinePrice(item.item, item.tarif.tarif);
-    }
+    let total = pr.items
+        .reduce((total, item) =>
+            total + calcBrutoLinePrice(item),
+            0);
     return {total, currencySymbel, currency};
 }

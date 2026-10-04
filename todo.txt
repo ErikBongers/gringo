@@ -1,3 +1,5 @@
+* Do all calculations with quantity AND item price.
+
 * create some sort of local first cache proxy.
    > when reading, the cache is checked first. If empty all (or one) data are loaded.
    > when writing, both cache and remote are updated.

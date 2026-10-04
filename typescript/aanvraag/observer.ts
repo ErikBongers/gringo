@@ -1,5 +1,5 @@
 import {PartialUrlObserver} from "../pageObserver";
-import {canBeDecoratedAndSet, formatPrice} from "../globals";
+import {canBeDecoratedAndSet, formatPrice, gringo} from "../globals";
 import {PurchaseRequisition, SapLineItem} from "../sap/SapPrInfo";
 import {fetchPr, fetchReqContext, fetchShoppingCart} from "../sap/api";
 import {emmet} from "../../libs/Emmeter";
@@ -77,7 +77,7 @@ function findPrId() {
 }
 
 
-export function createCompactReqItem(item: SapLineItem) {
+export function createCompactReqItem(item: SapLineItem): CompactReqItem {
     return {
         commodityCode: getPrItemCommodity(item)?.code ?? "",
         price: item.price.value.amount,
@@ -216,6 +216,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
     });
     //needed for tarif change...unless we make tarif change a linked field?
     priceBlock.addChangeListener(() => {
+        gringo("priceBlock changed");
         updateTotalBrutoView(pr);
     });
 
