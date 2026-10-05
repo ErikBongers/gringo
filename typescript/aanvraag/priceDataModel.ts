@@ -7,7 +7,7 @@ export type RecalcSource = "bruto" | "netto";
 //Values are only recalculated if sources are not null.
 //If there's a null value, the PriceData object is in a indeterminate state.
 // > Should we have a flag for that?
-export class PriceData {
+export class PriceDataModel {
     private _bruto: number | null = null;
     private _netto: number | null = null;
     private _tarif: number | null = null;

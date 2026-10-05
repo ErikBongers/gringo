@@ -6,7 +6,7 @@ import {ProcurementForm} from "../sap/ProcurementForm";
 import {ExpandedProcurementForm} from "../aanvragen/requests";
 import {Parser} from "../calculator/parser";
 import {PriceBlock} from "../aanvraag/priceBlock";
-import {PriceData} from "../aanvraag/priceData";
+import {PriceDataModel} from "../aanvraag/priceDataModel";
 import {sessionCache} from "../sessionCache";
 
 class ReqFormObserver extends PartialUrlObserver {
@@ -114,7 +114,7 @@ async function decoratePanel(el: HTMLElement) {
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
     fieldQuantityInput.value = "1";
 
-    priceBlock.linkField(fieldQuantityInput, (ctx: PriceData) => {
+    priceBlock.linkField(fieldQuantityInput, (ctx: PriceDataModel) => {
         if(!ctx.netto)
             return;
         fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();

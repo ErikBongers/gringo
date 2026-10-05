@@ -15,7 +15,7 @@ import {triggerFieldChanged} from "../reqForm/observer";
 import {Parser} from "../calculator/parser";
 import {PriceBlock} from "./priceBlock";
 import {createExpandedCompactPr} from "./expand";
-import {PriceData} from "./priceData";
+import {PriceDataModel} from "./priceDataModel";
 import {sessionCache} from "../sessionCache";
 
 class RequisitionObserver extends PartialUrlObserver {
@@ -211,7 +211,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
 
     let tarifDef = await sessionCache.getTarifDef(pr.items[index].commodityCode);
     let priceBlock = new PriceBlock(1, null, tarifDef?.tarif??null, calcFieldsContainer, pr.items[index]);
-    priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx: PriceData)=> {
+    priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx: PriceDataModel)=> {
         updateTotalBrutoView(pr);
     });
     //needed for tarif change...unless we make tarif change a linked field?
@@ -223,7 +223,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
     let quantity = "";
     let fieldQuantityInput = lineEl.querySelector("div.field-quantity input") as HTMLInputElement | null;
     if(fieldQuantityInput) {
-        priceBlock.linkField(fieldQuantityInput, (ctx: PriceData) => {
+        priceBlock.linkField(fieldQuantityInput, (ctx: PriceDataModel) => {
             if (!ctx.netto)
                 return;
             fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();

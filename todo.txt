@@ -1,10 +1,9 @@
-* Expand PriceData phased:
-  1. add price, perhaps keep it 1 for now...
-    > but include it in calculations!!!
+* Let PriceDataModel decide who is currentSource/lastUpdated and what fields get recalculated after a change.
+  > PriceDataModel should iform listener(s) (probably PriceBlock) to update the UI.
 
-PriceBlock and PriceData
+PriceBlock and PriceDataModel
 =========================
-PriceData
+PriceDataModel
 ----------
 Always in consistent state.
 Only numeric values.
@@ -20,7 +19,7 @@ Informes listeners of recalculated values.
 
 
 * Do all calculations with quantity AND item price.
-  > Refactor PriceData to also allow string values (calculations!)
+  > Refactor PriceDataModel to also allow string values (calculations!)
     > Of bruto and netto, only ONE can be a string.
     > Allowing strings can leave the priceBlock in an invalid state.
 

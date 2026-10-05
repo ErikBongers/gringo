@@ -27515,8 +27515,8 @@ Total Duration: ${a - u}ms`);
 		throw new Error("This error will never be thrown. It is used for type safety.");
 	}
 	//#endregion
-	//#region typescript/aanvraag/priceData.ts
-	var PriceData = class {
+	//#region typescript/aanvraag/priceDataModel.ts
+	var PriceDataModel = class {
 		_bruto = null;
 		_netto = null;
 		_tarif = null;
@@ -27622,7 +27622,7 @@ Total Duration: ${a - u}ms`);
 		entangledFields;
 		changeListeners = [];
 		constructor(quantity, unitPrice, btw, container, pr_or_pf) {
-			this.entangledFields = new EntangledFields(new PriceData(quantity, unitPrice, btw, pr_or_pf));
+			this.entangledFields = new EntangledFields(new PriceDataModel(quantity, unitPrice, btw, pr_or_pf));
 			container.classList.add("flexRow");
 			this.nettoCalcField = new CalcField(container, "Netto", pr_or_pf ? createTarifDiv(pr_or_pf, this.entangledFields) : "--", ["gringo", "pre"], (field) => {
 				if (!field.result) return;

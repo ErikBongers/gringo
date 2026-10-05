@@ -3,17 +3,17 @@ import {EntangledFields} from "./entangledFields";
 import {BaseLineItem} from "../aanvragen/requests";
 import {emmet} from "../../libs/Emmeter";
 import {formatPrice, gringo} from "../globals";
-import {PriceData} from "./priceData";
+import {PriceDataModel} from "./priceDataModel";
 import {sessionCache} from "../sessionCache";
 
 export class PriceBlock {
     brutoCalcField: CalcField;
     nettoCalcField: CalcField;
-    entangledFields: EntangledFields<PriceData>;
+    entangledFields: EntangledFields<PriceDataModel>;
     changeListeners: ((priceBlock: PriceBlock) => void)[] = [];
 
     constructor(quantity: number, unitPrice: number | null, btw: number | null, container: HTMLElement, pr_or_pf: BaseLineItem | null) {
-        this.entangledFields = new EntangledFields<PriceData>(new PriceData(quantity, unitPrice, btw, pr_or_pf));
+        this.entangledFields = new EntangledFields<PriceDataModel>(new PriceDataModel(quantity, unitPrice, btw, pr_or_pf));
 
         container.classList.add("flexRow");
 
@@ -33,18 +33,18 @@ export class PriceBlock {
             this.notifyChangeListeners();
         });
 
-        this.entangledFields.add(this.nettoCalcField.input, (ctx: PriceData) => {
+        this.entangledFields.add(this.nettoCalcField.input, (ctx: PriceDataModel) => {
             this.nettoCalcField.input.value = formatPrice(ctx.netto, "", "").trim();
             this.nettoCalcField.reParse();
         });
 
-        this.entangledFields.add(this.brutoCalcField.input, (ctx: PriceData) => {
+        this.entangledFields.add(this.brutoCalcField.input, (ctx: PriceDataModel) => {
             this.brutoCalcField.input.value = formatPrice(ctx.bruto, "", "").trim();
             this.brutoCalcField.reParse();
         });
     }
 
-    linkField(field: HTMLElement | null, updateCallback: (ctx: PriceData) => void) {
+    linkField(field: HTMLElement | null, updateCallback: (ctx: PriceDataModel) => void) {
         if (field)
             this.entangledFields.add(field, updateCallback);
     }
@@ -90,19 +90,19 @@ export class PriceBlock {
 }
 
 
-function createTarifDiv(pr: BaseLineItem, entangledFields: EntangledFields<PriceData>) {
+function createTarifDiv(pr: BaseLineItem, entangledFields: EntangledFields<PriceDataModel>) {
     let div = emmet.createElement(`div.tarifContainer`);
     fillTarifDiv(div, pr, entangledFields);
     return div;
 }
 
-function updateTarifDiv(container: HTMLElement, prItem: BaseLineItem, entangledFields: EntangledFields<PriceData>) {
+function updateTarifDiv(container: HTMLElement, prItem: BaseLineItem, entangledFields: EntangledFields<PriceDataModel>) {
     container.innerHTML = "";
     fillTarifDiv(container, prItem, entangledFields);
 }
 
 const TXT_NO_TARIF = "--";
-function fillTarifDiv(container: HTMLElement, prItem: BaseLineItem, entangledFields: EntangledFields<PriceData>) {
+function fillTarifDiv(container: HTMLElement, prItem: BaseLineItem, entangledFields: EntangledFields<PriceDataModel>) {
     if(prItem.tarif) {
         let label = emmet.appendChild(container, `div>label{${prItem.tarif.tarif.toString()}%}`).last as HTMLLabelElement;
         label.addEventListener("mousedown", (ev) => {
@@ -139,7 +139,7 @@ function fillTarifDiv(container: HTMLElement, prItem: BaseLineItem, entangledFie
 }
 
 
-async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElement, prItem: BaseLineItem, entangledFields: EntangledFields<PriceData>) {
+async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElement, prItem: BaseLineItem, entangledFields: EntangledFields<PriceDataModel>) {
     let txtNewValue = select.value;
     if (txtNewValue == TXT_NO_TARIF)
         return;
