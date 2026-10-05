@@ -27510,37 +27510,82 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	//#endregion
+	//#region typescript/unreachable.ts
+	function unreachable(x) {
+		throw new Error("This error will never be thrown. It is used for type safety.");
+	}
+	//#endregion
 	//#region typescript/aanvraag/priceData.ts
 	var PriceData = class {
 		_bruto = null;
 		_netto = null;
 		_tarif = null;
+		_unitPrice;
+		_quantity;
 		expandedPrItem;
-		constructor(btw, expandedPrItem) {
+		isGenericProduct;
+		constructor(quantity, unitPriceOrGeneric, btw, expandedPrItem) {
 			this._tarif = btw;
 			this.expandedPrItem = expandedPrItem;
+			this._quantity = quantity;
+			this.isGenericProduct = unitPriceOrGeneric == null;
+			this._unitPrice = unitPriceOrGeneric ?? 1;
 		}
 		get tarif() {
 			return this._tarif;
 		}
 		set tarif(value) {
 			this._tarif = value;
+			if (this._tarif != null && this._netto != null && this._unitPrice != null && this._quantity != null) this._bruto = this._netto * (1 + this._tarif / 100);
 		}
 		get netto() {
 			return this._netto;
 		}
 		set netto(value) {
 			this._netto = value;
-			if (this._netto != null) this._bruto = this._tarif != null ? this._netto * (1 + this._tarif / 100) : null;
-			if (this.expandedPrItem) this.expandedPrItem.quantity = this._netto;
+			if (this._netto != null) {
+				this._quantity = this._netto / this._unitPrice;
+				this._bruto = this._tarif != null ? this._netto * (1 + this._tarif / 100) : null;
+			}
+			this.updatePrItem();
 		}
 		get bruto() {
 			return this._bruto;
 		}
 		set bruto(value) {
 			this._bruto = value;
-			if (this._bruto != null) this._netto = this._tarif != null ? this._bruto / (1 + this._tarif / 100) : null;
-			if (this.expandedPrItem) this.expandedPrItem.quantity = this._netto;
+			if (this._bruto != null) {
+				this._netto = this._tarif != null ? this._bruto / (1 + this._tarif / 100) : null;
+				if (this._netto != null) this._quantity = this._netto / this._unitPrice;
+			}
+			this.updatePrItem();
+		}
+		get unitPrice() {
+			return this._unitPrice;
+		}
+		setUnitPrice(value, recalcFrom) {
+			this.isGenericProduct = value == null;
+			this._unitPrice = value ?? 1;
+			switch (recalcFrom) {
+				case "netto":
+					this.netto = this._netto;
+					break;
+				case "bruto":
+					this.bruto = this._bruto;
+					break;
+				default: unreachable(recalcFrom);
+			}
+		}
+		get quantity() {
+			return this._quantity;
+		}
+		set quantity(value) {
+			this._quantity = value;
+			this.updatePrItem();
+		}
+		updatePrItem() {
+			if (!this.expandedPrItem) return;
+			this.expandedPrItem.quantity = this._quantity;
 		}
 	};
 	//#endregion
@@ -27576,8 +27621,8 @@ Total Duration: ${a - u}ms`);
 		nettoCalcField;
 		entangledFields;
 		changeListeners = [];
-		constructor(btw, container, pr_or_pf) {
-			this.entangledFields = new EntangledFields(new PriceData(btw, pr_or_pf));
+		constructor(quantity, unitPrice, btw, container, pr_or_pf) {
+			this.entangledFields = new EntangledFields(new PriceData(quantity, unitPrice, btw, pr_or_pf));
 			container.classList.add("flexRow");
 			this.nettoCalcField = new CalcField(container, "Netto", pr_or_pf ? createTarifDiv(pr_or_pf, this.entangledFields) : "--", ["gringo", "pre"], (field) => {
 				if (!field.result) return;
@@ -27777,7 +27822,7 @@ Total Duration: ${a - u}ms`);
 			commodityCode: prForm.commodityCode,
 			price: unitPrice.result
 		};
-		let priceBlock = new PriceBlock(tarif?.tarif ?? null, calcFieldsContainer, expandedPf);
+		let priceBlock = new PriceBlock(1, null, tarif?.tarif ?? null, calcFieldsContainer, expandedPf);
 		let fieldQuantity = el.querySelector("div.field-quantity");
 		let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group");
 		emmet.appendChild(fieldQuantityInputGroup, `
@@ -28802,7 +28847,7 @@ Total Duration: ${a - u}ms`);
 		let calcFieldsContainer = emmet.appendChild(brutoRow, `
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first;
-		let priceBlock = new PriceBlock((await sessionCache.getTarifDef(pr.items[index].commodityCode))?.tarif ?? null, calcFieldsContainer, pr.items[index]);
+		let priceBlock = new PriceBlock(1, null, (await sessionCache.getTarifDef(pr.items[index].commodityCode))?.tarif ?? null, calcFieldsContainer, pr.items[index]);
 		priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx) => {
 			updateTotalBrutoView(pr);
 		});

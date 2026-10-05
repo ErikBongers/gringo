@@ -1,4 +1,28 @@
+* Expand PriceData phased:
+  1. add price, perhaps keep it 1 for now...
+    > but include it in calculations!!!
+
+PriceBlock and PriceData
+=========================
+PriceData
+----------
+Always in consistent state.
+Only numeric values.
+Has a currentSource "netto" or "bruto".
+  > can there be more source fields?
+    > for generic products, netto and quantity are the same, so they can't both be expressions or source fields.
+    > for non-generics, having both netto and quantity an expression will force the price to be updated.
+    > perhaps keep a lastUpdatedField that we try to avoid recalculating on the next update.
+    > an expression field can be locked (by PriceBlock).
+      > perhaps even visible in UI when it's an expression.
+      > this limits the possible calculations. Problem?
+Informes listeners of recalculated values.
+
+
 * Do all calculations with quantity AND item price.
+  > Refactor PriceData to also allow string values (calculations!)
+    > Of bruto and netto, only ONE can be a string.
+    > Allowing strings can leave the priceBlock in an invalid state.
 
 * update TarifDef commodityDesc, once we have it, which is only when the pr is saved AFTER copy from card.
   > we could scrape it in the pr screen, but it's better to get it from the full pr.

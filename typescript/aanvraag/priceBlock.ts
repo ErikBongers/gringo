@@ -12,8 +12,8 @@ export class PriceBlock {
     entangledFields: EntangledFields<PriceData>;
     changeListeners: ((priceBlock: PriceBlock) => void)[] = [];
 
-    constructor(btw: number | null, container: HTMLElement, pr_or_pf: BaseLineItem | null) {
-        this.entangledFields = new EntangledFields<PriceData>(new PriceData(btw, pr_or_pf));
+    constructor(quantity: number, unitPrice: number | null, btw: number | null, container: HTMLElement, pr_or_pf: BaseLineItem | null) {
+        this.entangledFields = new EntangledFields<PriceData>(new PriceData(quantity, unitPrice, btw, pr_or_pf));
 
         container.classList.add("flexRow");
 

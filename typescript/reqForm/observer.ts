@@ -104,7 +104,7 @@ async function decoratePanel(el: HTMLElement) {
         price: unitPrice.result
     };
 
-    let priceBlock = new PriceBlock(tarif?.tarif??null, calcFieldsContainer, expandedPf);
+    let priceBlock = new PriceBlock(1, null, tarif?.tarif??null, calcFieldsContainer, expandedPf);
 
     let fieldQuantity = el.querySelector("div.field-quantity") as HTMLDivElement;
     let fieldQuantityInputGroup = fieldQuantity.querySelector(":scope > div.input-group") as HTMLDivElement;
