@@ -1,22 +1,23 @@
-import {ExpandedCompactPrItem, BaseLineItem} from "../aanvragen/requests";
+import {BaseLineItem} from "../aanvragen/requests";
 
+//keeps values always consistent
 export class PriceData {
     private _bruto: number | null = null;
     private _netto: number | null = null;
-    private _btw: number | null = null; //todo: rename to tarif
+    private _tarif: number | null = null; //todo: rename to tarif
     private readonly expandedPrItem: BaseLineItem | null;
 
     constructor(btw: number | null, expandedPrItem: BaseLineItem | null) {
-        this._btw = btw;
+        this._tarif = btw;
         this.expandedPrItem = expandedPrItem;
     }
 
-    get btw(): number | null {
-        return this._btw;
+    get tarif(): number | null {
+        return this._tarif;
     }
 
-    set btw(value: number | null) {
-        this._btw = value;
+    set tarif(value: number | null) {
+        this._tarif = value;
     }
 
     get netto(): number | null {
@@ -26,7 +27,7 @@ export class PriceData {
     set netto(value: number | null) {
         this._netto = value;
         if (this._netto != null)
-            this._bruto = this._btw != null ? this._netto * (1 + this._btw / 100) : null;
+            this._bruto = this._tarif != null ? this._netto * (1 + this._tarif / 100) : null;
         if (this.expandedPrItem)
             this.expandedPrItem.quantity = this._netto!;
     }
@@ -38,7 +39,7 @@ export class PriceData {
     set bruto(value: number | null) {
         this._bruto = value;
         if (this._bruto != null)
-            this._netto = this._btw != null ? this._bruto / (1 + this._btw / 100) : null;
+            this._netto = this._tarif != null ? this._bruto / (1 + this._tarif / 100) : null;
         if (this.expandedPrItem)
             this.expandedPrItem.quantity = this._netto!;
     }

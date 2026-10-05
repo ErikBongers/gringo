@@ -1,9 +1,5 @@
 * Do all calculations with quantity AND item price.
 
-* create some sort of local first cache proxy.
-   > when reading, the cache is checked first. If empty all (or one) data are loaded.
-   > when writing, both cache and remote are updated.
-
 * update TarifDef commodityDesc, once we have it, which is only when the pr is saved AFTER copy from card.
   > we could scrape it in the pr screen, but it's better to get it from the full pr.
   > avoid keeping saving a dscr if none can be found.

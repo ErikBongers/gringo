@@ -27514,24 +27514,24 @@ Total Duration: ${a - u}ms`);
 	var PriceData = class {
 		_bruto = null;
 		_netto = null;
-		_btw = null;
+		_tarif = null;
 		expandedPrItem;
 		constructor(btw, expandedPrItem) {
-			this._btw = btw;
+			this._tarif = btw;
 			this.expandedPrItem = expandedPrItem;
 		}
-		get btw() {
-			return this._btw;
+		get tarif() {
+			return this._tarif;
 		}
-		set btw(value) {
-			this._btw = value;
+		set tarif(value) {
+			this._tarif = value;
 		}
 		get netto() {
 			return this._netto;
 		}
 		set netto(value) {
 			this._netto = value;
-			if (this._netto != null) this._bruto = this._btw != null ? this._netto * (1 + this._btw / 100) : null;
+			if (this._netto != null) this._bruto = this._tarif != null ? this._netto * (1 + this._tarif / 100) : null;
 			if (this.expandedPrItem) this.expandedPrItem.quantity = this._netto;
 		}
 		get bruto() {
@@ -27539,7 +27539,7 @@ Total Duration: ${a - u}ms`);
 		}
 		set bruto(value) {
 			this._bruto = value;
-			if (this._bruto != null) this._netto = this._btw != null ? this._bruto / (1 + this._btw / 100) : null;
+			if (this._bruto != null) this._netto = this._tarif != null ? this._bruto / (1 + this._tarif / 100) : null;
 			if (this.expandedPrItem) this.expandedPrItem.quantity = this._netto;
 		}
 	};
@@ -27604,7 +27604,7 @@ Total Duration: ${a - u}ms`);
 			if (field) this.entangledFields.add(field, updateCallback);
 		}
 		setTarif(tarif) {
-			this.entangledFields.context.btw = tarif;
+			this.entangledFields.context.tarif = tarif;
 			this.entangledFields.updateOtherFields();
 			this.notifyChangeListeners();
 		}
@@ -27664,7 +27664,7 @@ Total Duration: ${a - u}ms`);
 			let select = container.querySelector("select");
 			select.value = TXT_NO_TARIF;
 			select.onchange = () => {
-				entangledFields.context.btw = parseInt(select.value);
+				entangledFields.context.tarif = parseInt(select.value);
 				entangledFields.triggerRecalc();
 				gringo("btw changed");
 			};

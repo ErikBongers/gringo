@@ -50,7 +50,7 @@ export class PriceBlock {
     }
 
     setTarif(tarif: number | null) {
-        this.entangledFields.context.btw = tarif;
+        this.entangledFields.context.tarif = tarif;
         this.entangledFields.updateOtherFields();
         this.notifyChangeListeners();
     }
@@ -127,7 +127,7 @@ function fillTarifDiv(container: HTMLElement, prItem: BaseLineItem, entangledFie
         let select = container.querySelector('select') as HTMLSelectElement;
         select.value = TXT_NO_TARIF;
         select.onchange = () => {
-            entangledFields.context.btw = parseInt(select.value);
+            entangledFields.context.tarif = parseInt(select.value);
             entangledFields.triggerRecalc();
             gringo("btw changed");
         };
