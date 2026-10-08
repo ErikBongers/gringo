@@ -27845,7 +27845,7 @@ Total Duration: ${a - u}ms`);
 			if (!ctx.netto) return;
 			fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
 			triggerFieldChanged(fieldQuantityInput);
-		}, 500));
+		}, 1e3));
 		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");
 		fieldMoney.value = "1";
@@ -28873,7 +28873,7 @@ Total Duration: ${a - u}ms`);
 				if (!ctx.netto) return;
 				fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
 				triggerFieldChanged(fieldQuantityInput);
-			}, 500));
+			}, 1e3));
 			fieldQuantityInput.parentElement.classList.add("hidePlusMinButtons");
 			quantity = fieldQuantityInput.value;
 		} else {

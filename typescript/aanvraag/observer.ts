@@ -229,7 +229,7 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
                 return;
             fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
             triggerFieldChanged(fieldQuantityInput);
-        }, 500));
+        }, 1000));
         fieldQuantityInput.parentElement!.classList.add("hidePlusMinButtons");
         quantity = fieldQuantityInput.value;
     }

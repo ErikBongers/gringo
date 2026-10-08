@@ -120,7 +120,7 @@ async function decoratePanel(el: HTMLElement) {
             return;
         fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
         triggerFieldChanged(fieldQuantityInput);
-    }, 500));
+    }, 1000));
 
     decorateFieldQuantity(fieldQuantity);
     let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;
