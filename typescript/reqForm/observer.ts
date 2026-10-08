@@ -8,6 +8,7 @@ import {Parser} from "../calculator/parser";
 import {PriceBlock} from "../aanvraag/priceBlock";
 import {PriceDataModel} from "../aanvraag/priceDataModel";
 import {sessionCache} from "../sessionCache";
+import {debounce} from "../utils/debounce";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -114,12 +115,12 @@ async function decoratePanel(el: HTMLElement) {
     let fieldQuantityInput = fieldQuantity.querySelector("input") as HTMLInputElement;
     fieldQuantityInput.value = "1";
 
-    priceBlock.linkField(fieldQuantityInput, (ctx: PriceDataModel) => {
+    priceBlock.linkField(fieldQuantityInput, debounce((ctx: PriceDataModel) => {
         if(!ctx.netto)
             return;
         fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
         triggerFieldChanged(fieldQuantityInput);
-    });
+    }, 500));
 
     decorateFieldQuantity(fieldQuantity);
     let fieldMoney = el.querySelector("div.field-money input") as HTMLInputElement;

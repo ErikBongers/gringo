@@ -1,5 +1,5 @@
 import {BaseLineItem} from "../aanvragen/requests";
-import {unreachable} from "../unreachable";
+import {unreachable} from "../utils/unreachable";
 
 export type RecalcSource = "bruto" | "netto";
 

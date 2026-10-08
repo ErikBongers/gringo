@@ -27510,7 +27510,7 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	//#endregion
-	//#region typescript/unreachable.ts
+	//#region typescript/utils/unreachable.ts
 	function unreachable(x) {
 		throw new Error("This error will never be thrown. It is used for type safety.");
 	}
@@ -27740,6 +27740,17 @@ Total Duration: ${a - u}ms`);
 		entangledFields.triggerRecalc();
 	}
 	//#endregion
+	//#region typescript/utils/debounce.ts
+	function debounce(func, delay) {
+		let timeoutId;
+		return function(...args) {
+			if (timeoutId) clearTimeout(timeoutId);
+			timeoutId = setTimeout(() => {
+				func.apply(this, args);
+			}, delay);
+		};
+	}
+	//#endregion
 	//#region typescript/reqForm/observer.ts
 	var ReqFormObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -27830,11 +27841,11 @@ Total Duration: ${a - u}ms`);
     `);
 		let fieldQuantityInput = fieldQuantity.querySelector("input");
 		fieldQuantityInput.value = "1";
-		priceBlock.linkField(fieldQuantityInput, (ctx) => {
+		priceBlock.linkField(fieldQuantityInput, debounce((ctx) => {
 			if (!ctx.netto) return;
 			fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
 			triggerFieldChanged(fieldQuantityInput);
-		});
+		}, 500));
 		decorateFieldQuantity(fieldQuantity);
 		let fieldMoney = el.querySelector("div.field-money input");
 		fieldMoney.value = "1";
@@ -28858,11 +28869,11 @@ Total Duration: ${a - u}ms`);
 		let quantity = "";
 		let fieldQuantityInput = lineEl.querySelector("div.field-quantity input");
 		if (fieldQuantityInput) {
-			priceBlock.linkField(fieldQuantityInput, (ctx) => {
+			priceBlock.linkField(fieldQuantityInput, debounce((ctx) => {
 				if (!ctx.netto) return;
 				fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
 				triggerFieldChanged(fieldQuantityInput);
-			});
+			}, 500));
 			fieldQuantityInput.parentElement.classList.add("hidePlusMinButtons");
 			quantity = fieldQuantityInput.value;
 		} else {

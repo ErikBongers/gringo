@@ -17,6 +17,7 @@ import {PriceBlock} from "./priceBlock";
 import {createExpandedCompactPr} from "./expand";
 import {PriceDataModel} from "./priceDataModel";
 import {sessionCache} from "../sessionCache";
+import {debounce} from "../utils/debounce";
 
 class RequisitionObserver extends PartialUrlObserver {
     constructor() {
@@ -223,12 +224,12 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
     let quantity = "";
     let fieldQuantityInput = lineEl.querySelector("div.field-quantity input") as HTMLInputElement | null;
     if(fieldQuantityInput) {
-        priceBlock.linkField(fieldQuantityInput, (ctx: PriceDataModel) => {
+        priceBlock.linkField(fieldQuantityInput, debounce((ctx: PriceDataModel) => {
             if (!ctx.netto)
                 return;
             fieldQuantityInput.value = formatPrice(ctx.netto, "", "").trim();
             triggerFieldChanged(fieldQuantityInput);
-        });
+        }, 500));
         fieldQuantityInput.parentElement!.classList.add("hidePlusMinButtons");
         quantity = fieldQuantityInput.value;
     }

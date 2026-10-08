@@ -1,5 +1,11 @@
+* Delay updating the real quantity (and unitPrice) fields to avoid overloading Ariba.
+  >>> TEST debounce (already added to quantity listener).
+
 * Let PriceDataModel decide who is currentSource/lastUpdated and what fields get recalculated after a change.
   > PriceDataModel should iform listener(s) (probably PriceBlock) to update the UI.
+  > EntangledFields currently handles all the updating of the other fields.
+    > It has the currentSource, to avoid deadlooping.
+    > Keep it like that?
 
 PriceBlock and PriceDataModel
 =========================
