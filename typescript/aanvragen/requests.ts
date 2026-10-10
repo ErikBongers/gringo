@@ -76,6 +76,7 @@ export interface PrListItemData {
     index: number;
     supplier: string;
     commodityCode: string;
+    netto: number;
     bruto: number;
     currency: string;
 }
@@ -317,6 +318,7 @@ async function convertToBaseLineItem(item: SapLineItem): Promise<BaseLineItem> {
 async function convertPrListItemData(item: SapLineItem): Promise<PrListItemData> {
     return {
         index: parseInt(item.lineNumber),
+        netto: item.quantity.value,
         bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
         commodityCode: getPrItemCommodity(item)?.code??"",
         currency: item.price.currency??"",
@@ -351,5 +353,39 @@ export async function getPrDataList(){
         await cache.PrListData.put(prData);
         prListDatas.push(prData);
     }
-    return prListDatas;
+    return mergeRequestsAndData(prListDatas, requests);
+}
+
+export interface ExpandedPrListData {
+    request: RequestListItem;
+    prListData: PrListPrData;
+    meta: PrMeta;
+    netto: number;
+    bruto: number;
+}
+
+async function mergeRequestsAndData(prListDatas: PrListPrData[], requests: RequestListResponse) {
+    let cache = await getLocalCache();
+    let dataSet = new Map<string, PrListPrData>();
+    for(let prListData of prListDatas){
+        dataSet.set(prListData.prId, prListData);
+    }
+    let expandedPrListData: ExpandedPrListData[] = [];
+    for(let request of requests.requestList){
+        let prListData = dataSet.get(request.reqUniqueName);
+        if(!prListData){
+            console.error(`Could not find prListData for request ${request.reqUniqueName}`);
+            continue;
+        }
+        let meta = await cache.PrMetas.get(prListData.prId);
+        if(!meta){
+            console.error(`Could not find meta for pr ${prListData.prId}`);
+            continue;
+        }
+        let netto = prListData.items.reduce((acc, item) => acc + item.netto, 0);
+        let bruto = prListData.items.reduce((acc, item) => acc + item.bruto, 0);
+        expandedPrListData.push({ request, prListData, meta, netto, bruto });
+    }
+    return expandedPrListData
+        .filter(item => item !== undefined) as ExpandedPrListData[];
 }

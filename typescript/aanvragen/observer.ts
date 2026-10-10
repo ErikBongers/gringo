@@ -317,8 +317,12 @@ function onTabButtonClick(tabContainer: HTMLDivElement) {
 async function decorateSearchPanel() {
     let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
     let divSearchPanel = document.querySelector(`div.gringoSearchPanel`) as HTMLDivElement | null;
-    if(!divSearchPanel)
-        divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel`).first as HTMLDivElement;
+    let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`) as HTMLDivElement | null;
+    if(!divSearchPanel) {
+        let result = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel+div.gringoLeanListPanel`);
+        divSearchPanel = result.first as HTMLDivElement;
+        divLeanListPanel = result.last as HTMLDivElement;
+    }
     divSearchPanel.innerHTML = "";
     let tagsCollapse = emmet.appendChild(divSearchPanel, `
         details>(
@@ -373,6 +377,64 @@ async function decorateSearchPanel() {
         .forEach((button: Element) => {
             button.addEventListener("click", onAribaFilterButton);
         });
+
+    await createLeanListTable(divLeanListPanel!); //! should be filled
+}
+
+function formatDate(changed_date: string) {
+    return new Date(changed_date).toLocaleDateString();
+}
+
+function acronym(preparer: string) {
+    return preparer.split(" ").map((name) => name[0]).join("");
+}
+
+async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
+    let list = await getPrDataList();
+    let table = emmet.indent.appendChild(divLeanListPanel, `
+        table.leanPrList
+            thead
+                tr
+                    th{}
+                    th{}
+                    th{}
+                    th{}
+                    th{}
+                    th[colspan="2"]{Incl/Excl}
+                    th{}
+                    th{}
+                    th{}
+                tr
+                    th{ID/BB}
+                    th{Omschrijving}
+                    th{Door}
+                    th{Datum}
+                    th{Status}
+                    th{Netto}
+                    th{Bruto}
+                    th{Afdeling}
+                    th{Tags}
+                    th{Projects}
+            tbody
+    `).first as HTMLTableElement;
+
+    let tbody = table.querySelector("tbody")!; //! ok
+    for(let pr of list) {
+        emmet.indent.appendChild(tbody, `
+            tr
+                td{${pr.prListData.prId} ${pr.request.purchaseOrders?.join(", ")??""}}
+                td{${pr.request.reqTitle??""}}
+                td{${acronym(pr.request.preparer)}}
+                td{${formatDate(pr.prListData.changed_date)}}
+                td{${pr.request.status}}
+                td{${formatPrice(pr.netto)}}
+                td{${formatPrice(pr.bruto)}}
+                td{${pr.meta.project??""}}
+                td{${pr.meta.tags.join(", ")}}
+                td{reserved for project(s))}
+        `);
+    }
+    return table;
 }
 
 function scrapePRs() {

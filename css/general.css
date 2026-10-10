@@ -475,3 +475,9 @@ section.view-requisition .input-wrap-container .gringo .input-wrap .form-group i
 .pre {
     white-space: pre;
 }
+
+.leanPrList {
+    td, th {
+        padding: .3ch;
+    }
+}
