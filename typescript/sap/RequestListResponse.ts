@@ -41,7 +41,7 @@ export interface RequestListItem {
     quoteNumber: number;
     images: Nullable<unknown>;
     totalCostMoney: Money;
-    timeUpdated: string;
+    timeUpdated: string; //"2026-03-24T20:54:13.052+00:00"
     supplier: Nullable<unknown>;
     formUniqueName: Nullable<string>;
     formDocumentId: Nullable<string>;

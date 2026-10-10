@@ -1,8 +1,8 @@
 import {DBSchema, IDBPDatabase, openDB} from 'idb';
 import {Repository} from "./repository";
-import {PrMeta} from "../../aanvragen/requests";
+import {PrListPrData, PrMeta} from "../../aanvragen/requests";
 
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const LOCAL_DB_PREFIX = 'LocalGringoDb';
 
 export interface LocalDb extends DBSchema {
@@ -16,6 +16,11 @@ export interface LocalDb extends DBSchema {
         value: PrMeta;
         indexes: {};
     },
+    PrListData: {
+        key: string;
+        value: PrListPrData;
+        indexes: {};
+    }
 }
 
 let cacheMap: Map<string, LocalCache> = new Map();
@@ -37,13 +42,18 @@ export class LocalCache {
     get KeyValues(): Repository<LocalDb, "KeyValues"> {
         return this._KeyValues;
     }
+    get PrListData(): Repository<LocalDb, "PrListData"> {
+        return this._PrListData;
+    }
 
     private readonly _KeyValues: Repository<LocalDb, "KeyValues">;
     private readonly _PrMetas: Repository<LocalDb, "PrMetas">;
+    private readonly _PrListData: Repository<LocalDb, "PrListData">;
 
     constructor(private db: IDBPDatabase<LocalDb>) {
         this._KeyValues = new Repository<LocalDb, "KeyValues">(this.db, 'KeyValues');
         this._PrMetas = new Repository<LocalDb, "PrMetas">(this.db, 'PrMetas');
+        this._PrListData = new Repository<LocalDb, "PrListData">(this.db, 'PrListData');
     }
 
     private static getDbName(schoolId: string) {
@@ -52,9 +62,14 @@ export class LocalCache {
 
     static async get(schoolId: string) {
         return new LocalCache(await openDB<LocalDb>(LocalCache.getDbName(schoolId), DB_VERSION, {
-            upgrade(db) {
-                db.createObjectStore("KeyValues", {keyPath: "key"});
-                db.createObjectStore("PrMetas", {keyPath: "prId"});
+            upgrade(db, oldVersion , newVersion: number) {
+                if (oldVersion < 1) {
+                    db.createObjectStore("KeyValues", {keyPath: "key"});
+                    db.createObjectStore("PrMetas", {keyPath: "prId"});
+                }
+                if (oldVersion < 2) {
+                    db.createObjectStore("PrListData", {keyPath: "prId"});
+                }
             },
         }));
     }

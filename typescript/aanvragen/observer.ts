@@ -12,7 +12,7 @@ import {
     fetchMetaCached,
     fetchRequestList,
     fetchRequestListAndDetails,
-    getGlobalTags,
+    getGlobalTags, getPrDataList,
     PrMeta,
     saveMeta,
     TagDef
@@ -347,6 +347,12 @@ async function decorateSearchPanel() {
     let btnTestRequestList = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestList{TEST Fetch all}`).last as HTMLButtonElement;
     btnTestRequestList.onclick = async (ev) => {
         await fetchRequestList();
+    };
+    let btnTestListData = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestList{TEST Fetch list data}`).last as HTMLButtonElement;
+    btnTestListData.onclick = async (ev) => {
+        let list = await getPrDataList();
+        gringo("lizst");
+        console.log(list);
     };
     let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last as HTMLButtonElement;
     btnTestRequestListAndDetails.onclick = async (ev) => {

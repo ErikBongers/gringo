@@ -1,5 +1,57 @@
-* Delay updating the real quantity (and unitPrice) fields to avoid overloading Ariba.
-  >>> TEST debounce (already added to quantity listener).
+* Make new ExpandedPrListData
+  Cached locally in IndexedDb.
+  > When update
+    > based on lastModifiedDate!
+
+* Before expanding filters, make the full list
+  > Include the line item data that is missing from the PR list.
+
+
+PR Overview filters
+====================
+save filters?
+--------------
+"Unfinished MW".
+> save per user (local storage ok?)
+
+what do we want to see?
+------------------------
+* "Unfinished MW"
+    - Exclude BK (or MW)
+    - Unfinished ones
+        > exclude BB>
+* "Open dag"
+
+UI
+---
+ - Current filter box with Tags
+ - Add box with projects
+ - Add box with Ariba statusses "In aanmaak", ...
+ - Filter lists:
+   - Multiple list items is OR
+   - Each list has a NOT option, turning the checkmarks into X-es.
+   - Clicking a first item twice results in NOT being set for that list.
+   - Once NOT is set or once multiple items have been set, the ckeckboxes are binary, not triple state.
+ > Make a FilterModel that maintains all this state.
+ - A filter is a box. Multiple boxes can be added with AND or OR inbetween.
+   > is this even needed?
+ - A filter is a pre-selection of a list (Tags, Projects, Status)
+   > this allows for a filter: `All [MW] OR status ["In aanmaak", "Ingediend"]`
+ - Filters are applied immediately (no server call)
+
+
+
+
+* In addition to tags, have projects.
+  > Separate list.
+
+* aanvragen zoeken op lev: btwnr: strip spaces etc...
+
+* heropenen van PR: geen bruto block
+
+* BTWnr: selectie leverancier: strip dots and such en ook de "BE" strippen!!!
+
+* zet prnr/descr in tab title. (for multiple tabs)
 
 * Let PriceDataModel decide who is currentSource/lastUpdated and what fields get recalculated after a change.
   > PriceDataModel should iform listener(s) (probably PriceBlock) to update the UI.
@@ -386,7 +438,6 @@ Meta sync
   This forces a read of every single meta to be fetched separately.
   On subsequent fetchChangedSince() calls, only the most recently changed metas are fetched.
   > Is this waterproof?
-
 
 
 Filters

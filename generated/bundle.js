@@ -99,12 +99,14 @@
 			let loc = this.getLocation(pos);
 			let start = 0;
 			let end = this.length;
-			for (let i = 0; i < this.length; i++) if (this.text[i] == "\n") if (loc.line > 1) {
-				start = i + 1;
-				loc.line--;
-			} else {
-				end = i;
-				break;
+			for (let i = 0; i < this.length; i++) if (this.text[i] == "\n") {
+				if (loc.line > 1) {
+					start = i + 1;
+					loc.line--;
+				} else {
+					end = i;
+					break;
+				}
 			}
 			return this.text.substring(start, end);
 		}
@@ -476,9 +478,10 @@
 		let first = null;
 		let insertPos = target;
 		let children = [...tempRoot.childNodes];
-		for (let child of children) if (!first) if (child.nodeType === Node.TEXT_NODE) first = insertPos = insertAdjacentText(target, position, child.wholeText);
-		else first = insertPos = target.insertAdjacentElement(position, child);
-		else if (child.nodeType === Node.TEXT_NODE) insertPos = insertPos.parentElement.insertBefore(document.createTextNode(child.wholeText), insertPos.nextSibling);
+		for (let child of children) if (!first) {
+			if (child.nodeType === Node.TEXT_NODE) first = insertPos = insertAdjacentText(target, position, child.wholeText);
+			else first = insertPos = target.insertAdjacentElement(position, child);
+		} else if (child.nodeType === Node.TEXT_NODE) insertPos = insertPos.parentElement.insertBefore(document.createTextNode(child.wholeText), insertPos.nextSibling);
 		else insertPos = insertPos.parentElement.insertBefore(child, insertPos.nextSibling);
 		return {
 			target,
@@ -541,14 +544,9 @@
 	//#endregion
 	//#region typescript/def.ts
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
-	const JSON_SINCE_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json-since";
 	const KEY_LAST_FETCHED_METAS = "gringo.lastFetchedMetas";
-	const KEY_CLOUD_GRINGO_FOLDER = "gringo/";
-	const KEY_CLOUD_PR_FOLDER = KEY_CLOUD_GRINGO_FOLDER + "pr/";
-	KEY_CLOUD_GRINGO_FOLDER + "";
-	const GLOBAL_SETTINGS_FILENAME = KEY_CLOUD_GRINGO_FOLDER + "gringo_global_settings.json";
-	const KEY_CLOUD_METAS_FOLDER = KEY_CLOUD_PR_FOLDER + "meta/";
-	const KEY_ALL_PRS_FILENAME_NOEXT = KEY_CLOUD_PR_FOLDER + "allPrs";
+	const GLOBAL_SETTINGS_FILENAME = "gringo/gringo_global_settings.json";
+	const KEY_CLOUD_METAS_FOLDER = "gringo/pr/meta/";
 	//#endregion
 	//#region typescript/cloud.ts
 	let cloud = { json: {
@@ -567,7 +565,7 @@
 		})).text();
 	}
 	async function fetchJsonSince(folderName, zTimeStamp) {
-		return (await fetch(JSON_SINCE_URL + "?folderName=" + folderName + "&changedSince=" + zTimeStamp, { method: "GET" })).json();
+		return (await fetch("https://europe-west1-ebo-tain.cloudfunctions.net/json-since?folderName=" + folderName + "&changedSince=" + zTimeStamp, { method: "GET" })).json();
 	}
 	//#endregion
 	//#region typescript/plugin_options/options.ts
@@ -926,7 +924,8 @@
 		}
 		getQuotedString() {
 			let daString = "";
-			this.lastText = new TokenScanner(this.lastText ?? "--null--").captureString(((res) => daString = res)).result();
+			let scanner = new TokenScanner(this.lastText ?? "--null--").captureString(((res) => daString = res));
+			this.lastText = scanner.result();
 			return daString;
 		}
 		clipTo(end) {
@@ -985,9 +984,12 @@
 	}
 	//#endregion
 	//#region node_modules/@firebase/util/dist/postinstall.mjs
+	const getDefaultsFromPostinstall = () => void 0;
+	//#endregion
+	//#region node_modules/@firebase/util/dist/index.esm.js
 	/**
 	* @license
-	* Copyright 2025 Google LLC
+	* Copyright 2017 Google LLC
 	*
 	* Licensed under the Apache License, Version 2.0 (the "License");
 	* you may not use this file except in compliance with the License.
@@ -1001,9 +1003,22 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	const getDefaultsFromPostinstall = () => void 0;
-	//#endregion
-	//#region node_modules/@firebase/util/dist/index.esm.js
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2017 Google LLC
@@ -1074,18 +1089,58 @@
 		return out.join("");
 	};
 	const base64 = {
+		/**
+		* Maps bytes to characters.
+		*/
 		byteToCharMap_: null,
+		/**
+		* Maps characters to bytes.
+		*/
 		charToByteMap_: null,
+		/**
+		* Maps bytes to websafe characters.
+		* @private
+		*/
 		byteToCharMapWebSafe_: null,
+		/**
+		* Maps websafe characters to bytes.
+		* @private
+		*/
 		charToByteMapWebSafe_: null,
+		/**
+		* Our default alphabet, shared between
+		* ENCODED_VALS and ENCODED_VALS_WEBSAFE
+		*/
 		ENCODED_VALS_BASE: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+		/**
+		* Our default alphabet. Value 64 (=) is special; it means "nothing."
+		*/
 		get ENCODED_VALS() {
 			return this.ENCODED_VALS_BASE + "+/=";
 		},
+		/**
+		* Our websafe alphabet.
+		*/
 		get ENCODED_VALS_WEBSAFE() {
 			return this.ENCODED_VALS_BASE + "-_.";
 		},
+		/**
+		* Whether this browser supports the atob and btoa functions. This extension
+		* started at Mozilla but is now implemented by many browsers. We use the
+		* ASSUME_* variables to avoid pulling in the full useragent detection library
+		* but still allowing the standard per-browser compilations.
+		*
+		*/
 		HAS_NATIVE_SUPPORT: typeof atob === "function",
+		/**
+		* Base64-encode an array of bytes.
+		*
+		* @param input An array of bytes (numbers with
+		*     value in [0, 255]) to encode.
+		* @param webSafe Boolean indicating we should use the
+		*     alternative alphabet.
+		* @return The base64 encoded string.
+		*/
 		encodeByteArray(input, webSafe) {
 			if (!Array.isArray(input)) throw Error("encodeByteArray takes an array as a parameter");
 			this.init_();
@@ -1109,14 +1164,45 @@
 			}
 			return output.join("");
 		},
+		/**
+		* Base64-encode a string.
+		*
+		* @param input A string to encode.
+		* @param webSafe If true, we should use the
+		*     alternative alphabet.
+		* @return The base64 encoded string.
+		*/
 		encodeString(input, webSafe) {
 			if (this.HAS_NATIVE_SUPPORT && !webSafe) return btoa(input);
 			return this.encodeByteArray(stringToByteArray$1(input), webSafe);
 		},
+		/**
+		* Base64-decode a string.
+		*
+		* @param input to decode.
+		* @param webSafe True if we should use the
+		*     alternative alphabet.
+		* @return string representing the decoded value.
+		*/
 		decodeString(input, webSafe) {
 			if (this.HAS_NATIVE_SUPPORT && !webSafe) return atob(input);
 			return byteArrayToString(this.decodeStringToByteArray(input, webSafe));
 		},
+		/**
+		* Base64-decode a string.
+		*
+		* In base-64 decoding, groups of four characters are converted into three
+		* bytes.  If the encoder did not apply padding, the input length may not
+		* be a multiple of 4.
+		*
+		* In this case, the last group will have fewer than 4 characters, and
+		* padding will be inferred.  If the group has one or two characters, it decodes
+		* to one byte.  If the group has three characters, it decodes to two bytes.
+		*
+		* @param input Input to decode.
+		* @param webSafe True if we should use the web-safe alphabet.
+		* @return bytes representing the decoded value.
+		*/
 		decodeStringToByteArray(input, webSafe) {
 			this.init_();
 			const charToByteMap = webSafe ? this.charToByteMapWebSafe_ : this.charToByteMap_;
@@ -1143,6 +1229,11 @@
 			}
 			return output;
 		},
+		/**
+		* Lazy static initialization function. Called before
+		* accessing any of the static map variables.
+		* @private
+		*/
 		init_() {
 			if (!this.byteToCharMap_) {
 				this.byteToCharMap_ = {};
@@ -1202,6 +1293,22 @@
 		}
 		return null;
 	};
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2022 Google LLC
@@ -1597,6 +1704,54 @@
 		}
 	}
 	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
 	* Deep equal two objects. Support Arrays and Objects.
 	*/
 	function deepEqual(a, b) {
@@ -1617,6 +1772,118 @@
 	function isObject(thing) {
 		return thing !== null && typeof thing === "object";
 	}
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2019 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2021 Google LLC
@@ -1672,6 +1939,22 @@
 	async function pingServer(endpoint) {
 		return (await fetch(endpoint, { credentials: "include" })).ok;
 	}
+	/**
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	//#endregion
 	//#region node_modules/@firebase/component/dist/esm/index.esm.js
 	/**
@@ -2342,7 +2625,7 @@
 		return provider.getComponent()?.type === "VERSION";
 	}
 	const name$q = "@firebase/app";
-	const version$1 = "0.16.2";
+	const version$1 = "0.16.3";
 	/**
 	* @license
 	* Copyright 2019 Google LLC
@@ -2386,7 +2669,7 @@
 	const name$2 = "@firebase/ai";
 	const name$1 = "@firebase/firestore-compat";
 	const name = "firebase";
-	const version = "12.19.0";
+	const version = "13.0.0";
 	/**
 	* @license
 	* Copyright 2019 Google LLC
@@ -2525,6 +2808,22 @@
 		if (obj === null || obj === void 0) return false;
 		return obj.settings !== void 0;
 	}
+	/**
+	* @license
+	* Copyright 2019 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	const ERROR_FACTORY = new ErrorFactory("app", "Firebase", {
 		["no-app"]: "No Firebase App '{$appName}' has been created - call initializeApp() first",
 		["bad-app-name"]: "Illegal App name: '{$appName}'",
@@ -2606,6 +2905,22 @@
 	};
 	/**
 	* @license
+	* Copyright 2023 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
 	* Copyright 2019 Google LLC
 	*
 	* Licensed under the Apache License, Version 2.0 (the "License");
@@ -2639,19 +2954,21 @@
 		options || (options = getDefaultAppConfig());
 		if (!options) throw ERROR_FACTORY.create("no-options");
 		const existingApp = _apps.get(name);
-		if (existingApp) if (!deepEqual(options, existingApp.options)) throw ERROR_FACTORY.create("duplicate-app", {
-			appName: name,
-			mismatchedParam: "options",
-			oldValue: JSON.stringify(existingApp.options),
-			newValue: JSON.stringify(options)
-		});
-		else if (!deepEqual(config, existingApp.config)) throw ERROR_FACTORY.create("duplicate-app", {
-			appName: name,
-			mismatchedParam: "config",
-			oldValue: JSON.stringify(existingApp.config),
-			newValue: JSON.stringify(config)
-		});
-		else return existingApp;
+		if (existingApp) {
+			if (!deepEqual(options, existingApp.options)) throw ERROR_FACTORY.create("duplicate-app", {
+				appName: name,
+				mismatchedParam: "options",
+				oldValue: JSON.stringify(existingApp.options),
+				newValue: JSON.stringify(options)
+			});
+			else if (!deepEqual(config, existingApp.config)) throw ERROR_FACTORY.create("duplicate-app", {
+				appName: name,
+				mismatchedParam: "config",
+				oldValue: JSON.stringify(existingApp.config),
+				newValue: JSON.stringify(config)
+			});
+			else return existingApp;
+		}
 		const container = new ComponentContainer(name);
 		for (const component of _components.values()) container.addComponent(component);
 		const newApp = new FirebaseAppImpl(options, config, container);
@@ -2814,7 +3131,8 @@
 			* Leave public for easier testing.
 			*/
 			this._heartbeatsCache = null;
-			this._storage = new HeartbeatStorageImpl(this.container.getProvider("app").getImmediate());
+			const app = this.container.getProvider("app").getImmediate();
+			this._storage = new HeartbeatStorageImpl(app);
 			this._heartbeatsCachePromise = this._storage.read().then((result) => {
 				this._heartbeatsCache = result;
 				return result;
@@ -3044,7 +3362,7 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	registerVersion("firebase", "12.19.0", "app");
+	registerVersion("firebase", "13.0.0", "app");
 	//#endregion
 	//#region node_modules/@firebase/webchannel-wrapper/dist/bloom-blob/esm/bloom_blob_es2018.js
 	var commonjsGlobal$1 = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
@@ -3057,6 +3375,11 @@
 	var Md5;
 	(function() {
 		var h;
+		/** @license
+		
+		Copyright The Closure Library Authors.
+		SPDX-License-Identifier: Apache-2.0
+		*/
 		function k(d, a) {
 			function c() {}
 			c.prototype = a.prototype;
@@ -3478,6 +3801,13 @@
 		Integer = bloom_blob_es2018.Integer = t;
 	}).apply(typeof commonjsGlobal$1 !== "undefined" ? commonjsGlobal$1 : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
 	//#endregion
+	//#region node_modules/tslib/tslib.es6.mjs
+	function __classPrivateFieldGet(receiver, state, kind, f) {
+		if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+		if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+		return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+	}
+	//#endregion
 	//#region node_modules/@firebase/webchannel-wrapper/dist/webchannel-blob/esm/webchannel_blob_es2018.js
 	var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 	var webchannel_blob_es2018 = {};
@@ -3544,6 +3874,11 @@
 				return c;
 			};
 		});
+		/** @license
+		
+		Copyright The Closure Library Authors.
+		SPDX-License-Identifier: Apache-2.0
+		*/
 		var ea = ea || {}, l = this || self;
 		function n(a) {
 			var b = typeof a;
@@ -4777,7 +5112,7 @@
 			if (this.g) {
 				if (this.o && a.value) this.response.push(a.value);
 				else if (!this.o) {
-					var b = a.value ? a.value : new Uint8Array(0);
+					var b = a.value ? a.value : /* @__PURE__ */ new Uint8Array(0);
 					if (b = this.B.decode(b, { stream: !a.done })) this.response = this.responseText += b;
 				}
 				a.done ? Hc(this) : Gc(this);
@@ -4841,7 +5176,7 @@
 				}
 				d = true;
 			}
-			d || (c = Jc(c), typeof a === "string" ? c != null && L(c) : S(a, b, c));
+			d || (c = Jc(c), typeof a === "string" || S(a, b, c));
 		}
 		function X(a) {
 			C.call(this);
@@ -7921,7 +8256,7 @@
 	const VISITED_BITS = 32;
 	const MAX_BACKTRACK_PROG = 500;
 	const INITIAL_JOB_CAPACITY = 256;
-	const MAX_BACKTRACK_VECTOR = 256 * 1024;
+	const MAX_BACKTRACK_VECTOR = 262144;
 	var BitState = class {
 		constructor() {
 			this.end = 0;
@@ -8268,7 +8603,9 @@
 						m[pc] = true;
 						inst.op = Inst.ALT_MATCH;
 					}
-					const mergeRes = mergeRuneSets(onePassRunes[inst.out] || [], onePassRunes[inst.arg] || [], inst.out, inst.arg);
+					const leftRunes = onePassRunes[inst.out] || [];
+					const rightRunes = onePassRunes[inst.arg] || [];
+					const mergeRes = mergeRuneSets(leftRunes, rightRunes, inst.out, inst.arg);
 					if (!mergeRes) return false;
 					onePassRunes[pc] = mergeRes.merged;
 					inst.next = new Uint32Array(mergeRes.next);
@@ -8341,7 +8678,6 @@
 						Unicode.MAX_RUNE
 					];
 					inst.next = new Uint32Array(Math.floor(onePassRunes[pc].length / 2) + 1).fill(inst.out);
-					break;
 			}
 			return ok;
 		};
@@ -8374,7 +8710,6 @@
 					p.inst[ix].next = null;
 					p.inst[ix].op = instOriginal.op;
 					p.inst[ix].runes = instOriginal.runes ? instOriginal.runes.slice() : [];
-					break;
 			}
 		}
 	};
@@ -8403,9 +8738,7 @@
 							return null;
 						}
 						break;
-					default:
-						if (opOut === Inst.MATCH && hasAlt) return null;
-						break;
+					default: if (opOut === Inst.MATCH && hasAlt) return null;
 				}
 			}
 			let p = onePassCopy(prog);
@@ -8609,7 +8942,6 @@
 								if (this.max >= 0) out += this.max;
 							}
 							out += "}";
-							break;
 					}
 					if ((this.flags & RE2Flags.NON_GREEDY) !== 0) out += "?";
 					break;
@@ -8702,9 +9034,7 @@
 					}
 					out += "]";
 					break;
-				default:
-					out += this.op;
-					break;
+				default: out += this.op;
 			}
 			return out;
 		}
@@ -8748,9 +9078,7 @@
 					if (this.cap !== that.cap || (this.name === null ? that.name !== null : this.name !== that.name) || !this.subs[0].equals(that.subs[0])) return false;
 					break;
 				case Regexp.Op.PLB:
-				case Regexp.Op.NLB:
-					if (this.lb !== that.lb || !this.subs[0].equals(that.subs[0])) return false;
-					break;
+				case Regexp.Op.NLB: if (this.lb !== that.lb || !this.subs[0].equals(that.subs[0])) return false;
 			}
 			return true;
 		}
@@ -9942,7 +10270,6 @@
 					if (src.runes[0] === dst.runes[0] && src.flags === dst.flags) break;
 					dst.op = Regexp.Op.CHAR_CLASS;
 					dst.runes = new CharClass().appendLiteral(dst.runes[0], dst.flags).appendLiteral(src.runes[0], src.flags).toArray();
-					break;
 			}
 		}
 		static parseEscape(t) {
@@ -9999,9 +10326,7 @@
 				case Codepoint.CODES.get("r"): return Codepoint.CODES.get("\r");
 				case Codepoint.CODES.get("t"): return Codepoint.CODES.get("	");
 				case Codepoint.CODES.get("v"): return Codepoint.CODES.get("\v");
-				default:
-					if (c <= Unicode.MAX_ASCII && !Utils.isalnum(c)) return c;
-					break;
+				default: if (c <= Unicode.MAX_ASCII && !Utils.isalnum(c)) return c;
 			}
 			throw new RE2JSSyntaxException(Parser.ERR_INVALID_ESCAPE, t.from(startPos));
 		}
@@ -10408,9 +10733,7 @@
 							this.reuse(old);
 							break;
 						}
-						default:
-							re.subs = re.subs.slice(1, re.subs.length);
-							break;
+						default: re.subs = re.subs.slice(1, re.subs.length);
 					}
 				}
 				return re;
@@ -10509,9 +10832,7 @@
 							case Codepoint.CODES.get("+"):
 								op = Regexp.Op.PLUS;
 								break;
-							case Codepoint.CODES.get("?"):
-								op = Regexp.Op.QUEST;
-								break;
+							case Codepoint.CODES.get("?"): op = Regexp.Op.QUEST;
 						}
 						this.repeat(op, min, max, repeatPos, t, lastRepeatPos);
 						break;
@@ -10562,9 +10883,7 @@
 							case Codepoint.CODES.get("z"):
 								this.op(Regexp.Op.END_TEXT);
 								break bigswitch;
-							default:
-								t.rewindTo(savedPos);
-								break;
+							default: t.rewindTo(savedPos);
 						}
 						else t.rewindTo(savedPos);
 						const re = this.newRegexp(Regexp.Op.CHAR_CLASS);
@@ -10588,9 +10907,7 @@
 						this.literal(Parser.parseEscape(t));
 						break;
 					}
-					default:
-						this.literal(t.pop());
-						break;
+					default: this.literal(t.pop());
 				}
 				lastRepeatPos = repeatPos;
 			}
@@ -11948,7 +12265,23 @@
 		}
 	};
 	//#endregion
-	//#region node_modules/@firebase/firestore/dist/common-CLMydGSF.esm.js
+	//#region node_modules/@firebase/firestore/dist/common-D9UYuXJO.esm.js
+	/**
+	* @license
+	* Copyright 2023 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2017 Google LLC
@@ -11966,9 +12299,9 @@
 	* limitations under the License.
 	*/
 	/** The semver (www.semver.org) version of the SDK. */
-	let Se = "12.19.0";
+	let xe = "13.0.0";
 	function __PRIVATE_setSDKVersion(e) {
-		Se = e;
+		xe = e;
 	}
 	/**
 	* @license
@@ -12010,13 +12343,13 @@
 	function __PRIVATE_logDebug(e, ...t) {
 		if (ve.logLevel <= LogLevel.DEBUG) {
 			const n = t.map(__PRIVATE_argToString);
-			ve.debug(`Firestore (${Se}): ${e}`, ...n);
+			ve.debug(`Firestore (${xe}): ${e}`, ...n);
 		}
 	}
 	function __PRIVATE_logError(e, ...t) {
 		if (ve.logLevel <= LogLevel.ERROR) {
 			const n = t.map(__PRIVATE_argToString);
-			ve.error(`Firestore (${Se}): ${e}`, ...n);
+			ve.error(`Firestore (${xe}): ${e}`, ...n);
 		}
 	}
 	/**
@@ -12024,7 +12357,7 @@
 	*/ function __PRIVATE_logWarn(e, ...t) {
 		if (ve.logLevel <= LogLevel.WARN) {
 			const n = t.map(__PRIVATE_argToString);
-			ve.warn(`Firestore (${Se}): ${e}`, ...n);
+			ve.warn(`Firestore (${xe}): ${e}`, ...n);
 		}
 	}
 	/**
@@ -12059,7 +12392,7 @@
 		"string" == typeof t ? r = t : n = t, __PRIVATE__fail(e, r, n);
 	}
 	function __PRIVATE__fail(e, t, n) {
-		let r = `FIRESTORE (${Se}) INTERNAL ASSERTION FAILED: ${t} (ID: ${e.toString(16)})`;
+		let r = `FIRESTORE (${xe}) INTERNAL ASSERTION FAILED: ${t} (ID: ${e.toString(16)})`;
 		if (void 0 !== n) try {
 			r += " CONTEXT: " + JSON.stringify(n);
 		} catch (e) {
@@ -12146,10 +12479,11 @@
 		}
 		return __PRIVATE_primitiveComparator(e.length, t.length);
 	}
-	const De = 55296, xe = 57343;
+	const De = 55296;
+	const Ce = 57343;
 	function __PRIVATE_isSurrogate(e) {
 		const t = e.charCodeAt(0);
-		return t >= De && t <= xe;
+		return t >= De && t <= Ce;
 	}
 	/** Helper to compare arrays using isEqual(). */ function __PRIVATE_arrayEquals(e, t, n) {
 		return e.length === t.length && e.every(((e, r) => n(e, t[r])));
@@ -12553,22 +12887,113 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/ const ta = {
+		/** Not an error; returned on success. */
 		OK: "ok",
+		/** The operation was cancelled (typically by the caller). */
 		CANCELLED: "cancelled",
+		/** Unknown error or an error from a different error domain. */
 		UNKNOWN: "unknown",
+		/**
+		* Client specified an invalid argument. Note that this differs from
+		* FAILED_PRECONDITION. INVALID_ARGUMENT indicates arguments that are
+		* problematic regardless of the state of the system (e.g., a malformed file
+		* name).
+		*/
 		INVALID_ARGUMENT: "invalid-argument",
+		/**
+		* Deadline expired before operation could complete. For operations that
+		* change the state of the system, this error may be returned even if the
+		* operation has completed successfully. For example, a successful response
+		* from a server could have been delayed long enough for the deadline to
+		* expire.
+		*/
 		DEADLINE_EXCEEDED: "deadline-exceeded",
+		/** Some requested entity (e.g., file or directory) was not found. */
 		NOT_FOUND: "not-found",
+		/**
+		* Some entity that we attempted to create (e.g., file or directory) already
+		* exists.
+		*/
 		ALREADY_EXISTS: "already-exists",
+		/**
+		* The caller does not have permission to execute the specified operation.
+		* PERMISSION_DENIED must not be used for rejections caused by exhausting
+		* some resource (use RESOURCE_EXHAUSTED instead for those errors).
+		* PERMISSION_DENIED must not be used if the caller cannot be identified
+		* (use UNAUTHENTICATED instead for those errors).
+		*/
 		PERMISSION_DENIED: "permission-denied",
+		/**
+		* The request does not have valid authentication credentials for the
+		* operation.
+		*/
 		UNAUTHENTICATED: "unauthenticated",
+		/**
+		* Some resource has been exhausted, perhaps a per-user quota, or perhaps the
+		* entire file system is out of space.
+		*/
 		RESOURCE_EXHAUSTED: "resource-exhausted",
+		/**
+		* Operation was rejected because the system is not in a state required for
+		* the operation's execution. For example, directory to be deleted may be
+		* non-empty, an rmdir operation is applied to a non-directory, etc.
+		*
+		* A litmus test that may help a service implementor in deciding
+		* between FAILED_PRECONDITION, ABORTED, and UNAVAILABLE:
+		*  (a) Use UNAVAILABLE if the client can retry just the failing call.
+		*  (b) Use ABORTED if the client should retry at a higher-level
+		*      (e.g., restarting a read-modify-write sequence).
+		*  (c) Use FAILED_PRECONDITION if the client should not retry until
+		*      the system state has been explicitly fixed. E.g., if an "rmdir"
+		*      fails because the directory is non-empty, FAILED_PRECONDITION
+		*      should be returned since the client should not retry unless
+		*      they have first fixed up the directory by deleting files from it.
+		*  (d) Use FAILED_PRECONDITION if the client performs conditional
+		*      REST Get/Update/Delete on a resource and the resource on the
+		*      server does not match the condition. E.g., conflicting
+		*      read-modify-write on the same resource.
+		*/
 		FAILED_PRECONDITION: "failed-precondition",
+		/**
+		* The operation was aborted, typically due to a concurrency issue like
+		* sequencer check failures, transaction aborts, etc.
+		*
+		* See litmus test above for deciding between FAILED_PRECONDITION, ABORTED,
+		* and UNAVAILABLE.
+		*/
 		ABORTED: "aborted",
+		/**
+		* Operation was attempted past the valid range. E.g., seeking or reading
+		* past end of file.
+		*
+		* Unlike INVALID_ARGUMENT, this error indicates a problem that may be fixed
+		* if the system state changes. For example, a 32-bit file system will
+		* generate INVALID_ARGUMENT if asked to read at an offset that is not in the
+		* range [0,2^32-1], but it will generate OUT_OF_RANGE if asked to read from
+		* an offset past the current file size.
+		*
+		* There is a fair bit of overlap between FAILED_PRECONDITION and
+		* OUT_OF_RANGE. We recommend using OUT_OF_RANGE (the more specific error)
+		* when it applies so that callers who are iterating through a space can
+		* easily look for an OUT_OF_RANGE error to detect when they are done.
+		*/
 		OUT_OF_RANGE: "out-of-range",
+		/** Operation is not implemented or not supported/enabled in this service. */
 		UNIMPLEMENTED: "unimplemented",
+		/**
+		* Internal errors. Means some invariants expected by underlying System has
+		* been broken. If you see one of these errors, Something is very broken.
+		*/
 		INTERNAL: "internal",
+		/**
+		* The service is currently unavailable. This is a most likely a transient
+		* condition and may be corrected by retrying with a backoff.
+		*
+		* See litmus test above for deciding between FAILED_PRECONDITION, ABORTED,
+		* and UNAVAILABLE.
+		*/
 		UNAVAILABLE: "unavailable",
+		/** Unrecoverable data loss or corruption. */
 		DATA_LOSS: "data-loss"
 	};
 	/** An error returned by a Firestore operation. */ var e = class extends FirebaseError {
@@ -12592,7 +13017,7 @@
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const Ce = "__name__";
+	*/ const Fe = "__name__";
 	/**
 	* Path represents an ordered sequence of string segments.
 	*/
@@ -12719,11 +13144,11 @@
 			return new ResourcePath([]);
 		}
 	};
-	const Fe = /^[_a-zA-Z][_a-zA-Z0-9]*$/;
+	const Oe = /^[_a-zA-Z][_a-zA-Z0-9]*$/;
 	/**
 	* A dot-separated path for navigating sub-objects within a document.
 	* @internal
-	*/ let Oe = class FieldPath extends BasePath {
+	*/ let Me$1 = class FieldPath extends BasePath {
 		construct(e, t, n) {
 			return new FieldPath(e, t, n);
 		}
@@ -12731,7 +13156,7 @@
 		* Returns true if the string could be used as a segment in a field path
 		* without escaping.
 		*/ static isValidIdentifier(e) {
-			return Fe.test(e);
+			return Oe.test(e);
 		}
 		canonicalString() {
 			return this.toArray().map(((e) => (e = e.replace(/\\/g, "\\\\").replace(/`/g, "\\`"), FieldPath.isValidIdentifier(e) || (e = "`" + e + "`"), e))).join(".");
@@ -12742,12 +13167,12 @@
 		/**
 		* Returns true if this field references the key of a document.
 		*/ isKeyField() {
-			return 1 === this.length && this.get(0) === Ce;
+			return 1 === this.length && this.get(0) === Fe;
 		}
 		/**
 		* The field designating the key of a document.
 		*/ static keyField() {
-			return new FieldPath([Ce]);
+			return new FieldPath([Fe]);
 		}
 		/**
 		* Parses a field string from the given server-formatted string.
@@ -12809,7 +13234,7 @@
 	*             containing foo
 	*/ var FieldMask = class FieldMask {
 		constructor(e) {
-			this.fields = e, e.sort(Oe.comparator);
+			this.fields = e, e.sort(Me$1.comparator);
 		}
 		static empty() {
 			return new FieldMask([]);
@@ -12818,7 +13243,7 @@
 		* Returns a new FieldMask object that is the result of adding all the given
 		* fields paths to this field mask.
 		*/ unionWith(e) {
-			let t = new SortedSet(Oe.comparator);
+			let t = new SortedSet(Me$1.comparator);
 			for (const e of this.fields) t = t.add(e);
 			for (const n of e) t = t.add(n);
 			return new FieldMask(t.toArray());
@@ -13032,17 +13457,18 @@
 		if (!p(t)) throw new e(ta.INVALID_ARGUMENT, "JSON must be an object");
 		let r;
 		for (const e in n) if (n[e]) {
-			const i = n[e].typeString, s = "value" in n[e] ? { value: n[e].value } : void 0;
+			const i = n[e].typeString, s = "value" in n[e] ? { value: n[e].value } : void 0, _ = n[e].optional;
 			if (!(e in t)) {
+				if (_) continue;
 				r = `JSON missing required field: '${e}'`;
 				break;
 			}
-			const _ = t[e];
-			if (i && typeof _ !== i) {
+			const o = t[e];
+			if (i && typeof o !== i) {
 				r = `JSON field '${e}' must be a ${i}.`;
 				break;
 			}
-			if (void 0 !== s && _ !== s.value) {
+			if (void 0 !== s && o !== s.value) {
 				r = `Expected '${e}' field to equal '${s.value}'`;
 				break;
 			}
@@ -13066,7 +13492,8 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	const Me$1 = -62135596800, Ne = 1e6;
+	const Ne = -62135596800;
+	const Be = 1e6;
 	/**
 	* A `Timestamp` represents a point in time independent of any time zone or
 	* calendar, represented as seconds and fractions of seconds at nanosecond
@@ -13107,8 +13534,8 @@
 		* @returns A new `Timestamp` representing the same point in time as the given
 		*     number of milliseconds.
 		*/ static fromMillis(e) {
-			const t = Math.floor(e / 1e3);
-			return new Timestamp(t, Math.floor((e - 1e3 * t) * Ne));
+			const t = Math.floor(e / 1e3), n = Math.floor((e - 1e3 * t) * Be);
+			return new Timestamp(t, n);
 		}
 		/**
 		* Creates a new timestamp from the given `Temporal.Instant`.
@@ -13142,7 +13569,7 @@
 		*/ constructor(t, n) {
 			if (this.seconds = t, this.nanoseconds = n, n < 0) throw new e(ta.INVALID_ARGUMENT, "Timestamp nanoseconds out of range: " + n);
 			if (n >= 1e9) throw new e(ta.INVALID_ARGUMENT, "Timestamp nanoseconds out of range: " + n);
-			if (t < Me$1) throw new e(ta.INVALID_ARGUMENT, "Timestamp seconds out of range: " + t);
+			if (t < Ne) throw new e(ta.INVALID_ARGUMENT, "Timestamp seconds out of range: " + t);
 			if (t >= 253402300800) throw new e(ta.INVALID_ARGUMENT, "Timestamp seconds out of range: " + t);
 		}
 		/**
@@ -13162,7 +13589,7 @@
 		* @returns The point in time corresponding to this timestamp, represented as
 		*     the number of milliseconds since Unix epoch 1970-01-01T00:00:00Z.
 		*/ toMillis() {
-			return 1e3 * this.seconds + this.nanoseconds / Ne;
+			return 1e3 * this.seconds + this.nanoseconds / Be;
 		}
 		/**
 		* Converts a `Timestamp` to a `Temporal.Instant` object.
@@ -13206,7 +13633,7 @@
 		* Converts this object to a primitive string, which allows `Timestamp` objects
 		* to be compared using the `>`, `<=`, `>=` and `>` operators.
 		*/ valueOf() {
-			const e = this.seconds - Me$1;
+			const e = this.seconds - Ne;
 			return String(e).padStart(12, "0") + "." + String(this.nanoseconds).padStart(9, "0");
 		}
 	};
@@ -13256,6 +13683,22 @@
 	* limitations under the License.
 	*/
 	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
 	* Immutable class that represents a "proto" byte string.
 	*
 	* Proto byte strings can either be Base64-encoded strings or Uint8Arrays when
@@ -13268,25 +13711,22 @@
 			this.binaryString = e;
 		}
 		static fromBase64String(e) {
-			return new ByteString(function __PRIVATE_decodeBase64(e) {
+			const t = function __PRIVATE_decodeBase64(e) {
 				try {
 					return atob(e);
 				} catch (e) {
 					throw "undefined" != typeof DOMException && e instanceof DOMException ? new __PRIVATE_Base64DecodeError("Invalid base64 string: " + e) : e;
 				}
-			}(e));
+			}(e);
+			return new ByteString(t);
 		}
 		static fromUint8Array(e) {
-			return new ByteString(
-				/**
-				* Helper function to convert an Uint8array to a binary string.
-				*/
-				function __PRIVATE_binaryStringFromUint8Array(e) {
-					let t = "";
-					for (let n = 0; n < e.length; ++n) t += String.fromCharCode(e[n]);
-					return t;
-				}(e)
-			);
+			const t = function __PRIVATE_binaryStringFromUint8Array(e) {
+				let t = "";
+				for (let n = 0; n < e.length; ++n) t += String.fromCharCode(e[n]);
+				return t;
+			}(e);
+			return new ByteString(t);
 		}
 		[Symbol.iterator]() {
 			let e = 0;
@@ -13309,6 +13749,22 @@
 				for (let n = 0; n < e.length; n++) t[n] = e.charCodeAt(n);
 				return t;
 			}(this.binaryString);
+			/**
+			* @license
+			* Copyright 2020 Google LLC
+			*
+			* Licensed under the Apache License, Version 2.0 (the "License");
+			* you may not use this file except in compliance with the License.
+			* You may obtain a copy of the License at
+			*
+			*   http://www.apache.org/licenses/LICENSE-2.0
+			*
+			* Unless required by applicable law or agreed to in writing, software
+			* distributed under the License is distributed on an "AS IS" BASIS,
+			* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+			* See the License for the specific language governing permissions and
+			* limitations under the License.
+			*/
 		}
 		approximateByteSize() {
 			return 2 * this.binaryString.length;
@@ -13321,14 +13777,14 @@
 		}
 	};
 	ByteString.EMPTY_BYTE_STRING = new ByteString("");
-	const Le = /* @__PURE__ */ new RegExp(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.(\d+))?Z$/);
+	const Le$1 = /* @__PURE__ */ new RegExp(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.(\d+))?Z$/);
 	/**
 	* Converts the possible Proto values for a timestamp value into a "seconds and
 	* nanos" representation.
 	*/ function __PRIVATE_normalizeTimestamp(e) {
 		if (__PRIVATE_hardAssert(!!e, 39018), "string" == typeof e) {
 			let t = 0;
-			const n = Le.exec(e);
+			const n = Le$1.exec(e);
 			if (__PRIVATE_hardAssert(!!n, 46558, { timestamp: e }), n[1]) {
 				let e = n[1];
 				e = (e + "000000000").substr(0, 9), t = Number(e);
@@ -13386,9 +13842,12 @@
 	*   FieldValueOptions to value().
 	* - With respect to other ServerTimestampValues, they sort by their
 	*   localWriteTime.
-	*/ const Be$1 = "server_timestamp", Ue = "__type__", ke = "__previous_value__", qe = "__local_write_time__";
+	*/ const Ue = "server_timestamp";
+	const ke = "__type__";
+	const Qe = "__previous_value__";
+	const qe = "__local_write_time__";
 	function __PRIVATE_isServerTimestamp(e) {
-		return (e?.mapValue?.fields || {})[Ue]?.stringValue === Be$1;
+		return (e?.mapValue?.fields || {})[ke]?.stringValue === Ue;
 	}
 	/**
 	* Creates a new ServerTimestamp proto value (using the internal format).
@@ -13400,7 +13859,7 @@
 	* value until the backend responds with the timestamp.
 	*/
 	function __PRIVATE_getPreviousValue(e) {
-		const t = e.mapValue.fields[ke];
+		const t = e.mapValue.fields[Qe];
 		return __PRIVATE_isServerTimestamp(t) ? __PRIVATE_getPreviousValue(t) : t;
 	}
 	/**
@@ -13447,19 +13906,19 @@
 			this.databaseId = e, this.appId = t, this.persistenceKey = n, this.host = r, this.ssl = i, this.forceLongPolling = s, this.autoDetectLongPolling = _, this.longPollingOptions = o, this.useFetchStreams = a, this.isUsingEmulator = u, this.apiKey = c, this._customHeaders = l, this.grpcFlowControlWindow = E;
 		}
 	};
-	/** The default database name for a project. */ const $e = "(default)";
+	/** The default database name for a project. */ const Ke = "(default)";
 	/**
 	* Represents the database ID a Firestore client is associated with.
 	* @internal
 	*/ var DatabaseId = class DatabaseId {
 		constructor(e, t) {
-			this.projectId = e, this.database = t || $e;
+			this.projectId = e, this.database = t || Ke;
 		}
 		static empty() {
 			return new DatabaseId("", "");
 		}
 		get isDefaultDatabase() {
-			return this.database === $e;
+			return this.database === Ke;
 		}
 		isEqual(e) {
 			return e instanceof DatabaseId && e.projectId === this.projectId && e.database === this.database;
@@ -13469,6 +13928,697 @@
 		if (!Object.prototype.hasOwnProperty.apply(t.options, ["projectId"])) throw new e(ta.INVALID_ARGUMENT, "\"projectId\" not provided in firebase.initializeApp.");
 		return new DatabaseId(t.options.projectId, n);
 	}
+	/**
+	* Copyright 2021 M.Vokhmentsev
+	*
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @private
+	* @internal
+	*/ var __PRIVATE_QuadrupleBuilder = class __PRIVATE_QuadrupleBuilder {
+		constructor() {
+			this.exponent = 0, this.i = 0n, this.o = 0n, this.u = new Array(4).fill(0n), this.l = new Array(6).fill(0n), this.h = new Array(6).fill(0n), this.T = new Array(6).fill(0n), this.P = new Array(12).fill(0n);
+		}
+		static I(e, t) {
+			let n = new __PRIVATE_QuadrupleBuilder();
+			return n.parse(e, t), n;
+		}
+		parse(e, t) {
+			t += e.length - 1, this.exponent = 0, this.i = 0n, this.o = 0n;
+			let n = this.T, r = this.R(e, n);
+			if (0 == r && this.isEmpty(n)) return;
+			if ((t += r) < __PRIVATE_QuadrupleBuilder.A) return;
+			if (t > __PRIVATE_QuadrupleBuilder.V) return void (this.exponent = Number(__PRIVATE_QuadrupleBuilder.m));
+			let i = this.p(t, n);
+			this.S(t, i, n);
+		}
+		R(e, t) {
+			for (let e = 0; e < 6; e++) t[e] = 0n;
+			let n = 0;
+			for (; n < e.length && 0 == e[n];) n += 1;
+			if (n == e.length) return 0;
+			let r = -n;
+			if (e.length - n > __PRIVATE_QuadrupleBuilder.v) {
+				let t = e[__PRIVATE_QuadrupleBuilder.v] >= 5, i = new Array(__PRIVATE_QuadrupleBuilder.v).fill(0);
+				for (let t = 0; t < __PRIVATE_QuadrupleBuilder.v; t++) i[t] = e[t + n];
+				t && (r += this.D(i)), e = i, n = 0;
+			}
+			for (let r = e.length - 1; r >= n; r--) t[0] |= BigInt(e[r]) << 32n, this.C(t);
+			return r;
+		}
+		C(e) {
+			let t = e.length;
+			for (let n = 0; n < t; n++) {
+				let r = e[n] % 10n;
+				e[n] = e[n] / 10n, n + 1 < t && (e[n + 1] += r << 32n);
+			}
+		}
+		isEmpty(e) {
+			for (let t = 0; t < e.length; t++) if (0n != e[t]) return false;
+			return true;
+		}
+		D(e) {
+			for (let t = e.length - 1; t >= 0; t--) {
+				if (9 != e[t]) return e[t] = e[t] + 1, 0;
+				e[t] = 0;
+			}
+			return e[0] = 1, 1;
+		}
+		p(e, t) {
+			let n = t[0] << 31n | t[1] >> 1n, r = Number(n) / __PRIVATE_QuadrupleBuilder.F;
+			return Math.floor(Number(e) * __PRIVATE_QuadrupleBuilder.O + this.log2(r));
+		}
+		log2(e) {
+			return __PRIVATE_QuadrupleBuilder.M * Math.log(e);
+		}
+		S(e, t, n) {
+			let r = this.u;
+			this.N(-t, r);
+			let i = this.P;
+			this.B(n, r, i), this.L(i), BigInt(r[0]) != BigInt(-e) && this.L(i), t += this.U(i), (t += __PRIVATE_QuadrupleBuilder.k) <= 0 || (t += this.q(i), BigInt(t) >= __PRIVATE_QuadrupleBuilder.m ? this.exponent = Number(__PRIVATE_QuadrupleBuilder.m) : (this.exponent = Number(t), this.i = (i[0] << 32n) + i[1] & 18446744073709551615n, this.o = (i[2] << 32n) + i[3] & 18446744073709551615n));
+		}
+		N(e, t) {
+			if (0 == e) return void this.K(__PRIVATE_QuadrupleBuilder.$[0], t);
+			let n = __PRIVATE_QuadrupleBuilder.$;
+			e < 0 && (e = -e, n = __PRIVATE_QuadrupleBuilder.W);
+			let r = __PRIVATE_QuadrupleBuilder.G, i = 32, s = true;
+			for (; e > 0;) e >= r && (s ? (this.K(n[i], t), s = false) : this.j(t, n[i], t), e -= r), i -= 1, r *= .5;
+		}
+		K(e, t) {
+			for (let n = 0; n < t.length; n++) t[n] = e[n];
+		}
+		j(e, t, n) {
+			this.H(e, t, this.P);
+			let r = this.J(this.P);
+			this.Y(this.P, n), n[0] = e[0] + t[0] + BigInt(r);
+		}
+		H(e, t, n) {
+			for (let e = 0; e < n.length; e++) n[e] = 0n;
+			this.Z(e, this.l), this.Z(t, this.h);
+			for (let e = 5; e >= 0; e--) for (let t = 5; t >= 0; t--) {
+				let r = this.l[e] * this.h[t];
+				n[t + e + 1] = n[t + e + 1] + (r & __PRIVATE_QuadrupleBuilder.X) & 18446744073709551615n, n[t + e] = n[t + e] + (r >> 32n) & 18446744073709551615n;
+			}
+			for (let e = 11; e >= 1; e--) n[e - 1] = n[e - 1] + (n[e] >> 32n) & 18446744073709551615n, n[e] &= __PRIVATE_QuadrupleBuilder.X;
+		}
+		J(e) {
+			let t = 0;
+			for (; this.ee(e);) this.L(e), t -= 1;
+			return t;
+		}
+		ee(e) {
+			if (e[0] < 429496729n) return true;
+			if (e[0] > 429496729n) return false;
+			for (let t = 1; t < e.length; t++) {
+				if (e[t] < 2576980377n) return true;
+				if (e[t] > 2576980377n) return false;
+			}
+			return false;
+		}
+		B(e, t, n) {
+			for (let e = 0; e < n.length; e++) n[e] = 0n;
+			let r = this.h;
+			this.Z(t, r);
+			let i = e.length;
+			for (let t = i - 1; t >= 0; t--) for (let s = i - 1; s >= 0; s--) {
+				let i = e[t] * r[s];
+				n[s + t + 1] = n[s + t + 1] + (i & __PRIVATE_QuadrupleBuilder.X) & 18446744073709551615n, n[s + t] = n[s + t] + (i >> 32n) & 18446744073709551615n;
+			}
+			for (let e = 11; e >= 1; e--) n[e - 1] = n[e - 1] + (n[e] >> 32n) & 18446744073709551615n, n[e] &= __PRIVATE_QuadrupleBuilder.X;
+		}
+		L(e) {
+			let t = e.length - 1;
+			e[0] &= __PRIVATE_QuadrupleBuilder.X, e[t] *= 10n;
+			for (let n = t - 1; n >= 0; n--) e[n] = 10n * e[n] + (e[n + 1] >> 32n) & 18446744073709551615n, e[n + 1] &= __PRIVATE_QuadrupleBuilder.X;
+		}
+		U(e) {
+			let t = 31 - __PRIVATE_QuadrupleBuilder.te(e[0]);
+			return 0 != t && this.ne(e, t), t;
+		}
+		q(e) {
+			return this.re(e, 5, 100n), this.re(e, 4, 2147483648n), 0n != (e[0] & __PRIVATE_QuadrupleBuilder.ie << 1n) ? (this.ne(e, 1), 1) : 0;
+		}
+		Y(e, t) {
+			t[1] = (e[0] << 32n) + e[1], t[2] = (e[2] << 32n) + e[3], t[3] = (e[4] << 32n) + e[5];
+		}
+		Z(e, t) {
+			t[0] = e[1] >> 32n, t[1] = e[1] & __PRIVATE_QuadrupleBuilder.X, t[2] = e[2] >> 32n, t[3] = e[2] & __PRIVATE_QuadrupleBuilder.X, t[4] = e[3] >> 32n, t[5] = e[3] & __PRIVATE_QuadrupleBuilder.X;
+		}
+		ne(e, t) {
+			let n = e.length - 1, r = BigInt(32 - Math.abs(t));
+			if (t > 0) {
+				let i = BigInt(t);
+				for (let t = n + 1 - 1; t >= 1; t--) e[t] = e[t] >> i | e[t - 1] << r & __PRIVATE_QuadrupleBuilder.X;
+				e[0] = e[0] >> i;
+			} else if (t < 0) {
+				let i = BigInt(-t);
+				e[0] = 18446744073709551615n & (e[0] << i | e[1] >> r);
+				for (let t = 1; t < n; t++) e[t] = 18446744073709551615n & (e[t] << i & __PRIVATE_QuadrupleBuilder.X | e[t + 1] >> r);
+				e[n] = e[n] << i & __PRIVATE_QuadrupleBuilder.X;
+			}
+		}
+		re(e, t, n) {
+			let r = t;
+			e[r] = e[r] + n & 18446744073709551615n;
+			for (let t = r + 1 - 1; t >= 1 && 0n != (e[t] & __PRIVATE_QuadrupleBuilder.ie); t--) e[t] &= __PRIVATE_QuadrupleBuilder.X, e[t - 1] += 1n;
+		}
+		static te(e) {
+			let t = Number(e >> 32n);
+			return 0 == t ? 32 + Math.clz32(Number(BigInt.asUintN(32, e))) : Math.clz32(t);
+		}
+	};
+	/**
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	var $e;
+	var We;
+	var Ge;
+	var je;
+	var ze;
+	var He;
+	/**
+	* @private
+	* @internal
+	*/ __PRIVATE_QuadrupleBuilder.v = 59, __PRIVATE_QuadrupleBuilder.V = 646456993, __PRIVATE_QuadrupleBuilder.A = -646457032, __PRIVATE_QuadrupleBuilder.F = 0xccccccccccccd00, __PRIVATE_QuadrupleBuilder.se = 9223372036854775808n, __PRIVATE_QuadrupleBuilder.G = 2147483648, __PRIVATE_QuadrupleBuilder.X = 4294967295n, __PRIVATE_QuadrupleBuilder.ie = 18446744069414584320n, __PRIVATE_QuadrupleBuilder.O = Math.log(10) / Math.log(2), __PRIVATE_QuadrupleBuilder.M = 1 / Math.log(2), __PRIVATE_QuadrupleBuilder.k = 2147483647, __PRIVATE_QuadrupleBuilder.m = 4294967295n, __PRIVATE_QuadrupleBuilder.$ = [
+		[
+			1n,
+			1844674407370955161n,
+			11068046444225730969n,
+			11068046444225730970n
+		],
+		[
+			1n,
+			3689348814741910323n,
+			3689348814741910323n,
+			3689348814741910324n
+		],
+		[
+			1n,
+			7378697629483820646n,
+			7378697629483820646n,
+			7378697629483820647n
+		],
+		[
+			2n,
+			2951479051793528258n,
+			10330176681277348904n,
+			17708874310761169552n
+		],
+		[
+			3n,
+			4722366482869645213n,
+			12838933875301847924n,
+			13576803638250229990n
+		],
+		[
+			5n,
+			12089258196146291747n,
+			1139270913992301907n,
+			14834133714314273028n
+		],
+		[
+			10n,
+			7922816251426433759n,
+			6537434485812897421n,
+			10943610198455522670n
+		],
+		[
+			20n,
+			3402823669209384634n,
+			11690551640656395617n,
+			434502812078806219n
+		],
+		[
+			39n,
+			6277101735386680763n,
+			15417593589425144845n,
+			4980338030897529499n
+		],
+		[
+			78n,
+			2135987035920910082n,
+			7286864317269821293n,
+			1470929914900401402n
+		],
+		[
+			155n,
+			2473304014731045340n,
+			11160745210636643808n,
+			17197624135881608752n
+		],
+		[
+			309n,
+			3316158518186977171n,
+			1610101194367568473n,
+			2505321366944869367n
+		],
+		[
+			617n,
+			5961435402259919231n,
+			8541288306462491492n,
+			12917583404895345239n
+		],
+		[
+			1234n,
+			1926557440885621868n,
+			10330761220174613655n,
+			4973663491106771606n
+		],
+		[
+			2467n,
+			2012075170664720308n,
+			5203521067837755057n,
+			4252902708988064798n
+		],
+		[
+			4933n,
+			2194667241128661798n,
+			9997912988788550371n,
+			2882452207710407228n
+		],
+		[
+			9865n,
+			2611064738599533141n,
+			4667649273809606933n,
+			5480838552042273826n
+		],
+		[
+			19729n,
+			3695860387023220540n,
+			11618221355217427600n,
+			15743111447059609512n
+		],
+		[
+			39457n,
+			7404766904006053691n,
+			12160444268087321627n,
+			5501995613499181412n
+		],
+		[
+			78914n,
+			2972371312984624324n,
+			9931534487804675078n,
+			3934513978629065883n
+		],
+		[
+			157827n,
+			4789458338529041696n,
+			8874761816389274466n,
+			17334709082760258060n
+		],
+		[
+			315653n,
+			12435208666009569532n,
+			53738705337609241n,
+			5451751215914427447n
+		],
+		[
+			631306n,
+			8382748410739091470n,
+			5595760811601129281n,
+			5808897528453025485n
+		],
+		[
+			1262612n,
+			3809369861530133413n,
+			7258727891356815428n,
+			12698775008535499593n
+		],
+		[
+			2525223n,
+			7866590810795563528n,
+			11575482952928815984n,
+			1738499114246505760n
+		],
+		[
+			5050446n,
+			3354697757892663011n,
+			3122677384963859433n,
+			1903788099230575219n
+		],
+		[
+			10100891n,
+			6100804023648459231n,
+			15587055094752631951n,
+			12467802392503039034n
+		],
+		[
+			20201782n,
+			2017689928707321463n,
+			11400993815251097644n,
+			15657595017903947855n
+		],
+		[
+			40403563n,
+			2206932904874568912n,
+			10086775996354462822n,
+			7871099721466003992n
+		],
+		[
+			80807125n,
+			2640331988754402584n,
+			17494500724586232665n,
+			12073153853204213065n
+		],
+		[
+			161614249n,
+			3779178039757925203n,
+			4593549380955514492n,
+			2162745452984644395n
+		],
+		[
+			323228497n,
+			7742388900241556266n,
+			8212051283157458959n,
+			10362106829961871628n
+		],
+		[
+			646456994n,
+			3249602512132054904n,
+			4645955491659115631n,
+			2401850457105738694n
+		]
+	], __PRIVATE_QuadrupleBuilder.W = [
+		[
+			1n,
+			1844674407370955161n,
+			11068046444225730969n,
+			11068046444225730970n
+		],
+		[
+			0n,
+			9223372036854775808n,
+			0n,
+			0n
+		],
+		[
+			0n,
+			4611686018427387904n,
+			0n,
+			1n
+		],
+		[
+			-1n,
+			11529215046068469760n,
+			0n,
+			0n
+		],
+		[
+			-2n,
+			7205759403792793600n,
+			0n,
+			0n
+		],
+		[
+			-4n,
+			2814749767106560000n,
+			0n,
+			1n
+		],
+		[
+			-9n,
+			4294967296000000000n,
+			0n,
+			1n
+		],
+		[
+			-19n,
+			10000000000000000000n,
+			0n,
+			0n
+		],
+		[
+			-38n,
+			5421010862427522170n,
+			687399551400673280n,
+			1n
+		],
+		[
+			-77n,
+			15930919111324522770n,
+			5327493063679123134n,
+			12292710897160462338n
+		],
+		[
+			-154n,
+			13758210268297397763n,
+			12320534732722919674n,
+			6675599427733050225n
+		],
+		[
+			-308n,
+			10261342003245940623n,
+			6273243709394548296n,
+			6440670082096085128n
+		],
+		[
+			-616n,
+			5708060961156115120n,
+			9326959349272872362n,
+			14394422795431165174n
+		],
+		[
+			-1233n,
+			17662715873372225491n,
+			16018126490311694428n,
+			5356816969625239316n
+		],
+		[
+			-2466n,
+			16912010638674145271n,
+			1614368466976504750n,
+			8601533998869527035n
+		],
+		[
+			-4932n,
+			15504964057600816844n,
+			16725227620538152213n,
+			14050867044384726477n
+		],
+		[
+			-9864n,
+			13032322097974936284n,
+			15317032172363146549n,
+			6308761762498734157n
+		],
+		[
+			-19728n,
+			9207121787276552771n,
+			2686637268731583271n,
+			6864278666688451401n
+		],
+		[
+			-39456n,
+			4595450084145690875n,
+			7667683976197477395n,
+			449294573396472465n
+		],
+		[
+			-78913n,
+			11448178275521484223n,
+			3110751028328854690n,
+			1120171678522345134n
+		],
+		[
+			-157826n,
+			7104819436125367673n,
+			14991248556251613302n,
+			16820949487516534012n
+		],
+		[
+			-315652n,
+			2736442757499254003n,
+			4679685605244421446n,
+			11731094814065673062n
+		],
+		[
+			-631305n,
+			4059317424879466168n,
+			1990423776449209129n,
+			14056183348504135159n
+		],
+		[
+			-1262611n,
+			8932773117080711014n,
+			7396631747502695834n,
+			11647671188648399829n
+		],
+		[
+			-2525222n,
+			4325665019387541401n,
+			14660155504483916480n,
+			5763493405214599753n
+		],
+		[
+			-5050445n,
+			10143458262979115930n,
+			7822744214343089676n,
+			1615945487545495999n
+		],
+		[
+			-10100890n,
+			5577664281657086504n,
+			2124849129118726579n,
+			8904011362647467789n
+		],
+		[
+			-20201781n,
+			16864948477933278509n,
+			13298207519877393505n,
+			10179411950183364575n
+		],
+		[
+			-40403562n,
+			15418790764745900618n,
+			12109694407689697456n,
+			12044714451038874750n
+		],
+		[
+			-80807124n,
+			12887862903992969105n,
+			14515304112506087704n,
+			320416584029509902n
+		],
+		[
+			-161614248n,
+			9004136966850474441n,
+			7308686012685280919n,
+			1358577080284203015n
+		],
+		[
+			-323228496n,
+			4395056503947017296n,
+			13747437776819292273n,
+			16250244679374086836n
+		],
+		[
+			-646456993n,
+			10471507381303696026n,
+			4273141307571403437n,
+			18050914191569890740n
+		]
+	];
+	var __PRIVATE_Quadruple = class __PRIVATE_Quadruple {
+		constructor(e, t, n, r) {
+			this.negative = e, this._e = t, this.i = n, this.o = r;
+		}
+		/** Return the (unbiased) exponent of this {@link Quadruple}. */ exponent() {
+			return this._e - __PRIVATE_QuadrupleBuilder.k;
+		}
+		/** Return true if this {@link Quadruple} is -0 or +0 */ oe() {
+			return 0 === this._e && 0n === this.i && 0n === this.o;
+		}
+		/** Return true if this {@link Quadruple} is -infinity or +infinity */ ae() {
+			return this._e === __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "f", We) && 0n === this.i && 0n === this.o;
+		}
+		/** Return true if this {@link Quadruple} is a NaN. */ isNaN() {
+			return this._e === __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "f", We) && !(0n === this.i && 0n === this.o);
+		}
+		/** Compare two quadruples, with -0 < 0, and all NaNs equal and larger than all numbers. */ compareTo(e) {
+			if (this.isNaN()) return e.isNaN() ? 0 : 1;
+			if (e.isNaN()) return -1;
+			let t, n;
+			if (this.negative) {
+				if (!e.negative) return -1;
+				t = 1, n = -1;
+			} else {
+				if (e.negative) return 1;
+				t = -1, n = 1;
+			}
+			return this._e < e._e ? t : this._e > e._e ? n : this.i < e.i ? t : this.i > e.i ? n : this.o < e.o ? t : this.o > e.o ? n : 0;
+		}
+		debug() {
+			return (this.negative ? "+" : "-") + __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", Ge).call(__PRIVATE_Quadruple, this.i) + __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", Ge).call(__PRIVATE_Quadruple, this.o) + "*2^" + this.exponent();
+		}
+		static fromNumber(e) {
+			if (isNaN(e)) return __PRIVATE_Quadruple.NaN;
+			if (!isFinite(e)) return e < 0 ? __PRIVATE_Quadruple.ue : __PRIVATE_Quadruple.ce;
+			if (0 === e) return Math.sign(1 / e) > 0 ? __PRIVATE_Quadruple.le : __PRIVATE_Quadruple.Ee;
+			const t = /* @__PURE__ */ new DataView(/* @__PURE__ */ new ArrayBuffer(8));
+			t.setFloat64(0, e);
+			const n = t.getBigUint64(0);
+			let r = BigInt.asUintN(64, n << 12n), i = 2047 & Number(n >> 52n);
+			if (0 === i) {
+				const e = __PRIVATE_QuadrupleBuilder.te(r);
+				r = e < 63 ? r << BigInt(e + 1) : 0n, i = -e;
+			}
+			return new __PRIVATE_Quadruple(e < 0, __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", He).call(__PRIVATE_Quadruple, i - 1023), r, 0n);
+		}
+		/**
+		* Converts a decimal number to a {@link Quadruple}. The supported format (no whitespace allowed)
+		* is:
+		*
+		* <ul>
+		*   <li><code>NaN</code> for Quadruple.NaN
+		*   <li><code>Infinity</code> or <code>+Infinity</code> for Quadruple.POSITIVE_INFINITY
+		*   <li><code>-Infinity</code> for Quadruple.NEGATIVE_INFINITY
+		*   <li>String matching the regular expression: <code>[+-]?[0-9]*(\.[0-9]*)?([eE][+-]?[0-9]+)?</code> - the exponent cannot be more
+		*       than 9 digits, and the whole string cannot be empty
+		* </ul>
+		*/ static fromString(e) {
+			if ("NaN" === e) return __PRIVATE_Quadruple.NaN;
+			if ("-Infinity" === e) return __PRIVATE_Quadruple.ue;
+			if ("Infinity" === e || "+Infinity" === e) return __PRIVATE_Quadruple.ce;
+			const t = new Array(e.length).fill(0);
+			let n = 0, r = 0, i = 0, s = false;
+			for ("-" === e[n] ? (s = true, n++) : "+" === e[n] && n++; __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", je).call(__PRIVATE_Quadruple, e, n);) t[r++] = __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", ze).call(__PRIVATE_Quadruple, e, n++);
+			if ("." === e[n]) {
+				const s = ++n;
+				for (; __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", je).call(__PRIVATE_Quadruple, e, n);) t[r++] = __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", ze).call(__PRIVATE_Quadruple, e, n++);
+				i = s - n;
+			}
+			if ("e" === e[n] || "E" === e[n]) {
+				let t = 0;
+				n++;
+				let r = 1;
+				"-" === e[n] ? (r = -1, n++) : "+" === e[n] && n++;
+				const s = n;
+				for (; __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", je).call(__PRIVATE_Quadruple, e, n);) if (t = 10 * t + __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", ze).call(__PRIVATE_Quadruple, e, n++), n - s > 9) throw new Error("Exponent too large " + e);
+				if (n === s) throw new Error("Invalid number " + e);
+				i += t * r;
+			}
+			if (0 === r || n !== e.length) throw new Error("Invalid number " + e);
+			const _ = __PRIVATE_QuadrupleBuilder.I(t.slice(0, r), i);
+			return new __PRIVATE_Quadruple(s, _.exponent, _.i, _.o);
+		}
+	};
+	$e = __PRIVATE_Quadruple, Ge = function ___PRIVATE_Quadruple_hex(e) {
+		return e.toString(16).padStart(16, "0");
+	}, je = function ___PRIVATE_Quadruple_isDigit(e, t) {
+		const n = e.codePointAt(t);
+		return void 0 !== n && n >= 48 && n <= 57;
+	}, ze = function ___PRIVATE_Quadruple_digit(e, t) {
+		return e.codePointAt(t) - 48;
+	}, He = function ___PRIVATE_Quadruple_bias(e) {
+		return e + __PRIVATE_QuadrupleBuilder.k;
+	}, We = { value: Number(__PRIVATE_QuadrupleBuilder.m) }, __PRIVATE_Quadruple.le = new __PRIVATE_Quadruple(false, 0, 0n, 0n), __PRIVATE_Quadruple.Ee = new __PRIVATE_Quadruple(true, 0, 0n, 0n), __PRIVATE_Quadruple.NaN = new __PRIVATE_Quadruple(false, __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "f", We), 1n << 63n, 0n), __PRIVATE_Quadruple.ue = new __PRIVATE_Quadruple(true, __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "f", We), 0n, 0n), __PRIVATE_Quadruple.ce = new __PRIVATE_Quadruple(false, __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "f", We), 0n, 0n), new __PRIVATE_Quadruple(true, __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", He).call(__PRIVATE_Quadruple, 63), 0n, 0n), new __PRIVATE_Quadruple(false, __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", He).call(__PRIVATE_Quadruple, 0), 0n, 0n), new __PRIVATE_Quadruple(true, __classPrivateFieldGet(__PRIVATE_Quadruple, $e, "m", He).call(__PRIVATE_Quadruple, 0), 0n, 0n);
 	/**
 	* @license
 	* Copyright 2017 Google LLC
@@ -13485,14 +14635,15 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	/** Sentinel value that sorts before any Mutation Batch ID. */ const Ke = -1;
+	/** Sentinel value that sorts before any Mutation Batch ID. */
+	const Je = -1;
 	/**
 	* Returns whether a variable is either undefined or null.
 	*/ function __PRIVATE_isNullOrUndefined(e) {
 		return null == e;
 	}
 	/** Returns whether the value represents -0. */ function __PRIVATE_isNegativeZero(e) {
-		return 0 === e && 1 / e == -Infinity;
+		return 0 === e && 1 / e == -1 / 0;
 	}
 	/**
 	* Returns whether a value is an integer and in the safe integer range
@@ -13518,10 +14669,71 @@
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const Qe = "__type__", We = "__max__", Ge = { mapValue: { fields: { __type__: { stringValue: We } } } }, ze = "__vector__", je = "value", He = { nullValue: "NULL_VALUE" }, Je = { booleanValue: true }, Ye = { booleanValue: false };
+	*/ const Ye = "__type__";
+	const Ze = "__vector__";
+	const Xe = "value";
+	const et = "server_timestamp";
+	const tt = "__min__";
+	const nt = "__max__";
+	const rt = "__regex__";
+	const it = "pattern";
+	const st = "options";
+	const _t = "__oid__";
+	const ot = "__int__";
+	const at = "__decimal128__";
+	const ut = "__request_timestamp__";
+	const ct = "seconds";
+	const lt = "increment";
+	const Et = "__binary__";
+	const ht = { nullValue: "NULL_VALUE" };
+	const Tt = { mapValue: { fields: { __type__: { stringValue: nt } } } };
+	var dt;
+	var mt;
+	(mt = dt || (dt = {})).he = "regexValue", mt.Te = "bsonObjectIdValue", mt.Pe = "int32Value", mt.Ie = "decimal128Value", mt.Re = "bsonTimestampValue", mt.Ae = "bsonBinaryValue", mt.Ve = "minKeyValue", mt.fe = "maxKeyValue", mt.de = "maxValue", mt.me = "vectorValue", mt.pe = "serverTimestampValue", mt.ge = "regularMapValue";
+	const pt = {
+		[Ze]: dt.me,
+		[nt]: dt.de,
+		[et]: dt.pe
+	};
+	const gt = {
+		[rt]: dt.he,
+		[_t]: dt.Te,
+		[ot]: dt.Pe,
+		[at]: dt.Ie,
+		[ut]: dt.Re,
+		[Et]: dt.Ae,
+		[tt]: dt.Ve,
+		[nt]: dt.fe
+	};
+	new Set(Object.values(gt));
+	const wt = { booleanValue: true };
+	const bt = { booleanValue: false };
 	/** Extracts the backend's type order for the provided value. */
 	function __PRIVATE_typeOrder(e) {
-		return "nullValue" in e ? 0 : "booleanValue" in e ? 1 : "integerValue" in e || "doubleValue" in e ? 2 : "timestampValue" in e ? 3 : "stringValue" in e ? 5 : "bytesValue" in e ? 6 : "referenceValue" in e ? 7 : "geoPointValue" in e ? 8 : "arrayValue" in e ? 9 : "mapValue" in e ? __PRIVATE_isServerTimestamp(e) ? 4 : __PRIVATE_isMaxValue(e) ? 9007199254740991 : __PRIVATE_isVectorValue(e) ? 10 : 11 : l(28295, { value: e });
+		if ("nullValue" in e) return 0;
+		if ("booleanValue" in e) return 2;
+		if ("integerValue" in e || "doubleValue" in e) return 3;
+		if ("timestampValue" in e) return 4;
+		if ("stringValue" in e) return 7;
+		if ("bytesValue" in e) return 8;
+		if ("referenceValue" in e) return 9;
+		if ("geoPointValue" in e) return 11;
+		if ("arrayValue" in e) return 13;
+		if (!("mapValue" in e)) return l(28295, { value: e });
+		switch (__PRIVATE_detectMapRepresentation(e)) {
+			case dt.pe: return 6;
+			case dt.de: return 9007199254740991;
+			case dt.me: return 14;
+			case dt.he: return 12;
+			case dt.Te: return 10;
+			case dt.Pe:
+			case dt.Ie: return 3;
+			case dt.Re: return 5;
+			case dt.Ae: return 8;
+			case dt.Ve: return 1;
+			case dt.fe: return 16;
+			default: return 15;
+		}
 	}
 	/** Tests `left` and `right` for equality based on the backend semantics. */ function __PRIVATE_valueEquals$1(e, t, n) {
 		if (e === t) return true;
@@ -13529,41 +14741,47 @@
 		if (r !== __PRIVATE_typeOrder(t)) return false;
 		switch (r) {
 			case 0:
-			case 9007199254740991: return true;
-			case 1: return e.booleanValue === t.booleanValue;
-			case 4: return __PRIVATE_getLocalWriteTime(e).isEqual(__PRIVATE_getLocalWriteTime(t));
-			case 3: return function __PRIVATE_timestampEquals(e, t) {
+			case 9007199254740991:
+			case 16:
+			case 1: return true;
+			case 2: return e.booleanValue === t.booleanValue;
+			case 6: return __PRIVATE_getLocalWriteTime(e).isEqual(__PRIVATE_getLocalWriteTime(t));
+			case 4: return function __PRIVATE_timestampEquals(e, t) {
 				if ("string" == typeof e.timestampValue && "string" == typeof t.timestampValue && e.timestampValue.length === t.timestampValue.length) return e.timestampValue === t.timestampValue;
 				const n = __PRIVATE_normalizeTimestamp(e.timestampValue), r = __PRIVATE_normalizeTimestamp(t.timestampValue);
 				return n.seconds === r.seconds && n.nanos === r.nanos;
 			}(e, t);
-			case 5: return e.stringValue === t.stringValue;
-			case 6: return function __PRIVATE_blobEquals(e, t) {
-				return __PRIVATE_normalizeByteString(e.bytesValue).isEqual(__PRIVATE_normalizeByteString(t.bytesValue));
+			case 7: return e.stringValue === t.stringValue;
+			case 8: return function __PRIVATE_blobEquals(e, t) {
+				return 0 === __PRIVATE_compareBlobsAndSubtype(e, t);
 			}(e, t);
-			case 7: return e.referenceValue === t.referenceValue;
-			case 8: return function __PRIVATE_geoPointEquals(e, t) {
+			case 9: return e.referenceValue === t.referenceValue;
+			case 11: return function __PRIVATE_geoPointEquals(e, t) {
 				return __PRIVATE_normalizeNumber(e.geoPointValue.latitude) === __PRIVATE_normalizeNumber(t.geoPointValue.latitude) && __PRIVATE_normalizeNumber(e.geoPointValue.longitude) === __PRIVATE_normalizeNumber(t.geoPointValue.longitude);
 			}(e, t);
-			case 2: return function __PRIVATE_numberEquals(e, t, n) {
-				if ("integerValue" in e && "integerValue" in t) return __PRIVATE_normalizeNumber(e.integerValue) === __PRIVATE_normalizeNumber(t.integerValue);
+			case 3: return function __PRIVATE_numberEquals(e, t, n) {
+				if (__PRIVATE_isDecimal128Value(e) && __PRIVATE_isDecimal128Value(t)) return 0 === __PRIVATE_compareQuadruples(e, t);
+				if ("integerValue" in e && "integerValue" in t || __PRIVATE_isInt32Value(e) && __PRIVATE_isInt32Value(t)) return __PRIVATE_extractNumber(e) === __PRIVATE_extractNumber(t);
 				let r, i;
 				if ("doubleValue" in e && "doubleValue" in t) r = __PRIVATE_normalizeNumber(e.doubleValue), i = __PRIVATE_normalizeNumber(t.doubleValue);
 				else {
-					if (!n?.i) return false;
+					if (!n?.ye) return false;
 					r = __PRIVATE_normalizeNumber(e.integerValue ?? e.doubleValue), i = __PRIVATE_normalizeNumber(t.integerValue ?? t.doubleValue);
 				}
-				if (r === i) return !!n?.o || __PRIVATE_isNegativeZero(r) === __PRIVATE_isNegativeZero(i);
-				return !!(void 0 === n || n.u) && isNaN(r) && isNaN(i);
+				if (r === i) return !!n?.we || __PRIVATE_isNegativeZero(r) === __PRIVATE_isNegativeZero(i);
+				return !!(void 0 === n || n.be) && isNaN(r) && isNaN(i);
 			}(e, t, n);
-			case 9: return __PRIVATE_arrayEquals(e.arrayValue.values || [], t.arrayValue.values || [], ((e, t) => __PRIVATE_valueEquals$1(e, t, n)));
-			case 10:
-			case 11: return function __PRIVATE_objectEquals(e, t, n) {
+			case 13: return __PRIVATE_arrayEquals(e.arrayValue.values || [], t.arrayValue.values || [], ((e, t) => __PRIVATE_valueEquals$1(e, t, n)));
+			case 14:
+			case 15: return function __PRIVATE_objectEquals(e, t, n) {
 				const r = e.mapValue.fields || {}, i = t.mapValue.fields || {};
 				if (__PRIVATE_objectSize(r) !== __PRIVATE_objectSize(i)) return false;
 				for (const e in r) if (r.hasOwnProperty(e) && (void 0 === i[e] || !__PRIVATE_valueEquals$1(r[e], i[e], n))) return false;
 				return true;
 			}(e, t, n);
+			case 5: return 0 === __PRIVATE_compareBsonTimestamps(e, t);
+			case 12: return 0 === __PRIVATE_compareRegex(e, t);
+			case 10: return 0 === __PRIVATE_compareBsonObjectIds(e, t);
 			default: return l(52216, { left: e });
 		}
 	}
@@ -13576,20 +14794,16 @@
 		if (n !== r) return __PRIVATE_primitiveComparator(n, r);
 		switch (n) {
 			case 0:
+			case 1:
+			case 16:
 			case 9007199254740991: return 0;
-			case 1: return __PRIVATE_primitiveComparator(e.booleanValue, t.booleanValue);
-			case 2: return function __PRIVATE_compareNumbers(e, t) {
-				const n = __PRIVATE_normalizeNumber(e.integerValue || e.doubleValue), r = __PRIVATE_normalizeNumber(t.integerValue || t.doubleValue);
-				return n < r ? -1 : n > r ? 1 : n === r ? 0 : isNaN(n) ? isNaN(r) ? 0 : -1 : 1;
-			}(e, t);
-			case 3: return __PRIVATE_compareTimestamps(e.timestampValue, t.timestampValue);
-			case 4: return __PRIVATE_compareTimestamps(__PRIVATE_getLocalWriteTime(e), __PRIVATE_getLocalWriteTime(t));
-			case 5: return __PRIVATE_compareUtf8Strings(e.stringValue, t.stringValue);
-			case 6: return function __PRIVATE_compareBlobs(e, t) {
-				const n = __PRIVATE_normalizeByteString(e), r = __PRIVATE_normalizeByteString(t);
-				return n.compareTo(r);
-			}(e.bytesValue, t.bytesValue);
-			case 7: return function __PRIVATE_compareReferences(e, t) {
+			case 2: return __PRIVATE_primitiveComparator(e.booleanValue, t.booleanValue);
+			case 3: return __PRIVATE_compareNumbers(e, t);
+			case 4: return __PRIVATE_compareTimestamps(e.timestampValue, t.timestampValue);
+			case 6: return __PRIVATE_compareTimestamps(__PRIVATE_getLocalWriteTime(e), __PRIVATE_getLocalWriteTime(t));
+			case 7: return __PRIVATE_compareUtf8Strings(e.stringValue, t.stringValue);
+			case 8: return __PRIVATE_compareBlobsAndSubtype(e, t);
+			case 9: return function __PRIVATE_compareReferences(e, t) {
 				const n = e.split("/"), r = t.split("/");
 				for (let e = 0; e < n.length && e < r.length; e++) {
 					const t = __PRIVATE_primitiveComparator(n[e], r[e]);
@@ -13597,21 +14811,21 @@
 				}
 				return __PRIVATE_primitiveComparator(n.length, r.length);
 			}(e.referenceValue, t.referenceValue);
-			case 8: return function __PRIVATE_compareGeoPoints(e, t) {
+			case 11: return function __PRIVATE_compareGeoPoints(e, t) {
 				const n = __PRIVATE_primitiveComparator(__PRIVATE_normalizeNumber(e.latitude), __PRIVATE_normalizeNumber(t.latitude));
 				if (0 !== n) return n;
 				return __PRIVATE_primitiveComparator(__PRIVATE_normalizeNumber(e.longitude), __PRIVATE_normalizeNumber(t.longitude));
 			}(e.geoPointValue, t.geoPointValue);
-			case 9: return __PRIVATE_compareArrays(e.arrayValue, t.arrayValue);
-			case 10: return function __PRIVATE_compareVectors(e, t) {
-				const n = e.fields || {}, r = t.fields || {}, i = n[je]?.arrayValue, s = r[je]?.arrayValue, _ = __PRIVATE_primitiveComparator(i?.values?.length || 0, s?.values?.length || 0);
+			case 13: return __PRIVATE_compareArrays(e.arrayValue, t.arrayValue);
+			case 14: return function __PRIVATE_compareVectors(e, t) {
+				const n = e.fields || {}, r = t.fields || {}, i = n[Xe]?.arrayValue, s = r[Xe]?.arrayValue, _ = __PRIVATE_primitiveComparator(i?.values?.length || 0, s?.values?.length || 0);
 				if (0 !== _) return _;
 				return __PRIVATE_compareArrays(i, s);
 			}(e.mapValue, t.mapValue);
-			case 11: return function __PRIVATE_compareMaps(e, t) {
-				if (e === Ge.mapValue && t === Ge.mapValue) return 0;
-				if (e === Ge.mapValue) return 1;
-				if (t === Ge.mapValue) return -1;
+			case 15: return function __PRIVATE_compareMaps(e, t) {
+				if (e === Tt.mapValue && t === Tt.mapValue) return 0;
+				if (e === Tt.mapValue) return 1;
+				if (t === Tt.mapValue) return -1;
 				const n = e.fields || {}, r = Object.keys(n), i = t.fields || {}, s = Object.keys(i);
 				r.sort(), s.sort();
 				for (let e = 0; e < r.length && e < s.length; ++e) {
@@ -13622,8 +14836,30 @@
 				}
 				return __PRIVATE_primitiveComparator(r.length, s.length);
 			}(e.mapValue, t.mapValue);
-			default: throw l(23264, { l: n });
+			case 5: return __PRIVATE_compareBsonTimestamps(e, t);
+			case 12: return __PRIVATE_compareRegex(e, t);
+			case 10: return __PRIVATE_compareBsonObjectIds(e, t);
+			default: throw l(23264, { Se: n });
 		}
+	}
+	function __PRIVATE_extractNumber(e) {
+		let t;
+		return t = __PRIVATE_isInt32Value(e) ? e.mapValue.fields[ot].integerValue : e.integerValue || e.doubleValue, __PRIVATE_normalizeNumber(t);
+	}
+	function __PRIVATE_getDecimal128StringValue(e) {
+		return e.mapValue.fields[at].stringValue;
+	}
+	function __PRIVATE_compareNumbers(e, t) {
+		if (__PRIVATE_isDecimal128Value(e) || __PRIVATE_isDecimal128Value(t)) return __PRIVATE_compareQuadruples(e, t);
+		const n = __PRIVATE_extractNumber(e), r = __PRIVATE_extractNumber(t);
+		return isNaN(n) ? isNaN(r) ? 0 : -1 : isNaN(r) ? 1 : __PRIVATE_primitiveComparator(n, r);
+	}
+	function __PRIVATE_compareQuadruples(e, t) {
+		const n = __PRIVATE_convertNumberToQuadruple(e), r = __PRIVATE_convertNumberToQuadruple(t);
+		return n.oe() && r.oe() ? 0 : n.isNaN() ? r.isNaN() ? 0 : -1 : r.isNaN() ? 1 : n.compareTo(r);
+	}
+	function __PRIVATE_convertNumberToQuadruple(e) {
+		return __PRIVATE_isDecimal128Value(e) ? __PRIVATE_Quadruple.fromString(__PRIVATE_getDecimal128StringValue(e)) : __PRIVATE_Quadruple.fromNumber(__PRIVATE_extractNumber(e));
 	}
 	function __PRIVATE_compareTimestamps(e, t) {
 		if ("string" == typeof e && "string" == typeof t && e.length === t.length) return __PRIVATE_primitiveComparator(e, t);
@@ -13638,7 +14874,40 @@
 		}
 		return __PRIVATE_primitiveComparator(n.length, r.length);
 	}
-	function canonicalId(e) {
+	function __PRIVATE_compareBsonTimestamps(e, t) {
+		const n = e.mapValue.fields?.[ut].mapValue?.fields?.[ct], r = t.mapValue.fields?.[ut].mapValue?.fields?.[ct], i = e.mapValue.fields?.[ut].mapValue?.fields?.[lt], s = t.mapValue.fields?.[ut].mapValue?.fields?.[lt], _ = __PRIVATE_compareNumbers(n, r);
+		return 0 !== _ ? _ : __PRIVATE_compareNumbers(i, s);
+	}
+	function __PRIVATE_getBytesAndSubtype(e) {
+		if ("bytesValue" in e) return {
+			subtype: 0,
+			bytes: __PRIVATE_normalizeByteString(e.bytesValue)
+		};
+		const r = ((e.mapValue?.fields)?.[Et])?.bytesValue;
+		if (!r) throw new Error("Received incorrect value for BsonBinaryData");
+		const i = __PRIVATE_normalizeByteString(r).toUint8Array();
+		if (0 === i.length) throw new Error("Received empty bytesValue for BsonBinaryData");
+		const s = i[0], _ = i.slice(1);
+		return {
+			subtype: s,
+			bytes: ByteString.fromUint8Array(_)
+		};
+	}
+	function __PRIVATE_compareBlobsAndSubtype(e, t) {
+		const n = __PRIVATE_getBytesAndSubtype(e), r = __PRIVATE_getBytesAndSubtype(t);
+		return n.subtype !== r.subtype ? n.subtype < r.subtype ? -1 : 1 : n.bytes.compareTo(r.bytes);
+	}
+	function __PRIVATE_compareRegex(e, t) {
+		const n = e.mapValue.fields, r = n?.[rt]?.mapValue?.fields?.[it]?.stringValue ?? "", i = n?.[rt]?.mapValue?.fields?.[st]?.stringValue ?? "", s = t.mapValue.fields, _ = s?.[rt]?.mapValue?.fields?.[it]?.stringValue ?? "", o = s?.[rt]?.mapValue?.fields?.[st]?.stringValue ?? "", a = __PRIVATE_compareUtf8Strings(r, _);
+		return 0 !== a ? a : __PRIVATE_primitiveComparator(i, o);
+	}
+	function __PRIVATE_compareBsonObjectIds(e, t) {
+		return __PRIVATE_compareUtf8Strings(e.mapValue.fields?.[_t]?.stringValue ?? "", t.mapValue.fields?.[_t]?.stringValue ?? "");
+	}
+	/**
+	* Generates the canonical ID for the provided field value (as used in Target
+	* serialization).
+	*/ function canonicalId(e) {
 		return __PRIVATE_canonifyValue(e);
 	}
 	function __PRIVATE_canonifyValue(e) {
@@ -13665,42 +14934,58 @@
 	function __PRIVATE_estimateByteSize(e) {
 		switch (__PRIVATE_typeOrder(e)) {
 			case 0:
-			case 1: return 4;
-			case 2: return 8;
-			case 3:
-			case 8: return 16;
+			case 2: return 4;
+			case 3: return __PRIVATE_isDecimal128Value(e) ? 16 : 8;
 			case 4:
+			case 11: return 16;
+			case 6:
 				const t = __PRIVATE_getPreviousValue(e);
 				return t ? 16 + __PRIVATE_estimateByteSize(t) : 16;
-			case 5: return 2 * e.stringValue.length;
-			case 6: return __PRIVATE_normalizeByteString(e.bytesValue).approximateByteSize();
-			case 7: return e.referenceValue.length;
-			case 9: return function __PRIVATE_estimateArrayByteSize(e) {
+			case 7: return 2 * e.stringValue.length;
+			case 8: return "bytesValue" in e ? __PRIVATE_normalizeByteString(e.bytesValue).approximateByteSize() : __PRIVATE_estimateMapByteSize(e.mapValue);
+			case 9: return e.referenceValue.length;
+			case 13: return function __PRIVATE_estimateArrayByteSize(e) {
 				return (e.values || []).reduce(((e, t) => e + __PRIVATE_estimateByteSize(t)), 0);
 			}(e.arrayValue);
+			case 14:
+			case 15:
+			case 12:
 			case 10:
-			case 11: return function __PRIVATE_estimateMapByteSize(e) {
-				let t = 0;
-				return forEach(e.fields, ((e, n) => {
-					t += e.length + __PRIVATE_estimateByteSize(n);
-				})), t;
-			}(e.mapValue);
+			case 5:
+			case 1:
+			case 16: return __PRIVATE_estimateMapByteSize(e.mapValue);
 			default: throw l(13486, { value: e });
 		}
+	}
+	function __PRIVATE_estimateMapByteSize(e) {
+		let t = 0;
+		return forEach(e.fields, ((e, n) => {
+			t += e.length + __PRIVATE_estimateByteSize(n);
+		})), t;
 	}
 	function __PRIVATE_refValue(e, t) {
 		return { referenceValue: `projects/${e.projectId}/databases/${e.database}/documents/${t.path.canonicalString()}` };
 	}
 	/** Returns true if `value` is an BooleanValue . */
 	/** Returns true if `value` is an IntegerValue . */
-	function isInteger(e) {
+	function __PRIVATE_isIntegerValue(e) {
 		return !!e && "integerValue" in e;
 	}
-	/** Returns true if `value` is a DoubleValue. */ function __PRIVATE_isDouble(e) {
+	/** Returns true if `value` is a DoubleValue. */ function __PRIVATE_isDoubleValue(e) {
 		return !!e && "doubleValue" in e;
 	}
+	function __PRIVATE_isDecimal128Value(e) {
+		if (!e.mapValue?.fields) return false;
+		const t = e.mapValue.fields;
+		return 1 === __PRIVATE_objectSize(t) && t[at] && !!t[at].stringValue;
+	}
+	function __PRIVATE_isInt32Value(e) {
+		if (!e.mapValue?.fields) return false;
+		const t = e.mapValue.fields;
+		return 1 === __PRIVATE_objectSize(t) && void 0 !== t[ot]?.integerValue;
+	}
 	/** Returns true if `value` is either an IntegerValue or a DoubleValue. */ function R(e) {
-		return isInteger(e) || __PRIVATE_isDouble(e);
+		return __PRIVATE_isIntegerValue(e) || __PRIVATE_isDoubleValue(e) || !!e && __PRIVATE_isInt32Value(e) || !!e && __PRIVATE_isDecimal128Value(e);
 	}
 	/** Returns true if `value` is an ArrayValue. */ function isArray(e) {
 		return !!e && "arrayValue" in e;
@@ -13711,18 +14996,28 @@
 		return !!e && "nullValue" in e;
 	}
 	/** Returns true if `value` is NaN. */ function __PRIVATE_isNanValue(e) {
-		return !!e && "doubleValue" in e && isNaN(Number(e.doubleValue));
+		return !(!__PRIVATE_isDoubleValue(e) || !isNaN(Number(e.doubleValue))) || !(!__PRIVATE_isDecimal128Value(e) || "NaN" !== __PRIVATE_getDecimal128StringValue(e));
 	}
 	/** Returns true if `value` is Timestamp. */
 	/** Returns true if `value` is a MapValue. */
 	function __PRIVATE_isMapValue(e) {
 		return !!e && "mapValue" in e;
 	}
+	function __PRIVATE_detectMapRepresentation(e) {
+		if (!e.mapValue?.fields) return dt.ge;
+		const t = e.mapValue.fields, n = t[Ye]?.stringValue;
+		if (n && pt[n]) return pt[n];
+		if (1 === __PRIVATE_objectSize(t)) {
+			const e = Object.keys(t);
+			return gt[e[0]] ?? dt.ge;
+		}
+		return dt.ge;
+	}
 	/** Returns true if `value` is a VetorValue. */ function __PRIVATE_isVectorValue(e) {
-		return (e?.mapValue?.fields || {})[Qe]?.stringValue === ze;
+		return (e?.mapValue?.fields || {})[Ye]?.stringValue === Ze;
 	}
 	/** Returns true if `value` is a VetorValue. */ function __PRIVATE_getVectorValue(e) {
-		return (e?.mapValue?.fields || {})[je]?.arrayValue;
+		return (e?.mapValue?.fields || {})[Xe]?.arrayValue;
 	}
 	/** Creates a deep copy of `source`. */ function __PRIVATE_deepClone(e) {
 		if (e.geoPointValue) return { geoPointValue: { ...e.geoPointValue } };
@@ -13737,9 +15032,6 @@
 			return t;
 		}
 		return { ...e };
-	}
-	/** Returns true if the Value represents the canonical {@link #MAX_VALUE} . */ function __PRIVATE_isMaxValue(e) {
-		return (((e.mapValue || {}).fields || {}).__type__ || {}).stringValue === We;
 	}
 	/**
 	* @license
@@ -13793,7 +15085,7 @@
 		*
 		* @param data - A map of fields to values (or null for deletes).
 		*/ setAll(e) {
-			let t = Oe.emptyPath(), n = {}, r = [];
+			let t = Me$1.emptyPath(), n = {}, r = [];
 			e.forEach(((e, i) => {
 				if (!t.isImmediateParentOf(i)) {
 					const e = this.getFieldsMap(t);
@@ -13861,8 +15153,8 @@
 	*/ function __PRIVATE_toDouble(e, t) {
 		if (e.useProto3Json) {
 			if (isNaN(t)) return { doubleValue: "NaN" };
-			if (t === Infinity) return { doubleValue: "Infinity" };
-			if (t === -Infinity) return { doubleValue: "-Infinity" };
+			if (t === 1 / 0) return { doubleValue: "Infinity" };
+			if (t === -1 / 0) return { doubleValue: "-Infinity" };
 		}
 		return { doubleValue: __PRIVATE_isNegativeZero(t) ? "-0" : t };
 	}
@@ -13905,20 +15197,28 @@
 	*/ function __PRIVATE_applyTransformOperationToLocalView(e, t, n) {
 		return e instanceof __PRIVATE_ServerTimestampTransform ? function serverTimestamp$1(e, t) {
 			const n = { fields: {
-				[Ue]: { stringValue: Be$1 },
+				[ke]: { stringValue: Ue },
 				[qe]: { timestampValue: {
 					seconds: e.seconds,
 					nanos: e.nanoseconds
 				} }
 			} };
-			return t && __PRIVATE_isServerTimestamp(t) && (t = __PRIVATE_getPreviousValue(t)), t && (n.fields[ke] = t), { mapValue: n };
+			return t && __PRIVATE_isServerTimestamp(t) && (t = __PRIVATE_getPreviousValue(t)), t && (n.fields[Qe] = t), { mapValue: n };
 		}(n, t) : e instanceof __PRIVATE_ArrayUnionTransformOperation ? __PRIVATE_applyArrayUnionTransformOperation(e, t) : e instanceof __PRIVATE_ArrayRemoveTransformOperation ? __PRIVATE_applyArrayRemoveTransformOperation(e, t) : e instanceof __PRIVATE_NumericIncrementTransformOperation ? function __PRIVATE_applyNumericIncrementTransformOperationToLocalView(e, t) {
-			const n = __PRIVATE_computeTransformOperationBaseValue(e, t), r = asNumber(n) + asNumber(e.h);
-			return isInteger(n) && isInteger(e.h) ? __PRIVATE_toInteger(r) : __PRIVATE_toDouble(e.serializer, r);
+			const n = __PRIVATE_computeTransformOperationBaseValue(e, t), r = asNumber(n) + asNumber(e.xe);
+			if (__PRIVATE_isDecimal128Value(n) || __PRIVATE_isDecimal128Value(e.xe)) return { mapValue: { fields: { [at]: { stringValue: r.toString() } } } };
+			if (__PRIVATE_isInt32Value(n)) return __PRIVATE_isDoubleValue(e.xe) ? { doubleValue: r } : __PRIVATE_isIntegerValue(e.xe) ? { integerValue: r.toString() } : { mapValue: { fields: { [ot]: __PRIVATE_toInteger(r) } } };
+			return __PRIVATE_isIntegerValue(n) && (__PRIVATE_isIntegerValue(e.xe) || __PRIVATE_isInt32Value(e.xe)) ? __PRIVATE_toInteger(r) : __PRIVATE_toDouble(e.serializer, r);
 		}(e, t) : e instanceof __PRIVATE_NumericMinimumTransformOperation ? function __PRIVATE_applyNumericMinimumTransformOperationToLocalView(e, t) {
-			return __PRIVATE_applyNumericTransformOperationToLocalView(e, t, Math.min);
+			if (!R(t)) return e.xe;
+			if (__PRIVATE_isNanValue(e.xe)) return e.xe;
+			if (__PRIVATE_isNanValue(t)) return t;
+			return __PRIVATE_compareNumbers(e.xe, t) < 0 ? e.xe : t;
 		}(e, t) : e instanceof __PRIVATE_NumericMaximumTransformOperation ? function __PRIVATE_applyNumericMaximumTransformOperationToLocalView(e, t) {
-			return __PRIVATE_applyNumericTransformOperationToLocalView(e, t, Math.max);
+			if (!R(t)) return e.xe;
+			if (__PRIVATE_isNanValue(e.xe)) return e.xe;
+			if (__PRIVATE_isNanValue(t)) return t;
+			return __PRIVATE_compareNumbers(e.xe, t) > 0 ? e.xe : t;
 		}(e, t) : void 0;
 	}
 	/**
@@ -13973,26 +15273,37 @@
 	* arithmetic is used and precision loss can occur for values greater than 2^53.
 	*/ var __PRIVATE_NumericTransformOperation = class extends TransformOperation {
 		constructor(e, t) {
-			super(), this.serializer = e, this.h = t;
+			super(), this.serializer = e, this.xe = t;
 		}
 	};
 	var __PRIVATE_NumericIncrementTransformOperation = class extends __PRIVATE_NumericTransformOperation {};
 	var __PRIVATE_NumericMinimumTransformOperation = class extends __PRIVATE_NumericTransformOperation {};
 	var __PRIVATE_NumericMaximumTransformOperation = class extends __PRIVATE_NumericTransformOperation {};
-	function __PRIVATE_applyNumericTransformOperationToLocalView(e, t, n) {
-		if (!R(t)) return e.h;
-		const r = n(asNumber(t), asNumber(e.h));
-		return isInteger(t) && isInteger(e.h) ? __PRIVATE_toInteger(r) : __PRIVATE_toDouble(e.serializer, r);
-	}
 	function asNumber(e) {
-		return __PRIVATE_normalizeNumber(e.integerValue || e.doubleValue);
+		return __PRIVATE_isIntegerValue(e) ? __PRIVATE_normalizeNumber(e.integerValue) : __PRIVATE_isDoubleValue(e) ? __PRIVATE_normalizeNumber(e.doubleValue) : __PRIVATE_isInt32Value(e) ? __PRIVATE_normalizeNumber(e.mapValue.fields[ot].integerValue) : __PRIVATE_isDecimal128Value(e) ? parseFloat(e.mapValue.fields[at].stringValue) : 0;
 	}
 	function __PRIVATE_coercedFieldValuesArray(e) {
 		return isArray(e) && e.arrayValue.values ? e.arrayValue.values.slice() : [];
 	}
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	function __PRIVATE_fieldTransformEquals(e, t) {
 		return e.field.isEqual(t.field) && function __PRIVATE_transformOperationEquals(e, t) {
-			return e instanceof __PRIVATE_ArrayUnionTransformOperation && t instanceof __PRIVATE_ArrayUnionTransformOperation || e instanceof __PRIVATE_ArrayRemoveTransformOperation && t instanceof __PRIVATE_ArrayRemoveTransformOperation ? __PRIVATE_arrayEquals(e.elements, t.elements, __PRIVATE_valueEquals$1) : e instanceof __PRIVATE_NumericIncrementTransformOperation && t instanceof __PRIVATE_NumericIncrementTransformOperation || e instanceof __PRIVATE_NumericMinimumTransformOperation && t instanceof __PRIVATE_NumericMinimumTransformOperation || e instanceof __PRIVATE_NumericMaximumTransformOperation && t instanceof __PRIVATE_NumericMaximumTransformOperation ? __PRIVATE_valueEquals$1(e.h, t.h) : e instanceof __PRIVATE_ServerTimestampTransform && t instanceof __PRIVATE_ServerTimestampTransform;
+			return e instanceof __PRIVATE_ArrayUnionTransformOperation && t instanceof __PRIVATE_ArrayUnionTransformOperation || e instanceof __PRIVATE_ArrayRemoveTransformOperation && t instanceof __PRIVATE_ArrayRemoveTransformOperation ? __PRIVATE_arrayEquals(e.elements, t.elements, __PRIVATE_valueEquals$1) : e instanceof __PRIVATE_NumericIncrementTransformOperation && t instanceof __PRIVATE_NumericIncrementTransformOperation || e instanceof __PRIVATE_NumericMinimumTransformOperation && t instanceof __PRIVATE_NumericMinimumTransformOperation || e instanceof __PRIVATE_NumericMaximumTransformOperation && t instanceof __PRIVATE_NumericMaximumTransformOperation ? __PRIVATE_valueEquals$1(e.xe, t.xe) : e instanceof __PRIVATE_ServerTimestampTransform && t instanceof __PRIVATE_ServerTimestampTransform;
 		}(e.transform, t.transform);
 	}
 	/**
@@ -14075,7 +15386,7 @@
 		if (null === t) return e.isNoDocument() ? new __PRIVATE_DeleteMutation(e.key, Precondition.none()) : new __PRIVATE_SetMutation(e.key, e.data, Precondition.none());
 		{
 			const n = e.data, r = ObjectValue.empty();
-			let i = new SortedSet(Oe.comparator);
+			let i = new SortedSet(Me$1.comparator);
 			for (let e of t.fields) if (!i.has(e)) {
 				let t = n.field(e);
 				null === t && e.length > 1 && (e = e.popLast(), t = n.field(e)), null === t ? r.delete(e) : r.set(e, t), i = i.add(e);
@@ -14180,8 +15491,8 @@
 	*/ function __PRIVATE_serverTransformResults(e, t, n) {
 		const r = /* @__PURE__ */ new Map();
 		__PRIVATE_hardAssert(e.length === n.length, 32656, {
-			T: n.length,
-			P: e.length
+			ve: n.length,
+			De: e.length
 		});
 		for (let i = 0; i < n.length; i++) {
 			const s = e[i], _ = s.transform, o = t.data.field(s.field);
@@ -14331,7 +15642,7 @@
 	};
 	var CompositeFilter = class CompositeFilter extends Filter {
 		constructor(e, t) {
-			super(), this.filters = e, this.op = t, this.I = null;
+			super(), this.filters = e, this.op = t, this.Ce = null;
 		}
 		/**
 		* Creates a filter based on the provided arguments.
@@ -14342,7 +15653,7 @@
 			return __PRIVATE_compositeFilterIsConjunction(this) ? void 0 === this.filters.find(((t) => !t.matches(e))) : void 0 !== this.filters.find(((t) => t.matches(e)));
 		}
 		getFlattenedFilters() {
-			return null !== this.I || (this.I = this.filters.reduce(((e, t) => e.concat(t.getFlattenedFilters())), [])), this.I;
+			return null !== this.Ce || (this.Ce = this.filters.reduce(((e, t) => e.concat(t.getFlattenedFilters())), [])), this.Ce;
 		}
 		getFilters() {
 			return Object.assign([], this.filters);
@@ -14658,7 +15969,7 @@
 	* The initial mutation batch id for each index. Gets updated during index
 	* backfill.
 	*/
-	const Xe = -1;
+	const St = -1;
 	/**
 	* The initial sequence number for each index. Gets updated during index
 	* backfill.
@@ -14688,7 +15999,7 @@
 		return new IndexOffset(SnapshotVersion.fromTimestamp(1e9 === r ? new Timestamp(n + 1, 0) : new Timestamp(n, r)), DocumentKey.empty(), t);
 	}
 	/** Creates a new offset based on the provided document. */ function __PRIVATE_newIndexOffsetFromDocument(e) {
-		return new IndexOffset(e.readTime, e.key, Xe);
+		return new IndexOffset(e.readTime, e.key, St);
 	}
 	/**
 	* Stores the latest read time, document and batch ID that were processed for an
@@ -14698,10 +16009,10 @@
 			this.readTime = e, this.documentKey = t, this.largestBatchId = n;
 		}
 		/** Returns an offset that sorts before all regular offsets. */ static min() {
-			return new IndexOffset(SnapshotVersion.min(), DocumentKey.empty(), Xe);
+			return new IndexOffset(SnapshotVersion.min(), DocumentKey.empty(), St);
 		}
 		/** Returns an offset that sorts after all regular offsets. */ static max() {
-			return new IndexOffset(SnapshotVersion.max(), DocumentKey.empty(), Xe);
+			return new IndexOffset(SnapshotVersion.max(), DocumentKey.empty(), St);
 		}
 	};
 	function __PRIVATE_indexOffsetComparator(e, t) {
@@ -14726,7 +16037,7 @@
 	*/
 	var __PRIVATE_TargetImpl = class {
 		constructor(e, t = null, n = [], r = [], i = null, s = null, _ = null) {
-			this.path = e, this.collectionGroup = t, this.orderBy = n, this.filters = r, this.limit = i, this.startAt = s, this.endAt = _, this.R = null;
+			this.path = e, this.collectionGroup = t, this.orderBy = n, this.filters = r, this.limit = i, this.startAt = s, this.endAt = _, this.Fe = null;
 		}
 	};
 	/**
@@ -14741,13 +16052,13 @@
 	}
 	function __PRIVATE_canonifyTarget(e) {
 		const t = __PRIVATE_debugCast(e);
-		if (null === t.R) {
+		if (null === t.Fe) {
 			let e = t.path.canonicalString();
 			null !== t.collectionGroup && (e += "|cg:" + t.collectionGroup), e += "|f:", e += t.filters.map(((e) => __PRIVATE_canonifyFilter(e))).join(","), e += "|ob:", e += t.orderBy.map(((e) => function __PRIVATE_canonifyOrderBy(e) {
 				return e.field.canonicalString() + e.dir;
-			}(e))).join(","), __PRIVATE_isNullOrUndefined(t.limit) || (e += "|l:", e += t.limit), t.startAt && (e += "|lb:", e += t.startAt.inclusive ? "b:" : "a:", e += t.startAt.position.map(((e) => canonicalId(e))).join(",")), t.endAt && (e += "|ub:", e += t.endAt.inclusive ? "a:" : "b:", e += t.endAt.position.map(((e) => canonicalId(e))).join(",")), t.R = e;
+			}(e))).join(","), __PRIVATE_isNullOrUndefined(t.limit) || (e += "|l:", e += t.limit), t.startAt && (e += "|lb:", e += t.startAt.inclusive ? "b:" : "a:", e += t.startAt.position.map(((e) => canonicalId(e))).join(",")), t.endAt && (e += "|ub:", e += t.endAt.inclusive ? "a:" : "b:", e += t.endAt.position.map(((e) => canonicalId(e))).join(",")), t.Fe = e;
 		}
-		return t.R;
+		return t.Fe;
 	}
 	function __PRIVATE_targetEquals(e, t) {
 		if (e.limit !== t.limit) return false;
@@ -14793,7 +16104,7 @@
 		* Path must currently be empty if this is a collection group query.
 		*/
 		constructor(e, t = null, n = [], r = [], i = null, s = "F", _ = null, o = null) {
-			this.path = e, this.collectionGroup = t, this.explicitOrderBy = n, this.filters = r, this.limit = i, this.limitType = s, this.startAt = _, this.endAt = o, this.A = null, this.V = null, this.m = null, this.startAt, this.endAt;
+			this.path = e, this.collectionGroup = t, this.explicitOrderBy = n, this.filters = r, this.limit = i, this.limitType = s, this.startAt = _, this.endAt = o, this.Oe = null, this.Me = null, this.Ne = null, this.startAt, this.endAt;
 		}
 	};
 	/** Creates a new Query instance with the options provided. */ function __PRIVATE_newQuery(e, t, n, r, i, s, _, o) {
@@ -14836,29 +16147,29 @@
 	* order-bys.
 	*/ function __PRIVATE_queryNormalizedOrderBy(e) {
 		const t = __PRIVATE_debugCast(e);
-		if (null === t.A) {
-			t.A = [];
+		if (null === t.Oe) {
+			t.Oe = [];
 			const e = /* @__PURE__ */ new Set();
-			for (const n of t.explicitOrderBy) t.A.push(n), e.add(n.field.canonicalString());
+			for (const n of t.explicitOrderBy) t.Oe.push(n), e.add(n.field.canonicalString());
 			const n = t.explicitOrderBy.length > 0 ? t.explicitOrderBy[t.explicitOrderBy.length - 1].dir : "asc";
 			(function __PRIVATE_getInequalityFilterFields(e) {
-				let t = new SortedSet(Oe.comparator);
+				let t = new SortedSet(Me$1.comparator);
 				return e.filters.forEach(((e) => {
 					e.getFlattenedFilters().forEach(((e) => {
 						e.isInequality() && (t = t.add(e.field));
 					}));
 				})), t;
 			})(t).forEach(((r) => {
-				e.has(r.canonicalString()) || r.isKeyField() || t.A.push(new OrderBy(r, n));
-			})), e.has(Oe.keyField().canonicalString()) || t.A.push(new OrderBy(Oe.keyField(), n));
+				e.has(r.canonicalString()) || r.isKeyField() || t.Oe.push(new OrderBy(r, n));
+			})), e.has(Me$1.keyField().canonicalString()) || t.Oe.push(new OrderBy(Me$1.keyField(), n));
 		}
-		return t.A;
+		return t.Oe;
 	}
 	/**
 	* Converts this `Query` instance to its corresponding `Target` representation.
 	*/ function __PRIVATE_queryToTarget(e) {
 		const t = __PRIVATE_debugCast(e);
-		return t.V || (t.V = __PRIVATE__queryToTarget(t, __PRIVATE_queryNormalizedOrderBy(e))), t.V;
+		return t.Me || (t.Me = __PRIVATE__queryToTarget(t, __PRIVATE_queryNormalizedOrderBy(e))), t.Me;
 	}
 	function __PRIVATE__queryToTarget(e, t) {
 		if ("F" === e.limitType) return __PRIVATE_newTarget(e.path, e.collectionGroup, t, e.filters, e.limit, e.startAt, e.endAt);
@@ -14982,7 +16293,8 @@
 	* Important! The names of these identifiers matter because the string forms
 	* are used for reverse lookups from the webchannel stream. Do NOT change the
 	* names of these identifiers or change this into a const enum.
-	*/ var et, tt;
+	*/ var xt;
+	var vt;
 	/**
 	* Determines whether an error code represents a permanent error when received
 	* in response to a write operation.
@@ -15005,23 +16317,23 @@
 	function __PRIVATE_mapCodeFromRpcCode(e) {
 		if (void 0 === e) return __PRIVATE_logError("GRPC error has no .code"), ta.UNKNOWN;
 		switch (e) {
-			case et.OK: return ta.OK;
-			case et.CANCELLED: return ta.CANCELLED;
-			case et.UNKNOWN: return ta.UNKNOWN;
-			case et.DEADLINE_EXCEEDED: return ta.DEADLINE_EXCEEDED;
-			case et.RESOURCE_EXHAUSTED: return ta.RESOURCE_EXHAUSTED;
-			case et.INTERNAL: return ta.INTERNAL;
-			case et.UNAVAILABLE: return ta.UNAVAILABLE;
-			case et.UNAUTHENTICATED: return ta.UNAUTHENTICATED;
-			case et.INVALID_ARGUMENT: return ta.INVALID_ARGUMENT;
-			case et.NOT_FOUND: return ta.NOT_FOUND;
-			case et.ALREADY_EXISTS: return ta.ALREADY_EXISTS;
-			case et.PERMISSION_DENIED: return ta.PERMISSION_DENIED;
-			case et.FAILED_PRECONDITION: return ta.FAILED_PRECONDITION;
-			case et.ABORTED: return ta.ABORTED;
-			case et.OUT_OF_RANGE: return ta.OUT_OF_RANGE;
-			case et.UNIMPLEMENTED: return ta.UNIMPLEMENTED;
-			case et.DATA_LOSS: return ta.DATA_LOSS;
+			case xt.OK: return ta.OK;
+			case xt.CANCELLED: return ta.CANCELLED;
+			case xt.UNKNOWN: return ta.UNKNOWN;
+			case xt.DEADLINE_EXCEEDED: return ta.DEADLINE_EXCEEDED;
+			case xt.RESOURCE_EXHAUSTED: return ta.RESOURCE_EXHAUSTED;
+			case xt.INTERNAL: return ta.INTERNAL;
+			case xt.UNAVAILABLE: return ta.UNAVAILABLE;
+			case xt.UNAUTHENTICATED: return ta.UNAUTHENTICATED;
+			case xt.INVALID_ARGUMENT: return ta.INVALID_ARGUMENT;
+			case xt.NOT_FOUND: return ta.NOT_FOUND;
+			case xt.ALREADY_EXISTS: return ta.ALREADY_EXISTS;
+			case xt.PERMISSION_DENIED: return ta.PERMISSION_DENIED;
+			case xt.FAILED_PRECONDITION: return ta.FAILED_PRECONDITION;
+			case xt.ABORTED: return ta.ABORTED;
+			case xt.OUT_OF_RANGE: return ta.OUT_OF_RANGE;
+			case xt.UNIMPLEMENTED: return ta.UNIMPLEMENTED;
+			case xt.DATA_LOSS: return ta.DATA_LOSS;
 			default: return l(39323, { code: e });
 		}
 	}
@@ -15032,7 +16344,7 @@
 	* "UNKNOWN", etc.)
 	* @returns The equivalent Code. Non-matching responses are mapped to
 	*     Code.UNKNOWN.
-	*/ (tt = et || (et = {}))[tt.OK = 0] = "OK", tt[tt.CANCELLED = 1] = "CANCELLED", tt[tt.UNKNOWN = 2] = "UNKNOWN", tt[tt.INVALID_ARGUMENT = 3] = "INVALID_ARGUMENT", tt[tt.DEADLINE_EXCEEDED = 4] = "DEADLINE_EXCEEDED", tt[tt.NOT_FOUND = 5] = "NOT_FOUND", tt[tt.ALREADY_EXISTS = 6] = "ALREADY_EXISTS", tt[tt.PERMISSION_DENIED = 7] = "PERMISSION_DENIED", tt[tt.UNAUTHENTICATED = 16] = "UNAUTHENTICATED", tt[tt.RESOURCE_EXHAUSTED = 8] = "RESOURCE_EXHAUSTED", tt[tt.FAILED_PRECONDITION = 9] = "FAILED_PRECONDITION", tt[tt.ABORTED = 10] = "ABORTED", tt[tt.OUT_OF_RANGE = 11] = "OUT_OF_RANGE", tt[tt.UNIMPLEMENTED = 12] = "UNIMPLEMENTED", tt[tt.INTERNAL = 13] = "INTERNAL", tt[tt.UNAVAILABLE = 14] = "UNAVAILABLE", tt[tt.DATA_LOSS = 15] = "DATA_LOSS";
+	*/ (vt = xt || (xt = {}))[vt.OK = 0] = "OK", vt[vt.CANCELLED = 1] = "CANCELLED", vt[vt.UNKNOWN = 2] = "UNKNOWN", vt[vt.INVALID_ARGUMENT = 3] = "INVALID_ARGUMENT", vt[vt.DEADLINE_EXCEEDED = 4] = "DEADLINE_EXCEEDED", vt[vt.NOT_FOUND = 5] = "NOT_FOUND", vt[vt.ALREADY_EXISTS = 6] = "ALREADY_EXISTS", vt[vt.PERMISSION_DENIED = 7] = "PERMISSION_DENIED", vt[vt.UNAUTHENTICATED = 16] = "UNAUTHENTICATED", vt[vt.RESOURCE_EXHAUSTED = 8] = "RESOURCE_EXHAUSTED", vt[vt.FAILED_PRECONDITION = 9] = "FAILED_PRECONDITION", vt[vt.ABORTED = 10] = "ABORTED", vt[vt.OUT_OF_RANGE = 11] = "OUT_OF_RANGE", vt[vt.UNIMPLEMENTED = 12] = "UNIMPLEMENTED", vt[vt.INTERNAL = 13] = "INTERNAL", vt[vt.UNAVAILABLE = 14] = "UNAVAILABLE", vt[vt.DATA_LOSS = 15] = "DATA_LOSS";
 	/**
 	* @license
 	* Copyright 2017 Google LLC
@@ -15109,18 +16421,18 @@
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const nt = new SortedMap(DocumentKey.comparator);
+	*/ const Dt = new SortedMap(DocumentKey.comparator);
 	function __PRIVATE_mutableDocumentMap() {
-		return nt;
+		return Dt;
 	}
-	const rt = new SortedMap(DocumentKey.comparator);
+	const Ct = new SortedMap(DocumentKey.comparator);
 	function documentMap(...e) {
-		let t = rt;
+		let t = Ct;
 		for (const n of e) t = t.insert(n.key, n);
 		return t;
 	}
 	function __PRIVATE_convertOverlayedDocumentMapToDocumentMap(e) {
-		let t = rt;
+		let t = Ct;
 		return e.forEach(((e, n) => t = t.insert(e, n.overlayedDocument))), t;
 	}
 	function __PRIVATE_newOverlayMap() {
@@ -15133,15 +16445,15 @@
 		return new ObjectMap(((e) => e.toString()), ((e, t) => e.isEqual(t)));
 	}
 	new SortedMap(DocumentKey.comparator);
-	const st = new SortedSet(DocumentKey.comparator);
+	const Ot = new SortedSet(DocumentKey.comparator);
 	function __PRIVATE_documentKeySet(...e) {
-		let t = st;
+		let t = Ot;
 		for (const n of e) t = t.add(n);
 		return t;
 	}
-	const _t = new SortedSet(__PRIVATE_primitiveComparator);
+	const Mt = new SortedSet(__PRIVATE_primitiveComparator);
 	function __PRIVATE_targetIdSet() {
-		return _t;
+		return Mt;
 	}
 	/**
 	* @license
@@ -15159,13 +16471,6 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	/**
-	* The global, singleton instance of TestingHooksSpi.
-	*
-	* This variable will be `null` in all cases _except_ when running from
-	* integration tests that have registered callbacks to be notified of events
-	* that happen during the test execution.
-	*/ let ot = null;
 	/**
 	* @license
 	* Copyright 2023 Google LLC
@@ -15206,7 +16511,7 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	const at = new Integer([4294967295, 4294967295], 0);
+	const Bt = new Integer([4294967295, 4294967295], 0);
 	function __PRIVATE_getMd5HashValue(e) {
 		const t = __PRIVATE_newTextEncoder().encode(e), n = new Md5();
 		return n.update(t), new Uint8Array(n.digest());
@@ -15221,37 +16526,37 @@
 			if (n < 0) throw new __PRIVATE_BloomFilterError(`Invalid hash count: ${n}`);
 			if (e.length > 0 && 0 === this.hashCount) throw new __PRIVATE_BloomFilterError(`Invalid hash count: ${n}`);
 			if (0 === e.length && 0 !== t) throw new __PRIVATE_BloomFilterError(`Invalid padding when bitmap length is 0: ${t}`);
-			this.p = 8 * e.length - t, this.S = Integer.fromNumber(this.p);
+			this.Be = 8 * e.length - t, this.Le = Integer.fromNumber(this.Be);
 		}
-		v(e, t, n) {
+		Ue(e, t, n) {
 			let r = e.add(t.multiply(Integer.fromNumber(n)));
-			return 1 === r.compare(at) && (r = new Integer([r.getBits(0), r.getBits(1)], 0)), r.modulo(this.S).toNumber();
+			return 1 === r.compare(Bt) && (r = new Integer([r.getBits(0), r.getBits(1)], 0)), r.modulo(this.Le).toNumber();
 		}
-		D(e) {
+		ke(e) {
 			return !!(this.bitmap[Math.floor(e / 8)] & 1 << e % 8);
 		}
 		mightContain(e) {
-			if (0 === this.p) return false;
+			if (0 === this.Be) return false;
 			const [n, r] = __PRIVATE_get64BitUints(__PRIVATE_getMd5HashValue(e));
 			for (let e = 0; e < this.hashCount; e++) {
-				const t = this.v(n, r, e);
-				if (!this.D(t)) return false;
+				const t = this.Ue(n, r, e);
+				if (!this.ke(t)) return false;
 			}
 			return true;
 		}
 		/** Create bloom filter for testing purposes only. */ static create(e, t, n) {
-			const r = e % 8 == 0 ? 0 : 8 - e % 8, s = new BloomFilter(new Uint8Array(Math.ceil(e / 8)), r, t);
+			const r = e % 8 == 0 ? 0 : 8 - e % 8, i = new Uint8Array(Math.ceil(e / 8)), s = new BloomFilter(i, r, t);
 			return n.forEach(((e) => s.insert(e))), s;
 		}
 		insert(e) {
-			if (0 === this.p) return;
+			if (0 === this.Be) return;
 			const [n, r] = __PRIVATE_get64BitUints(__PRIVATE_getMd5HashValue(e));
 			for (let e = 0; e < this.hashCount; e++) {
-				const t = this.v(n, r, e);
-				this.C(t);
+				const t = this.Ue(n, r, e);
+				this.Qe(t);
 			}
 		}
-		C(e) {
+		Qe(e) {
 			const t = Math.floor(e / 8), n = e % 8;
 			this.bitmap[t] |= 1 << n;
 		}
@@ -15338,12 +16643,12 @@
 	* If document has been deleted NoDocument will be provided.
 	*/ var __PRIVATE_DocumentWatchChange = class {
 		constructor(e, t, n, r) {
-			this.F = e, this.removedTargetIds = t, this.key = n, this.O = r;
+			this.qe = e, this.removedTargetIds = t, this.key = n, this.Ke = r;
 		}
 	};
 	var __PRIVATE_ExistenceFilterChange = class {
 		constructor(e, t) {
-			this.targetId = e, this.M = t;
+			this.targetId = e, this.$e = t;
 		}
 	};
 	var __PRIVATE_WatchTargetChange = class {
@@ -15356,7 +16661,7 @@
 		* Track the targetId for logging.
 		*/
 		constructor(e) {
-			this.targetId = e, this.N = 0, this.L = __PRIVATE_snapshotChangesMap(), this.B = ByteString.EMPTY_BYTE_STRING, this.U = false, this.k = true;
+			this.targetId = e, this.We = 0, this.Ge = __PRIVATE_snapshotChangesMap(), this.je = ByteString.EMPTY_BYTE_STRING, this.ze = false, this.He = true;
 		}
 		/**
 		* Whether this target has been marked 'current'.
@@ -15366,31 +16671,31 @@
 		* was added and that the target is consistent with the rest of the watch
 		* stream.
 		*/ get current() {
-			return this.U;
+			return this.ze;
 		}
 		/** The last resume token sent to us for this target. */ get resumeToken() {
-			return this.B;
+			return this.je;
 		}
-		/** Whether this target has pending target adds or target removes. */ get q() {
-			return 0 !== this.N;
+		/** Whether this target has pending target adds or target removes. */ get Je() {
+			return 0 !== this.We;
 		}
-		/** Whether we have modified any state that should trigger a snapshot. */ get $() {
-			return this.k;
+		/** Whether we have modified any state that should trigger a snapshot. */ get Ye() {
+			return this.He;
 		}
 		/**
 		* Applies the resume token to the TargetChange, but only when it has a new
 		* value. Empty resumeTokens are discarded.
-		*/ K(e) {
-			e.approximateByteSize() > 0 && (this.k = true, this.B = e);
+		*/ Ze(e) {
+			e.approximateByteSize() > 0 && (this.He = true, this.je = e);
 		}
 		/**
 		* Creates a target change from the current set of changes.
 		*
 		* To reset the document changes after raising this snapshot, call
 		* `clearPendingChanges()`.
-		*/ W() {
+		*/ Xe() {
 			let e = __PRIVATE_documentKeySet(), t = __PRIVATE_documentKeySet(), n = __PRIVATE_documentKeySet();
-			return this.L.forEach(((r, i) => {
+			return this.Ge.forEach(((r, i) => {
 				switch (i) {
 					case 0:
 						e = e.add(r);
@@ -15403,67 +16708,67 @@
 						break;
 					default: l(38017, { changeType: i });
 				}
-			})), new TargetChange(this.B, this.U, e, t, n);
+			})), new TargetChange(this.je, this.ze, e, t, n);
 		}
 		/**
 		* Resets the document changes and sets `hasPendingChanges` to false.
-		*/ G() {
-			this.k = false, this.L = __PRIVATE_snapshotChangesMap();
+		*/ et() {
+			this.He = false, this.Ge = __PRIVATE_snapshotChangesMap();
 		}
-		j(e, t) {
-			this.k = true, this.L = this.L.insert(e, t);
+		tt(e, t) {
+			this.He = true, this.Ge = this.Ge.insert(e, t);
 		}
-		H(e) {
-			this.k = true, this.L = this.L.remove(e);
+		nt(e) {
+			this.He = true, this.Ge = this.Ge.remove(e);
 		}
-		J() {
-			this.N += 1;
+		rt() {
+			this.We += 1;
 		}
-		Y() {
-			this.N -= 1, __PRIVATE_hardAssert(this.N >= 0, 3241, {
-				N: this.N,
+		it() {
+			this.We -= 1, __PRIVATE_hardAssert(this.We >= 0, 3241, {
+				We: this.We,
 				targetId: this.targetId
 			});
 		}
-		Z() {
-			this.k = true, this.U = true;
+		st() {
+			this.He = true, this.ze = true;
 		}
 	};
-	const ut = "WatchChangeAggregator";
+	const Lt = "WatchChangeAggregator";
 	/**
 	* A helper class to accumulate watch changes into a RemoteEvent.
 	*/ var __PRIVATE_WatchChangeAggregator = class {
 		constructor(e) {
-			this.X = e, this.ee = /* @__PURE__ */ new Map(), this.te = __PRIVATE_mutableDocumentMap(), this.ne = __PRIVATE_documentTargetMap(), this.re = __PRIVATE_mutableDocumentMap(), this.ie = __PRIVATE_documentTargetMap(), this.se = new SortedMap(__PRIVATE_primitiveComparator);
+			this._t = e, this.ot = /* @__PURE__ */ new Map(), this.ut = __PRIVATE_mutableDocumentMap(), this.ct = __PRIVATE_documentTargetMap(), this.lt = __PRIVATE_mutableDocumentMap(), this.Et = __PRIVATE_documentTargetMap(), this.ht = new SortedMap(__PRIVATE_primitiveComparator);
 		}
 		/**
 		* Processes and adds the DocumentWatchChange to the current set of changes.
-		*/ _e(e) {
-			for (const t of e.F) e.O && e.O.isFoundDocument() ? this.oe(t, e.O) : this.ae(t, e.key, e.O);
-			for (const t of e.removedTargetIds) this.ae(t, e.key, e.O);
+		*/ Tt(e) {
+			for (const t of e.qe) e.Ke && e.Ke.isFoundDocument() ? this.Pt(t, e.Ke) : this.It(t, e.key, e.Ke);
+			for (const t of e.removedTargetIds) this.It(t, e.key, e.Ke);
 		}
-		/** Processes and adds the WatchTargetChange to the current set of changes. */ ue(e) {
+		/** Processes and adds the WatchTargetChange to the current set of changes. */ Rt(e) {
 			this.forEachTarget(e, ((t) => {
-				const n = this.ee.get(t);
+				const n = this.ot.get(t);
 				if (n) switch (e.state) {
 					case 0:
-						this.ce(t) && n.K(e.resumeToken);
+						this.At(t) && n.Ze(e.resumeToken);
 						break;
 					case 1:
-						n.Y(), n.q || n.G(), n.K(e.resumeToken);
+						n.it(), n.Je || n.et(), n.Ze(e.resumeToken);
 						break;
 					case 2:
-						n.Y(), n.q || this.removeTarget(t);
+						n.it(), n.Je || this.removeTarget(t);
 						break;
 					case 3:
-						this.ce(t) && (n.Z(), n.K(e.resumeToken));
+						this.At(t) && (n.st(), n.Ze(e.resumeToken));
 						break;
 					case 4:
-						this.ce(t) && (this.le(t), n.K(e.resumeToken));
+						this.At(t) && (this.Vt(t), n.Ze(e.resumeToken));
 						break;
 					default: l(56790, { state: e.state });
 				}
-				else __PRIVATE_logDebug(ut, `handleTargetChange received targetChange for untracked target ID (${t}) with state (${e.state})`);
+				else __PRIVATE_logDebug(Lt, `handleTargetChange received targetChange for untracked target ID (${t}) with state (${e.state})`);
 			}));
 		}
 		/**
@@ -15471,50 +16776,50 @@
 		* targetIds explicitly listed in the change or the targetIds of all currently
 		* active targets.
 		*/ forEachTarget(e, t) {
-			e.targetIds.length > 0 ? e.targetIds.forEach(t) : this.ee.forEach(((e, n) => {
-				this.ce(n) && t(n);
+			e.targetIds.length > 0 ? e.targetIds.forEach(t) : this.ot.forEach(((e, n) => {
+				this.At(n) && t(n);
 			}));
 		}
-		Ee(e) {
+		ft(e) {
 			return __PRIVATE_targetIsPipelineTarget(e) ? "documents" === e.getPipelineSourceType() && 1 === e.getPipelineDocuments()?.length : __PRIVATE_targetIsDocumentTarget(e);
 		}
 		/**
 		* Handles existence filters and synthesizes deletes for filter mismatches.
 		* Targets that are invalidated by filter mismatches are added to
 		* `pendingTargetResets`.
-		*/ he(e) {
-			const t = e.targetId, n = e.M.count, r = this.Te(t);
+		*/ dt(e) {
+			const t = e.targetId, n = e.$e.count, r = this.gt(t);
 			if (r) {
 				const i = r.target;
-				if (this.Ee(i)) if (0 === n) {
+				if (this.ft(i)) if (0 === n) {
 					const e = new DocumentKey(__PRIVATE_targetIsPipelineTarget(i) ? ResourcePath.fromString(i.getPipelineDocuments()[0]) : i.path);
-					this.ae(t, e, MutableDocument.newNoDocument(e, SnapshotVersion.min()));
+					this.It(t, e, MutableDocument.newNoDocument(e, SnapshotVersion.min()));
 				} else __PRIVATE_hardAssert(1 === n, 20013, "Single document existence filter with count: " + n);
 				else {
-					const r = this.Pe(t);
+					const r = this.yt(t);
 					if (r !== n) {
-						const n = this.Ie(e), i = n ? this.Re(n, e, r) : 1;
+						const n = this.wt(e), i = n ? this.bt(n, e, r) : 1;
 						if (0 !== i) {
-							this.le(t);
+							this.Vt(t);
 							const e = 2 === i ? "TargetPurposeExistenceFilterMismatchBloom" : "TargetPurposeExistenceFilterMismatch";
-							this.se = this.se.insert(t, e);
+							this.ht = this.ht.insert(t, e);
 						}
-						ot?.Ae(function __PRIVATE_createExistenceFilterMismatchInfoForTestingHooks(e, t, n, r, i) {
-							const s = {
-								localCacheCount: e,
-								existenceFilterCount: t.count,
-								databaseId: n.database,
-								projectId: n.projectId
-							}, _ = t.unchangedNames;
-							_ && (s.bloomFilter = {
-								applied: 0 === i,
-								hashCount: _?.hashCount ?? 0,
-								bitmapLength: _?.bits?.bitmap?.length ?? 0,
-								padding: _?.bits?.padding ?? 0,
-								mightContain: (e) => r?.mightContain(e) ?? false
-							});
-							return s;
-						}(r, e.M, this.X.Ve(), n, i));
+						/**
+						* @license
+						* Copyright 2017 Google LLC
+						*
+						* Licensed under the Apache License, Version 2.0 (the "License");
+						* you may not use this file except in compliance with the License.
+						* You may obtain a copy of the License at
+						*
+						*   http://www.apache.org/licenses/LICENSE-2.0
+						*
+						* Unless required by applicable law or agreed to in writing, software
+						* distributed under the License is distributed on an "AS IS" BASIS,
+						* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+						* See the License for the specific language governing permissions and
+						* limitations under the License.
+						*/
 					}
 				}
 			}
@@ -15522,8 +16827,8 @@
 		/**
 		* Parse the bloom filter from the "unchanged_names" field of an existence
 		* filter.
-		*/ Ie(e) {
-			const t = e.M.unchangedNames;
+		*/ wt(e) {
+			const t = e.$e.unchangedNames;
 			if (!t || !t.bits) return null;
 			const { bits: { bitmap: n = "", padding: r = 0 }, hashCount: i = 0 } = t;
 			let s, _;
@@ -15538,60 +16843,60 @@
 			} catch (e) {
 				return __PRIVATE_logWarn(e instanceof __PRIVATE_BloomFilterError ? "BloomFilter error: " : "Applying bloom filter failed: ", e), null;
 			}
-			return 0 === _.p ? null : _;
+			return 0 === _.Be ? null : _;
 		}
 		/**
 		* Apply bloom filter to remove the deleted documents, and return the
 		* application status.
-		*/ Re(e, t, n) {
-			return t.M.count === n - this.de(e, t.targetId) ? 0 : 2;
+		*/ bt(e, t, n) {
+			return t.$e.count === n - this.vt(e, t.targetId) ? 0 : 2;
 		}
 		/**
 		* Filter out removed documents based on bloom filter membership result and
 		* return number of documents removed.
-		*/ de(e, t) {
-			const n = this.X.getRemoteKeysForTarget(t);
+		*/ vt(e, t) {
+			const n = this._t.getRemoteKeysForTarget(t);
 			let r = 0;
 			return n.forEach(((n) => {
-				const i = this.X.Ve(), s = `projects/${i.projectId}/databases/${i.database}/documents/${n.path.canonicalString()}`;
-				e.mightContain(s) || (this.ae(t, n, null), r++);
+				const i = this._t.xt(), s = `projects/${i.projectId}/databases/${i.database}/documents/${n.path.canonicalString()}`;
+				e.mightContain(s) || (this.It(t, n, null), r++);
 			})), r;
 		}
 		/**
 		* Converts the currently accumulated state into a remote event at the
 		* provided snapshot version. Resets the accumulated changes before returning.
-		*/ fe(e) {
+		*/ Dt(e) {
 			const t = /* @__PURE__ */ new Map();
-			this.ee.forEach(((n, r) => {
-				const i = this.Te(r);
+			this.ot.forEach(((n, r) => {
+				const i = this.gt(r);
 				if (i) {
-					if (n.current && this.Ee(i.target)) {
+					if (n.current && this.ft(i.target)) {
 						const n = new DocumentKey(__PRIVATE_targetIsPipelineTarget(i.target) ? ResourcePath.fromString(i.target.getPipelineDocuments()[0]) : i.target.path);
-						this.me(n).has(r) || this.pe(r, n) || this.ae(r, n, MutableDocument.newNoDocument(n, e));
+						this.Ct(n).has(r) || this.Ft(r, n) || this.It(r, n, MutableDocument.newNoDocument(n, e));
 					}
-					n.$ && (t.set(r, n.W()), n.G());
+					n.Ye && (t.set(r, n.Xe()), n.et());
 				}
 			}));
 			let n = __PRIVATE_documentKeySet();
-			this.ie.forEach(((e, t) => {
+			this.Et.forEach(((e, t) => {
 				let r = true;
 				t.forEachWhile(((e) => {
-					const t = this.Te(e);
+					const t = this.gt(e);
 					return !t || "TargetPurposeLimboResolution" === t.purpose || (r = false, false);
 				})), r && (n = n.add(e));
-			})), this.te.forEach(((t, n) => n.setReadTime(e))), this.re.forEach(((t, n) => n.setReadTime(e)));
-			const r = new RemoteEvent(e, t, this.se, this.te, this.re, n);
-			return this.te = __PRIVATE_mutableDocumentMap(), this.ne = __PRIVATE_documentTargetMap(), this.re = __PRIVATE_mutableDocumentMap(), this.ie = __PRIVATE_documentTargetMap(), this.se = new SortedMap(__PRIVATE_primitiveComparator), r;
+			})), this.ut.forEach(((t, n) => n.setReadTime(e))), this.lt.forEach(((t, n) => n.setReadTime(e)));
+			const r = new RemoteEvent(e, t, this.ht, this.ut, this.lt, n);
+			return this.ut = __PRIVATE_mutableDocumentMap(), this.ct = __PRIVATE_documentTargetMap(), this.lt = __PRIVATE_mutableDocumentMap(), this.Et = __PRIVATE_documentTargetMap(), this.ht = new SortedMap(__PRIVATE_primitiveComparator), r;
 		}
 		/**
 		* Adds the provided document to the internal list of document updates and
 		* its document key to the given target's mapping.
 		*/
-		oe(e, t) {
-			const n = this.ee.get(e);
-			if (!n || !this.ce(e)) return void __PRIVATE_logDebug(ut, `addDocumentToTarget received document for unknown inactive target (${e})`);
-			const r = this.pe(e, t.key) ? 2 : 0;
-			n.j(t.key, r), __PRIVATE_targetIsPipelineTarget(this.Te(e).target) && "exact" !== this.Te(e).target.getPipelineFlavor() ? this.re = this.re.insert(t.key, t) : this.te = this.te.insert(t.key, t), this.ne = this.ne.insert(t.key, this.me(t.key).add(e)), this.ie = this.ie.insert(t.key, this.ge(t.key).add(e));
+		Pt(e, t) {
+			const n = this.ot.get(e);
+			if (!n || !this.At(e)) return void __PRIVATE_logDebug(Lt, `addDocumentToTarget received document for unknown inactive target (${e})`);
+			const r = this.Ft(e, t.key) ? 2 : 0;
+			n.tt(t.key, r), __PRIVATE_targetIsPipelineTarget(this.gt(e).target) && "exact" !== this.gt(e).target.getPipelineFlavor() ? this.lt = this.lt.insert(t.key, t) : this.ut = this.ut.insert(t.key, t), this.ct = this.ct.insert(t.key, this.Ct(t.key).add(e)), this.Et = this.Et.insert(t.key, this.Ot(t.key).add(e));
 		}
 		/**
 		* Removes the provided document from the target mapping. If the
@@ -15600,68 +16905,68 @@
 		* that caused the filter mismatch), the new document can be provided
 		* to update the remote document cache.
 		*/
-		ae(e, t, n) {
-			const r = this.ee.get(e);
-			r && this.ce(e) ? (this.pe(e, t) ? r.j(t, 1) : r.H(t), this.ie = this.ie.insert(t, this.ge(t).delete(e)), this.ie = this.ie.insert(t, this.ge(t).add(e)), n && (__PRIVATE_targetIsPipelineTarget(this.Te(e).target) && "exact" !== this.Te(e).target.getPipelineFlavor() ? this.re = this.re.insert(t, n) : this.te = this.te.insert(t, n))) : __PRIVATE_logDebug(ut, `removeDocumentFromTarget received document for unknown or inactive target (${e})`);
+		It(e, t, n) {
+			const r = this.ot.get(e);
+			r && this.At(e) ? (this.Ft(e, t) ? r.tt(t, 1) : r.nt(t), this.Et = this.Et.insert(t, this.Ot(t).delete(e)), this.Et = this.Et.insert(t, this.Ot(t).add(e)), n && (__PRIVATE_targetIsPipelineTarget(this.gt(e).target) && "exact" !== this.gt(e).target.getPipelineFlavor() ? this.lt = this.lt.insert(t, n) : this.ut = this.ut.insert(t, n))) : __PRIVATE_logDebug(Lt, `removeDocumentFromTarget received document for unknown or inactive target (${e})`);
 		}
 		removeTarget(e) {
-			this.ee.delete(e);
+			this.ot.delete(e);
 		}
 		/**
 		* Returns the current count of documents in the target. This includes both
 		* the number of documents that the LocalStore considers to be part of the
 		* target as well as any accumulated changes.
-		*/ Pe(e) {
-			const t = this.ee.get(e);
+		*/ yt(e) {
+			const t = this.ot.get(e);
 			if (!t) return 0;
-			const n = t.W();
-			return this.X.getRemoteKeysForTarget(e).size + n.addedDocuments.size - n.removedDocuments.size;
+			const n = t.Xe();
+			return this._t.getRemoteKeysForTarget(e).size + n.addedDocuments.size - n.removedDocuments.size;
 		}
 		/**
 		* Increment the number of acks needed from watch before we can consider the
 		* server to be 'in-sync' with the client's active targets.
-		*/ J(e) {
-			let t = this.ee.get(e);
-			t || (__PRIVATE_logDebug(ut, `recordPendingTargetRequest set up tracking for target ID ${e}`), t = new __PRIVATE_TargetState(e), this.ee.set(e, t)), t.J();
+		*/ rt(e) {
+			let t = this.ot.get(e);
+			t || (__PRIVATE_logDebug(Lt, `recordPendingTargetRequest set up tracking for target ID ${e}`), t = new __PRIVATE_TargetState(e), this.ot.set(e, t)), t.rt();
 		}
-		ge(e) {
-			let t = this.ie.get(e);
-			return t || (t = new SortedSet(__PRIVATE_primitiveComparator), this.ie = this.ie.insert(e, t)), t;
+		Ot(e) {
+			let t = this.Et.get(e);
+			return t || (t = new SortedSet(__PRIVATE_primitiveComparator), this.Et = this.Et.insert(e, t)), t;
 		}
-		me(e) {
-			let t = this.ne.get(e);
-			return t || (t = new SortedSet(__PRIVATE_primitiveComparator), this.ne = this.ne.insert(e, t)), t;
+		Ct(e) {
+			let t = this.ct.get(e);
+			return t || (t = new SortedSet(__PRIVATE_primitiveComparator), this.ct = this.ct.insert(e, t)), t;
 		}
 		/**
 		* Verifies that the user is still interested in this target (by calling
 		* `getTargetDataForTarget()`) and that we are not waiting for pending ADDs
 		* from watch.
-		*/ ce(e) {
-			const t = null !== this.Te(e);
-			return t || __PRIVATE_logDebug(ut, "Detected inactive target", e), t;
+		*/ At(e) {
+			const t = null !== this.gt(e);
+			return t || __PRIVATE_logDebug(Lt, "Detected inactive target", e), t;
 		}
 		/**
 		* Returns the TargetData for an active target (i.e. a target that the user
 		* is still interested in that has no outstanding target change requests).
-		*/ Te(e) {
-			const t = this.ee.get(e);
-			return void 0 === t || t.q ? null : this.X.ye(e);
+		*/ gt(e) {
+			const t = this.ot.get(e);
+			return void 0 === t || t.Je ? null : this._t.Mt(e);
 		}
 		/**
 		* Resets the state of a Watch target to its initial state (e.g. sets
 		* 'current' to false, clears the resume token and removes its target mapping
 		* from all documents).
-		*/ le(e) {
-			this.ee.set(e, new __PRIVATE_TargetState(e));
-			this.X.getRemoteKeysForTarget(e).forEach(((t) => {
-				this.ae(e, t, null);
+		*/ Vt(e) {
+			this.ot.set(e, new __PRIVATE_TargetState(e));
+			this._t.getRemoteKeysForTarget(e).forEach(((t) => {
+				this.It(e, t, null);
 			}));
 		}
 		/**
 		* Returns whether the LocalStore considers the document to be part of the
 		* specified target.
-		*/ pe(e, t) {
-			return this.X.getRemoteKeysForTarget(e).has(t);
+		*/ Ft(e, t) {
+			return this._t.getRemoteKeysForTarget(e).has(t);
 		}
 	};
 	function __PRIVATE_documentTargetMap() {
@@ -15670,24 +16975,32 @@
 	function __PRIVATE_snapshotChangesMap() {
 		return new SortedMap(DocumentKey.comparator);
 	}
-	const ct = {
-		asc: "ASCENDING",
-		desc: "DESCENDING"
-	}, lt = {
-		"<": "LESS_THAN",
-		"<=": "LESS_THAN_OR_EQUAL",
-		">": "GREATER_THAN",
-		">=": "GREATER_THAN_OR_EQUAL",
-		"==": "EQUAL",
-		"!=": "NOT_EQUAL",
-		"array-contains": "ARRAY_CONTAINS",
-		in: "IN",
-		"not-in": "NOT_IN",
-		"array-contains-any": "ARRAY_CONTAINS_ANY"
-	}, Et = {
-		and: "AND",
-		or: "OR"
-	};
+	const Ut = (() => {
+		return {
+			asc: "ASCENDING",
+			desc: "DESCENDING"
+		};
+	})();
+	const kt = (() => {
+		return {
+			"<": "LESS_THAN",
+			"<=": "LESS_THAN_OR_EQUAL",
+			">": "GREATER_THAN",
+			">=": "GREATER_THAN_OR_EQUAL",
+			"==": "EQUAL",
+			"!=": "NOT_EQUAL",
+			"array-contains": "ARRAY_CONTAINS",
+			in: "IN",
+			"not-in": "NOT_IN",
+			"array-contains-any": "ARRAY_CONTAINS_ANY"
+		};
+	})();
+	const Qt = (() => {
+		return {
+			and: "AND",
+			or: "OR"
+		};
+	})();
 	/**
 	* This class generates JsonObject values for the Datastore API suitable for
 	* sending to either GRPC stub methods or via the JSON/HTTP REST API.
@@ -15804,7 +17117,7 @@
 			const i = function __PRIVATE_fromWatchTargetChangeState(e) {
 				return "NO_CHANGE" === e ? 0 : "ADD" === e ? 1 : "REMOVE" === e ? 2 : "CURRENT" === e ? 3 : "RESET" === e ? 4 : l(39313, { state: e });
 			}(n.targetChange.targetChangeType || "NO_CHANGE"), s = n.targetChange.targetIds || [], _ = function __PRIVATE_fromBytes(e, t) {
-				return e.useProto3Json ? (__PRIVATE_hardAssert(void 0 === t || "string" == typeof t, 58123), ByteString.fromBase64String(t || "")) : (__PRIVATE_hardAssert(void 0 === t || t instanceof Buffer || t instanceof Uint8Array, 16193), ByteString.fromUint8Array(t || new Uint8Array()));
+				return e.useProto3Json ? (__PRIVATE_hardAssert(void 0 === t || "string" == typeof t, 58123), ByteString.fromBase64String(t || "")) : (__PRIVATE_hardAssert(void 0 === t || t instanceof Buffer || t instanceof Uint8Array, 16193), ByteString.fromUint8Array(t || /* @__PURE__ */ new Uint8Array()));
 			}(t, n.targetChange.resumeToken), o = n.targetChange.cause;
 			r = new __PRIVATE_WatchTargetChange(i, s, _, o && function __PRIVATE_fromRpcStatus(t) {
 				return new e(void 0 === t.code ? ta.UNKNOWN : __PRIVATE_mapCodeFromRpcCode(t.code), t.message || "");
@@ -15828,7 +17141,7 @@
 			const i = fromName(t, e.document);
 			r = new __PRIVATE_DocumentWatchChange([], e.removedTargetIds || [], i, null);
 		} else {
-			if (!("filter" in n)) return l(11601, { we: n });
+			if (!("filter" in n)) return l(11601, { Nt: n });
 			{
 				n.filter;
 				const e = n.filter;
@@ -15876,7 +17189,7 @@
 				values: e.position
 			};
 		}(t.endAt)), {
-			Se: n,
+			Lt: n,
 			parent: i
 		};
 	}
@@ -15984,19 +17297,19 @@
 		}(e) : l(30097, { filter: e });
 	}
 	function __PRIVATE_toDirection(e) {
-		return ct[e];
+		return Ut[e];
 	}
 	function __PRIVATE_toOperatorName(e) {
-		return lt[e];
+		return kt[e];
 	}
 	function __PRIVATE_toCompositeOperatorName(e) {
-		return Et[e];
+		return Qt[e];
 	}
 	function __PRIVATE_toFieldPathReference(e) {
 		return { fieldPath: e.canonicalString() };
 	}
 	function __PRIVATE_fromFieldPathReference(e) {
-		return Oe.fromServerFormat(e.fieldPath);
+		return Me$1.fromServerFormat(e.fieldPath);
 	}
 	function __PRIVATE_toFilter(e) {
 		return e instanceof FieldFilter ? function __PRIVATE_toUnaryOrFieldFilter(e) {
@@ -16069,6 +17382,73 @@
 	}
 	/**
 	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* Represents a BSON ObjectId type in Firestore documents.
+	*
+	* @class BsonObjectId
+	*/ var BsonObjectId = class {
+		constructor(e) {
+			this.value = e;
+		}
+		/**
+		* Returns true if this `BsonObjectId` is equal to the provided one.
+		*
+		* @param other - The `BsonObjectId` to compare against.
+		* @return 'true' if this `BsonObjectId` is equal to the provided one.
+		*/ isEqual(e) {
+			return this.value === e.value;
+		}
+	};
+	/**
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* Represents a BSON Timestamp type in Firestore documents.
+	*
+	* @class BsonTimestamp
+	*/ var BsonTimestamp = class {
+		constructor(e, t) {
+			if (this.seconds = e, this.increment = t, !Number.isInteger(e) || e < 0 || e > 4294967295) throw new Error("BsonTimestamp 'seconds' must be in the range of a 32-bit unsigned integer (0-4294967295).");
+			if (!Number.isInteger(t) || t < 0 || t > 4294967295) throw new Error("BsonTimestamp 'increment' must be in the range of a 32-bit unsigned integer (0-4294967295).");
+		}
+		/**
+		* Returns true if this `BsonTimestamp` is equal to the provided one.
+		*
+		* @param other -  The `BsonTimestamp` to compare against.
+		* @return 'true' if this `BsonTimestamp` is equal to the provided one.
+		*/ isEqual(e) {
+			return this.seconds === e.seconds && this.increment === e.increment;
+		}
+	};
+	/**
+	* @license
 	* Copyright 2020 Google LLC
 	*
 	* Licensed under the Apache License, Version 2.0 (the "License");
@@ -16087,17 +17467,19 @@
 	* An immutable object representing an array of bytes.
 	*/ var Bytes = class Bytes {
 		/** @hideconstructor */
-		constructor(e) {
-			this._byteString = e;
+		constructor(t, n = 0) {
+			if (this.subtype = n, !Number.isInteger(n) || n < 0 || n > 255) throw new e(ta.INVALID_ARGUMENT, "The subtype for Bytes must be a value in the inclusive [0, 255] range.");
+			this._byteString = t;
 		}
 		/**
 		* Creates a new `Bytes` object from the given Base64 string, converting it to
 		* bytes.
 		*
 		* @param base64 - The Base64 string used to create the `Bytes` object.
-		*/ static fromBase64String(t) {
+		* @param subtype - Optional subtype value.
+		*/ static fromBase64String(t, n = 0) {
 			try {
-				return new Bytes(ByteString.fromBase64String(t));
+				return new Bytes(ByteString.fromBase64String(t), n);
 			} catch (t) {
 				throw new e(ta.INVALID_ARGUMENT, "Failed to construct data from Base64 string: " + t);
 			}
@@ -16106,8 +17488,9 @@
 		* Creates a new `Bytes` object from the given Uint8Array.
 		*
 		* @param array - The Uint8Array used to create the `Bytes` object.
-		*/ static fromUint8Array(e) {
-			return new Bytes(ByteString.fromUint8Array(e));
+		* @param subtype - Optional subtype value.
+		*/ static fromUint8Array(e, t = 0) {
+			return new Bytes(ByteString.fromUint8Array(e), t);
 		}
 		/**
 		* Returns the underlying bytes as a Base64-encoded string.
@@ -16124,11 +17507,18 @@
 			return this._byteString.toUint8Array();
 		}
 		/**
+		* Returns the underlying bytes as a `Uint8Array`.
+		*
+		* @returns The Uint8Array created from the `Bytes` object.
+		*/ get data() {
+			return this.toUint8Array();
+		}
+		/**
 		* Returns a string representation of the `Bytes` object.
 		*
 		* @returns A string representation of the `Bytes` object.
 		*/ toString() {
-			return "Bytes(base64: " + this.toBase64() + ")";
+			return "Bytes(base64: " + this.toBase64() + ", subtype: " + this.subtype + ")";
 		}
 		/**
 		* Returns true if this `Bytes` object is equal to the provided one.
@@ -16136,17 +17526,18 @@
 		* @param other - The `Bytes` object to compare against.
 		* @returns true if this `Bytes` object is equal to the provided one.
 		*/ isEqual(e) {
-			return this._byteString.isEqual(e._byteString);
+			return this.subtype === e.subtype && this._byteString.isEqual(e._byteString);
 		}
 		/**
 		* Returns a JSON-serializable representation of this `Bytes` instance.
 		*
 		* @returns a JSON representation of this object.
 		*/ toJSON() {
-			return {
+			const e = {
 				type: Bytes._jsonSchemaVersion,
 				bytes: this.toBase64()
 			};
+			return 0 !== this.subtype && (e.subtype = this.subtype), e;
 		}
 		/**
 		* Builds a `Bytes` instance from a JSON object created by {@link Bytes.toJSON}.
@@ -16155,12 +17546,60 @@
 		* @returns an instance of {@link Bytes} if the JSON object could be parsed. Throws a
 		* {@link FirestoreError} if an error occurs.
 		*/ static fromJSON(e) {
-			if (__PRIVATE_validateJSON(e, Bytes._jsonSchema)) return Bytes.fromBase64String(e.bytes);
+			if (__PRIVATE_validateJSON(e, Bytes._jsonSchema)) {
+				const t = e.subtype ?? 0;
+				return Bytes.fromBase64String(e.bytes, t);
+			}
 		}
 	};
 	Bytes._jsonSchemaVersion = "firestore/bytes/1.0", Bytes._jsonSchema = {
 		type: property("string", Bytes._jsonSchemaVersion),
-		bytes: property("string")
+		bytes: property("string"),
+		subtype: {
+			...property("number"),
+			optional: true
+		}
+	};
+	/**
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* Represents a 128-bit decimal type in Firestore documents.
+	*
+	* @class Decimal128Value
+	*/
+	var Decimal128Value = class {
+		constructor(e) {
+			this.stringValue = e, this.value = __PRIVATE_Quadruple.fromString(e);
+		}
+		/**
+		* Returns true if this `Decimal128Value` is equal to the provided one.
+		*
+		* @param other - The `Decimal128Value` to compare against.
+		* @return 'true' if this `Decimal128Value` is equal to the provided one.
+		*/ isEqual(e) {
+			return !(!this.value.oe() || !e.value.oe()) || 0 === this.value.compareTo(e.value);
+		}
+		/**
+		* Returns a JSON-serializable representation of this `Decimal128Value` instance.
+		*
+		* @returns a JSON representation of this object.
+		*/ toJSON() {
+			return { kt: { stringValue: this.stringValue } };
+		}
 	};
 	/**
 	* @license
@@ -16185,8 +17624,7 @@
 	*
 	* Create a `FieldPath` by providing field names. If more than one field
 	* name is provided, the path will point to a nested field in a document.
-	*/
-	var FieldPath = class {
+	*/ var FieldPath = class {
 		/**
 		* Creates a `FieldPath` from the provided field names. If more than one field
 		* name is provided, the path will point to a nested field in a document.
@@ -16195,7 +17633,7 @@
 		*/
 		constructor(...t) {
 			for (let n = 0; n < t.length; ++n) if (0 === t[n].length) throw new e(ta.INVALID_ARGUMENT, "Invalid field name at argument $(i + 1). Field names must not be empty.");
-			this._internalPath = new Oe(t);
+			this._internalPath = new Me$1(t);
 		}
 		/**
 		* Returns true if this `FieldPath` is equal to the provided one.
@@ -16210,7 +17648,7 @@
 	* Returns a special sentinel `FieldPath` to refer to the ID of a document.
 	* It can be used in queries to sort or filter by the document ID.
 	*/ function documentId$1() {
-		return new FieldPath(Ce);
+		return new FieldPath(Fe);
 	}
 	/**
 	* @license
@@ -16326,6 +17764,101 @@
 	};
 	/**
 	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* Represents a 32-bit integer type in Firestore documents.
+	*
+	* @class Int32Value
+	*/
+	var Int32Value = class {
+		constructor(e) {
+			this.value = e;
+		}
+		/**
+		* Returns true if this `Int32Value` is equal to the provided one.
+		*
+		* @param other - The `Int32Value` to compare against.
+		* @return 'true' if this `Int32Value` is equal to the provided one.
+		*/ isEqual(e) {
+			return this.value === e.value;
+		}
+	};
+	/**
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* Represent a "Max Key" type in Firestore documents.
+	*
+	* @class MaxKey
+	*/ var MaxKey = class MaxKey {
+		constructor() {
+			/** A type string to uniquely identify instances of this class. */
+			this.type = "MaxKey";
+		}
+		static instance() {
+			return MaxKey.MAX_KEY_VALUE_INSTANCE || (MaxKey.MAX_KEY_VALUE_INSTANCE = new MaxKey()), MaxKey.MAX_KEY_VALUE_INSTANCE;
+		}
+	};
+	MaxKey.MAX_KEY_VALUE_INSTANCE = null;
+	/**
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* Represent a "Min Key" type in Firestore documents.
+	*
+	* @class MinKey
+	*/
+	var MinKey = class MinKey {
+		constructor() {
+			/** A type string to uniquely identify instances of this class. */
+			this.type = "MinKey";
+		}
+		static instance() {
+			return MinKey.MIN_KEY_VALUE_INSTANCE || (MinKey.MIN_KEY_VALUE_INSTANCE = new MinKey()), MinKey.MIN_KEY_VALUE_INSTANCE;
+		}
+	};
+	MinKey.MIN_KEY_VALUE_INSTANCE = null;
+	/**
+	* @license
 	* Copyright 2017 Google LLC
 	*
 	* Licensed under the Apache License, Version 2.0 (the "License");
@@ -16438,15 +17971,15 @@
 	};
 	var __PRIVATE_FirebaseAuthCredentialsProvider = class {
 		constructor(e) {
-			this.De = e, this.currentUser = User.UNAUTHENTICATED, this.xe = 0, this.forceRefresh = false, this.auth = null;
+			this.Qt = e, this.currentUser = User.UNAUTHENTICATED, this.qt = 0, this.forceRefresh = false, this.auth = null;
 		}
 		start(e, t) {
-			__PRIVATE_hardAssert(void 0 === this.Ce, 42304);
-			let n = this.xe;
-			const __PRIVATE_guardedChangeListener = (e) => this.xe !== n ? (n = this.xe, t(e)) : Promise.resolve();
+			__PRIVATE_hardAssert(void 0 === this.Kt, 42304);
+			let n = this.qt;
+			const __PRIVATE_guardedChangeListener = (e) => this.qt !== n ? (n = this.qt, t(e)) : Promise.resolve();
 			let r = new __PRIVATE_Deferred();
-			this.Ce = () => {
-				this.xe++, this.currentUser = this.Fe(), r.resolve(), r = new __PRIVATE_Deferred(), e.enqueueRetryable((() => __PRIVATE_guardedChangeListener(this.currentUser)));
+			this.Kt = () => {
+				this.qt++, this.currentUser = this.$t(), r.resolve(), r = new __PRIVATE_Deferred(), e.enqueueRetryable((() => __PRIVATE_guardedChangeListener(this.currentUser)));
 			};
 			const __PRIVATE_awaitNextToken = () => {
 				const t = r;
@@ -16454,52 +17987,52 @@
 					await t.promise, await __PRIVATE_guardedChangeListener(this.currentUser);
 				}));
 			}, __PRIVATE_registerAuth = (e) => {
-				__PRIVATE_logDebug("FirebaseAuthCredentialsProvider", "Auth detected"), this.auth = e, this.Ce && (this.auth.addAuthTokenListener(this.Ce), __PRIVATE_awaitNextToken());
+				__PRIVATE_logDebug("FirebaseAuthCredentialsProvider", "Auth detected"), this.auth = e, this.Kt && (this.auth.addAuthTokenListener(this.Kt), __PRIVATE_awaitNextToken());
 			};
-			this.De.onInit(((e) => __PRIVATE_registerAuth(e))), setTimeout((() => {
+			this.Qt.onInit(((e) => __PRIVATE_registerAuth(e))), setTimeout((() => {
 				if (!this.auth) {
-					const e = this.De.getImmediate({ optional: true });
+					const e = this.Qt.getImmediate({ optional: true });
 					e ? __PRIVATE_registerAuth(e) : (__PRIVATE_logDebug("FirebaseAuthCredentialsProvider", "Auth not yet detected"), r.resolve(), r = new __PRIVATE_Deferred());
 				}
 			}), 0), __PRIVATE_awaitNextToken();
 		}
 		getToken() {
-			const e = this.xe, t = this.forceRefresh;
-			return this.forceRefresh = false, this.auth ? this.auth.getToken(t).then(((t) => this.xe !== e ? (__PRIVATE_logDebug("FirebaseAuthCredentialsProvider", "getToken aborted due to token change."), this.getToken()) : t ? (__PRIVATE_hardAssert("string" == typeof t.accessToken, 31837, { Oe: t }), new __PRIVATE_OAuthToken(t.accessToken, this.currentUser)) : null)) : Promise.resolve(null);
+			const e = this.qt, t = this.forceRefresh;
+			return this.forceRefresh = false, this.auth ? this.auth.getToken(t).then(((t) => this.qt !== e ? (__PRIVATE_logDebug("FirebaseAuthCredentialsProvider", "getToken aborted due to token change."), this.getToken()) : t ? (__PRIVATE_hardAssert("string" == typeof t.accessToken, 31837, { Wt: t }), new __PRIVATE_OAuthToken(t.accessToken, this.currentUser)) : null)) : Promise.resolve(null);
 		}
 		invalidateToken() {
 			this.forceRefresh = true;
 		}
 		shutdown() {
-			this.auth && this.Ce && this.auth.removeAuthTokenListener(this.Ce), this.Ce = void 0;
+			this.auth && this.Kt && this.auth.removeAuthTokenListener(this.Kt), this.Kt = void 0;
 		}
-		Fe() {
+		$t() {
 			const e = this.auth && this.auth.getUid();
-			return __PRIVATE_hardAssert(null === e || "string" == typeof e, 2055, { Me: e }), new User(e);
+			return __PRIVATE_hardAssert(null === e || "string" == typeof e, 2055, { Gt: e }), new User(e);
 		}
 	};
 	var __PRIVATE_FirstPartyToken = class {
 		constructor(e, t, n) {
-			this.Ne = e, this.Le = t, this.Be = n, this.type = "FirstParty", this.user = User.FIRST_PARTY, this.Ue = /* @__PURE__ */ new Map();
+			this.jt = e, this.zt = t, this.Ht = n, this.type = "FirstParty", this.user = User.FIRST_PARTY, this.Jt = /* @__PURE__ */ new Map();
 		}
 		/**
 		* Gets an authorization token, using a provided factory function, or return
 		* null.
-		*/ ke() {
-			return this.Be ? this.Be() : null;
+		*/ Yt() {
+			return this.Ht ? this.Ht() : null;
 		}
 		get headers() {
-			this.Ue.set("X-Goog-AuthUser", this.Ne);
-			const e = this.ke();
-			return e && this.Ue.set("Authorization", e), this.Le && this.Ue.set("X-Goog-Iam-Authorization-Token", this.Le), this.Ue;
+			this.Jt.set("X-Goog-AuthUser", this.jt);
+			const e = this.Yt();
+			return e && this.Jt.set("Authorization", e), this.zt && this.Jt.set("X-Goog-Iam-Authorization-Token", this.zt), this.Jt;
 		}
 	};
 	var __PRIVATE_FirstPartyAuthCredentialsProvider = class {
 		constructor(e, t, n) {
-			this.Ne = e, this.Le = t, this.Be = n;
+			this.jt = e, this.zt = t, this.Ht = n;
 		}
 		getToken() {
-			return Promise.resolve(new __PRIVATE_FirstPartyToken(this.Ne, this.Le, this.Be));
+			return Promise.resolve(new __PRIVATE_FirstPartyToken(this.jt, this.zt, this.Ht));
 		}
 		start(e, t) {
 			e.enqueueRetryable((() => t(User.FIRST_PARTY)));
@@ -16514,38 +18047,38 @@
 	};
 	var __PRIVATE_FirebaseAppCheckTokenProvider = class {
 		constructor(e, t) {
-			this.qe = t, this.forceRefresh = false, this.appCheck = null, this.$e = null, this.Ke = null, _isFirebaseServerApp(e) && e.settings.appCheckToken && (this.Ke = e.settings.appCheckToken);
+			this.Zt = t, this.forceRefresh = false, this.appCheck = null, this.Xt = null, this.en = null, _isFirebaseServerApp(e) && e.settings.appCheckToken && (this.en = e.settings.appCheckToken);
 		}
 		start(e, t) {
-			__PRIVATE_hardAssert(void 0 === this.Ce, 3512);
+			__PRIVATE_hardAssert(void 0 === this.Kt, 3512);
 			const onTokenChanged = (e) => {
 				null != e.error && __PRIVATE_logDebug("FirebaseAppCheckTokenProvider", `Error getting App Check token; using placeholder token instead. Error: ${e.error.message}`);
-				const n = e.token !== this.$e;
-				return this.$e = e.token, __PRIVATE_logDebug("FirebaseAppCheckTokenProvider", `Received ${n ? "new" : "existing"} token.`), n ? t(e.token) : Promise.resolve();
+				const n = e.token !== this.Xt;
+				return this.Xt = e.token, __PRIVATE_logDebug("FirebaseAppCheckTokenProvider", `Received ${n ? "new" : "existing"} token.`), n ? t(e.token) : Promise.resolve();
 			};
-			this.Ce = (t) => {
+			this.Kt = (t) => {
 				e.enqueueRetryable((() => onTokenChanged(t)));
 			};
 			const __PRIVATE_registerAppCheck = (e) => {
-				__PRIVATE_logDebug("FirebaseAppCheckTokenProvider", "AppCheck detected"), this.appCheck = e, this.Ce && this.appCheck.addTokenListener(this.Ce);
+				__PRIVATE_logDebug("FirebaseAppCheckTokenProvider", "AppCheck detected"), this.appCheck = e, this.Kt && this.appCheck.addTokenListener(this.Kt);
 			};
-			this.qe.onInit(((e) => __PRIVATE_registerAppCheck(e))), setTimeout((() => {
+			this.Zt.onInit(((e) => __PRIVATE_registerAppCheck(e))), setTimeout((() => {
 				if (!this.appCheck) {
-					const e = this.qe.getImmediate({ optional: true });
+					const e = this.Zt.getImmediate({ optional: true });
 					e ? __PRIVATE_registerAppCheck(e) : __PRIVATE_logDebug("FirebaseAppCheckTokenProvider", "AppCheck not yet detected");
 				}
 			}), 0);
 		}
 		getToken() {
-			if (this.Ke) return Promise.resolve(new AppCheckToken(this.Ke));
+			if (this.en) return Promise.resolve(new AppCheckToken(this.en));
 			const e = this.forceRefresh;
-			return this.forceRefresh = false, this.appCheck ? this.appCheck.getToken(e).then(((e) => e ? (__PRIVATE_hardAssert("string" == typeof e.token, 44558, { tokenResult: e }), this.$e = e.token, new AppCheckToken(e.token)) : null)) : Promise.resolve(null);
+			return this.forceRefresh = false, this.appCheck ? this.appCheck.getToken(e).then(((e) => e ? (__PRIVATE_hardAssert("string" == typeof e.token, 44558, { tokenResult: e }), this.Xt = e.token, new AppCheckToken(e.token)) : null)) : Promise.resolve(null);
 		}
 		invalidateToken() {
 			this.forceRefresh = true;
 		}
 		shutdown() {
-			this.appCheck && this.Ce && this.appCheck.removeTokenListener(this.Ce), this.Ce = void 0;
+			this.appCheck && this.Kt && this.appCheck.removeTokenListener(this.Kt), this.Kt = void 0;
 		}
 	};
 	/**
@@ -16576,7 +18109,7 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/ var __PRIVATE_NoopConnectivityMonitor = class {
-		Qe(e) {}
+		tn(e) {}
 		shutdown() {}
 	};
 	/**
@@ -16595,32 +18128,32 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	const ht = "ConnectivityMonitor";
+	const qt = "ConnectivityMonitor";
 	/**
 	* Browser implementation of ConnectivityMonitor.
 	*/ var __PRIVATE_BrowserConnectivityMonitor = class {
 		constructor() {
-			this.We = () => this.Ge(), this.ze = () => this.je(), this.He = [], this.Je();
+			this.nn = () => this.rn(), this.sn = () => this._n(), this.an = [], this.un();
 		}
-		Qe(e) {
-			this.He.push(e);
+		tn(e) {
+			this.an.push(e);
 		}
 		shutdown() {
-			window.removeEventListener("online", this.We), window.removeEventListener("offline", this.ze);
+			window.removeEventListener("online", this.nn), window.removeEventListener("offline", this.sn);
 		}
-		Je() {
-			window.addEventListener("online", this.We), window.addEventListener("offline", this.ze);
+		un() {
+			window.addEventListener("online", this.nn), window.addEventListener("offline", this.sn);
 		}
-		Ge() {
-			__PRIVATE_logDebug(ht, "Network connectivity changed: AVAILABLE");
-			for (const e of this.He) e(0);
+		rn() {
+			__PRIVATE_logDebug(qt, "Network connectivity changed: AVAILABLE");
+			for (const e of this.an) e(0);
 		}
-		je() {
-			__PRIVATE_logDebug(ht, "Network connectivity changed: UNAVAILABLE");
-			for (const e of this.He) e(1);
+		_n() {
+			__PRIVATE_logDebug(qt, "Network connectivity changed: UNAVAILABLE");
+			for (const e of this.an) e(1);
 		}
 		/** Checks that all used attributes of window are available. */
-		static Ye() {
+		static cn() {
 			return "undefined" != typeof window && void 0 !== window.addEventListener && void 0 !== window.removeEventListener;
 		}
 	};
@@ -16643,7 +18176,7 @@
 	/**
 	* The value returned from the most recent invocation of
 	* `generateUniqueDebugId()`, or null if it has never been invoked.
-	*/ let Tt = null;
+	*/ let Kt = null;
 	/**
 	* Generates and returns an initial value for `lastUniqueDebugId`.
 	*
@@ -16667,9 +18200,9 @@
 	* @returns the 10-character generated ID (e.g. "0xa1b2c3d4").
 	*/
 	function __PRIVATE_generateUniqueDebugId() {
-		return null === Tt ? Tt = function __PRIVATE_generateInitialUniqueDebugId() {
+		return null === Kt ? Kt = function __PRIVATE_generateInitialUniqueDebugId() {
 			return 268435456 + Math.round(2147483648 * Math.random());
-		}() : Tt++, "0x" + Tt.toString(16);
+		}() : Kt++, "0x" + Kt.toString(16);
 	}
 	/**
 	* @license
@@ -16686,7 +18219,8 @@
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const Pt = "RestConnection", It = {
+	*/ const $t = "RestConnection";
+	const Wt = {
 		BatchGetDocuments: "batchGet",
 		Commit: "commit",
 		RunQuery: "runQuery",
@@ -16703,41 +18237,41 @@
 	* HTTP).
 	*/
 	var __PRIVATE_RestConnection = class {
-		get Ze() {
+		get En() {
 			return false;
 		}
 		constructor(e) {
 			this.databaseInfo = e, this.databaseId = e.databaseId;
 			const t = e.ssl ? "https" : "http", n = encodeURIComponent(this.databaseId.projectId), r = encodeURIComponent(this.databaseId.database);
-			this.Xe = t + "://" + e.host, this.et = `projects/${n}/databases/${r}`, this.tt = this.databaseId.database === $e ? `project_id=${n}` : `project_id=${n}&database_id=${r}`;
+			this.hn = t + "://" + e.host, this.Tn = `projects/${n}/databases/${r}`, this.Pn = this.databaseId.database === Ke ? `project_id=${n}` : `project_id=${n}&database_id=${r}`;
 		}
-		nt(e, t, n, r, i) {
-			const s = __PRIVATE_generateUniqueDebugId(), _ = this.rt(e, t.toUriEncodedString());
-			__PRIVATE_logDebug(Pt, `Sending RPC '${e}' ${s}:`, _, n);
+		In(e, t, n, r, i) {
+			const s = __PRIVATE_generateUniqueDebugId(), _ = this.Rn(e, t.toUriEncodedString());
+			__PRIVATE_logDebug($t, `Sending RPC '${e}' ${s}:`, _, n);
 			const o = {
-				"google-cloud-resource-prefix": this.et,
-				"x-goog-request-params": this.tt
+				"google-cloud-resource-prefix": this.Tn,
+				"x-goog-request-params": this.Pn
 			};
-			this.it(o, r, i);
+			this.An(o, r, i);
 			const { host: a } = new URL(_), u = isCloudWorkstation(a);
-			return this.st(e, _, o, n, u).then(((t) => (__PRIVATE_logDebug(Pt, `Received RPC '${e}' ${s}: `, t), t)), ((t) => {
-				throw __PRIVATE_logWarn(Pt, `RPC '${e}' ${s} failed with error: `, t, "url: ", _, "request:", n), t;
+			return this.Vn(e, _, o, n, u).then(((t) => (__PRIVATE_logDebug($t, `Received RPC '${e}' ${s}: `, t), t)), ((t) => {
+				throw __PRIVATE_logWarn($t, `RPC '${e}' ${s} failed with error: `, t, "url: ", _, "request:", n), t;
 			}));
 		}
-		_t(e, t, n, r, i, s) {
-			return this.nt(e, t, n, r, i);
+		fn(e, t, n, r, i, s) {
+			return this.In(e, t, n, r, i);
 		}
 		/**
 		* Modifies the headers for a request, adding any authorization token if
 		* present and any additional headers for the request.
-		*/ it(e, t, n) {
+		*/ An(e, t, n) {
 			if (e["X-Goog-Api-Client"] = function __PRIVATE_getGoogApiClientValue() {
-				return "gl-js/ fire/" + Se;
+				return "gl-js/ fire/" + xe;
 			}(), e["Content-Type"] = "text/plain", this.databaseInfo.appId && (e["X-Firebase-GMPID"] = this.databaseInfo.appId), t && t.headers.forEach(((t, n) => e[n] = t)), n && n.headers.forEach(((t, n) => e[n] = t)), this.databaseInfo._customHeaders) for (const t of Object.keys(this.databaseInfo._customHeaders)) e[t] = this.databaseInfo._customHeaders[t];
 		}
-		rt(e, t) {
-			const n = It[e];
-			let r = `${this.Xe}/v1/${t}:${n}`;
+		Rn(e, t) {
+			const n = Wt[e];
+			let r = `${this.hn}/v1/${t}:${n}`;
 			return this.databaseInfo.apiKey && (r = `${r}?key=${encodeURIComponent(this.databaseInfo.apiKey)}`), r;
 		}
 		/**
@@ -16768,37 +18302,37 @@
 	* interface. The stream callbacks are invoked with the callOn... methods.
 	*/ var __PRIVATE_StreamBridge = class {
 		constructor(e) {
-			this.ot = e.ot, this.ut = e.ut;
+			this.dn = e.dn, this.mn = e.mn;
 		}
-		ct(e) {
-			this.lt = e;
+		pn(e) {
+			this.gn = e;
 		}
-		Et(e) {
-			this.ht = e;
+		yn(e) {
+			this.wn = e;
 		}
-		Tt(e) {
-			this.Pt = e;
+		bn(e) {
+			this.Sn = e;
 		}
 		onMessage(e) {
-			this.It = e;
+			this.xn = e;
 		}
 		close() {
-			this.ut();
+			this.mn();
 		}
 		send(e) {
-			this.ot(e);
+			this.dn(e);
 		}
-		Rt() {
-			this.lt();
+		vn() {
+			this.gn();
 		}
-		At() {
-			this.ht();
+		Dn() {
+			this.wn();
 		}
-		Vt(e) {
-			this.Pt(e);
+		Cn(e) {
+			this.Sn(e);
 		}
-		dt(e) {
-			this.It(e);
+		Fn(e) {
+			this.xn(e);
 		}
 	};
 	/**
@@ -16816,7 +18350,8 @@
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const Rt = "WebChannelConnection", __PRIVATE_unguardedEventListen = (e, t, n) => {
+	*/ const Gt = "WebChannelConnection";
+	const __PRIVATE_unguardedEventListen = (e, t, n) => {
 		e.listen(t, ((e) => {
 			try {
 				n(e);
@@ -16829,17 +18364,20 @@
 	};
 	var __PRIVATE_WebChannelConnection = class __PRIVATE_WebChannelConnection extends __PRIVATE_RestConnection {
 		constructor(e) {
-			super(e), this.ft = [], this.forceLongPolling = e.forceLongPolling, this.autoDetectLongPolling = e.autoDetectLongPolling, this.useFetchStreams = e.useFetchStreams, this.longPollingOptions = e.longPollingOptions;
+			super(e), this.On = [], this.forceLongPolling = e.forceLongPolling, this.autoDetectLongPolling = e.autoDetectLongPolling, this.useFetchStreams = e.useFetchStreams, this.longPollingOptions = e.longPollingOptions;
 		}
 		/**
 		* Initialize STAT_EVENT listener once. Subsequent calls are a no-op.
 		* getStatEventTarget() returns the same target every time.
-		*/ static gt() {
-			if (!__PRIVATE_WebChannelConnection.yt) __PRIVATE_unguardedEventListen(getStatEventTarget(), Event$1.STAT_EVENT, ((e) => {
-				e.stat === Stat.PROXY ? __PRIVATE_logDebug(Rt, "STAT_EVENT: detected buffering proxy") : e.stat === Stat.NOPROXY && __PRIVATE_logDebug(Rt, "STAT_EVENT: detected no buffering proxy");
-			})), __PRIVATE_WebChannelConnection.yt = true;
+		*/ static Mn() {
+			if (!__PRIVATE_WebChannelConnection.Nn) {
+				const e = getStatEventTarget();
+				__PRIVATE_unguardedEventListen(e, Event$1.STAT_EVENT, ((e) => {
+					e.stat === Stat.PROXY ? __PRIVATE_logDebug(Gt, "STAT_EVENT: detected buffering proxy") : e.stat === Stat.NOPROXY && __PRIVATE_logDebug(Gt, "STAT_EVENT: detected no buffering proxy");
+				})), __PRIVATE_WebChannelConnection.Nn = true;
+			}
 		}
-		st(t, n, r, i, s) {
+		Vn(t, n, r, i, s) {
 			const _ = __PRIVATE_generateUniqueDebugId();
 			return new Promise(((s, o) => {
 				const a = new XhrIo();
@@ -16848,14 +18386,14 @@
 						switch (a.getLastErrorCode()) {
 							case ErrorCode.NO_ERROR:
 								const n = a.getResponseJson();
-								__PRIVATE_logDebug(Rt, `XHR for RPC '${t}' ${_} received:`, JSON.stringify(n)), s(n);
+								__PRIVATE_logDebug(Gt, `XHR for RPC '${t}' ${_} received:`, JSON.stringify(n)), s(n);
 								break;
 							case ErrorCode.TIMEOUT:
-								__PRIVATE_logDebug(Rt, `RPC '${t}' ${_} timed out`), o(new e(ta.DEADLINE_EXCEEDED, "Request time out"));
+								__PRIVATE_logDebug(Gt, `RPC '${t}' ${_} timed out`), o(new e(ta.DEADLINE_EXCEEDED, "Request time out"));
 								break;
 							case ErrorCode.HTTP_ERROR:
 								const r = a.getStatus();
-								if (__PRIVATE_logDebug(Rt, `RPC '${t}' ${_} failed with status:`, r, "response text:", a.getResponseText()), r > 0) {
+								if (__PRIVATE_logDebug(Gt, `RPC '${t}' ${_} failed with status:`, r, "response text:", a.getResponseText()), r > 0) {
 									let t = a.getResponseJson();
 									Array.isArray(t) && (t = t[0]);
 									const n = t?.error;
@@ -16867,23 +18405,23 @@
 								} else o(new e(ta.UNAVAILABLE, "Connection failed."));
 								break;
 							default: l(9055, {
-								wt: t,
+								Bn: t,
 								streamId: _,
-								bt: a.getLastErrorCode(),
-								St: a.getLastError()
+								Ln: a.getLastErrorCode(),
+								Un: a.getLastError()
 							});
 						}
 					} finally {
-						__PRIVATE_logDebug(Rt, `RPC '${t}' ${_} completed.`);
+						__PRIVATE_logDebug(Gt, `RPC '${t}' ${_} completed.`);
 					}
 				}));
 				const u = JSON.stringify(i);
-				__PRIVATE_logDebug(Rt, `RPC '${t}' ${_} sending request:`, i), a.send(n, "POST", u, r, 15);
+				__PRIVATE_logDebug(Gt, `RPC '${t}' ${_} sending request:`, i), a.send(n, "POST", u, r, 15);
 			}));
 		}
-		vt(t, n, r) {
+		kn(t, n, r) {
 			const i = __PRIVATE_generateUniqueDebugId(), s = [
-				this.Xe,
+				this.hn,
 				"/",
 				"google.firestore.v1.Firestore",
 				"/",
@@ -16899,65 +18437,65 @@
 				forceLongPolling: this.forceLongPolling,
 				detectBufferingProxy: this.autoDetectLongPolling
 			}, a = this.longPollingOptions.timeoutSeconds;
-			void 0 !== a && (o.longPollingTimeout = Math.round(1e3 * a)), this.useFetchStreams && (o.useFetchStreams = true), this.it(o.initMessageHeaders, n, r), o.encodeInitMessageHeaders = true;
+			void 0 !== a && (o.longPollingTimeout = Math.round(1e3 * a)), this.useFetchStreams && (o.useFetchStreams = true), this.An(o.initMessageHeaders, n, r), o.encodeInitMessageHeaders = true;
 			const u = s.join("");
-			__PRIVATE_logDebug(Rt, `Creating RPC '${t}' stream ${i}: ${u}`, o);
+			__PRIVATE_logDebug(Gt, `Creating RPC '${t}' stream ${i}: ${u}`, o);
 			const c = _.createWebChannel(u, o);
-			this.Dt(c);
+			this.Qn(c);
 			let l = false, E = false;
 			const h = new __PRIVATE_StreamBridge({
-				ot: (e) => {
-					E ? __PRIVATE_logDebug(Rt, `Not sending because RPC '${t}' stream ${i} is closed:`, e) : (l || (__PRIVATE_logDebug(Rt, `Opening RPC '${t}' stream ${i} transport.`), c.open(), l = true), __PRIVATE_logDebug(Rt, `RPC '${t}' stream ${i} sending:`, e), c.send(e));
+				dn: (e) => {
+					E ? __PRIVATE_logDebug(Gt, `Not sending because RPC '${t}' stream ${i} is closed:`, e) : (l || (__PRIVATE_logDebug(Gt, `Opening RPC '${t}' stream ${i} transport.`), c.open(), l = true), __PRIVATE_logDebug(Gt, `RPC '${t}' stream ${i} sending:`, e), c.send(e));
 				},
-				ut: () => c.close()
+				mn: () => c.close()
 			});
 			return __PRIVATE_unguardedEventListen(c, WebChannel.EventType.OPEN, (() => {
-				E || (__PRIVATE_logDebug(Rt, `RPC '${t}' stream ${i} transport opened.`), h.Rt());
+				E || (__PRIVATE_logDebug(Gt, `RPC '${t}' stream ${i} transport opened.`), h.vn());
 			})), __PRIVATE_unguardedEventListen(c, WebChannel.EventType.CLOSE, (() => {
-				E || (E = !0, __PRIVATE_logDebug(Rt, `RPC '${t}' stream ${i} transport closed`), h.Vt(), this.xt(c));
+				E || (E = !0, __PRIVATE_logDebug(Gt, `RPC '${t}' stream ${i} transport closed`), h.Cn(), this.qn(c));
 			})), __PRIVATE_unguardedEventListen(c, WebChannel.EventType.ERROR, ((n) => {
-				E || (E = !0, __PRIVATE_logWarn(Rt, `RPC '${t}' stream ${i} transport errored. Name:`, n.name, "Message:", n.message), h.Vt(new e(ta.UNAVAILABLE, "The operation could not be completed")));
+				E || (E = !0, __PRIVATE_logWarn(Gt, `RPC '${t}' stream ${i} transport errored. Name:`, n.name, "Message:", n.message), h.Cn(new e(ta.UNAVAILABLE, "The operation could not be completed")));
 			})), __PRIVATE_unguardedEventListen(c, WebChannel.EventType.MESSAGE, ((n) => {
 				if (!E) {
 					const r = n.data[0];
 					__PRIVATE_hardAssert(!!r, 16349);
 					const s = r, _ = s?.error || s[0]?.error;
 					if (_) {
-						__PRIVATE_logDebug(Rt, `RPC '${t}' stream ${i} received error:`, _);
+						__PRIVATE_logDebug(Gt, `RPC '${t}' stream ${i} received error:`, _);
 						const n = _.status;
 						let r = function __PRIVATE_mapCodeFromRpcStatus(e) {
-							const t = et[e];
+							const t = xt[e];
 							if (void 0 !== t) return __PRIVATE_mapCodeFromRpcCode(t);
 						}(n), s = _.message;
-						"NOT_FOUND" === n && s.includes("database") && s.includes("does not exist") && s.includes(this.databaseId.database) && __PRIVATE_logWarn(`Database '${this.databaseId.database}' not found. Please check your project configuration.`), void 0 === r && (r = ta.INTERNAL, s = "Unknown error status: " + n + " with message " + _.message), E = !0, h.Vt(new e(r, s)), c.close();
-					} else __PRIVATE_logDebug(Rt, `RPC '${t}' stream ${i} received:`, r), h.dt(r);
+						"NOT_FOUND" === n && s.includes("database") && s.includes("does not exist") && s.includes(this.databaseId.database) && __PRIVATE_logWarn(`Database '${this.databaseId.database}' not found. Please check your project configuration.`), void 0 === r && (r = ta.INTERNAL, s = "Unknown error status: " + n + " with message " + _.message), E = !0, h.Cn(new e(r, s)), c.close();
+					} else __PRIVATE_logDebug(Gt, `RPC '${t}' stream ${i} received:`, r), h.Fn(r);
 				}
-			})), __PRIVATE_WebChannelConnection.gt(), setTimeout((() => {
-				h.At();
+			})), __PRIVATE_WebChannelConnection.Mn(), setTimeout((() => {
+				h.Dn();
 			}), 0), h;
 		}
 		/**
 		* Closes and cleans up any resources associated with the connection.
 		*/ terminate() {
-			this.ft.forEach(((e) => e.close())), this.ft = [];
+			this.On.forEach(((e) => e.close())), this.On = [];
 		}
 		/**
 		* Add a WebChannel instance to the collection of open instances.
 		* @param webChannel
-		*/ Dt(e) {
-			this.ft.push(e);
+		*/ Qn(e) {
+			this.On.push(e);
 		}
 		/**
 		* Remove a WebChannel instance from the collection of open instances.
 		* @param webChannel
-		*/ xt(e) {
-			this.ft = this.ft.filter(((t) => t === e));
+		*/ qn(e) {
+			this.On = this.On.filter(((t) => t === e));
 		}
 		/**
 		* Modifies the headers for a request, adding the api key if present,
 		* and then calling super.modifyHeadersForRequest
-		*/ it(e, t, n) {
-			super.it(e, t, n), this.databaseInfo.apiKey && (e["x-goog-api-key"] = this.databaseInfo.apiKey);
+		*/ An(e, t, n) {
+			super.An(e, t, n), this.databaseInfo.apiKey && (e["x-goog-api-key"] = this.databaseInfo.apiKey);
 		}
 		/**
 		* Wrapped for mocking.
@@ -16989,7 +18527,7 @@
 	function __PRIVATE_newConnection(e) {
 		return new __PRIVATE_WebChannelConnection(e);
 	}
-	/** Return the Platform-specific connectivity monitor. */ __PRIVATE_WebChannelConnection.yt = false;
+	/** Return the Platform-specific connectivity monitor. */ __PRIVATE_WebChannelConnection.Nn = false;
 	/**
 	* A helper for running delayed tasks following an exponential backoff curve
 	* between attempts.
@@ -17001,7 +18539,7 @@
 	*/
 	var __PRIVATE_ExponentialBackoff = class {
 		constructor(e, t, n = 1e3, r = 1.5, i = 6e4) {
-			this.Ct = e, this.timerId = t, this.Ft = n, this.Ot = r, this.Mt = i, this.Nt = 0, this.Lt = null, this.Bt = Date.now(), this.reset();
+			this.Kn = e, this.timerId = t, this.$n = n, this.Wn = r, this.Gn = i, this.jn = 0, this.zn = null, this.Hn = Date.now(), this.reset();
 		}
 		/**
 		* Resets the backoff delay.
@@ -17010,31 +18548,31 @@
 		* (i.e. due to an error), initialDelayMs (plus jitter) will be used, and
 		* subsequent ones will increase according to the backoffFactor.
 		*/ reset() {
-			this.Nt = 0;
+			this.jn = 0;
 		}
 		/**
 		* Resets the backoff delay to the maximum delay (e.g. for use after a
 		* RESOURCE_EXHAUSTED error).
-		*/ Ut() {
-			this.Nt = this.Mt;
+		*/ Jn() {
+			this.jn = this.Gn;
 		}
 		/**
 		* Returns a promise that resolves after currentDelayMs, and increases the
 		* delay for any subsequent attempts. If there was a pending backoff operation
 		* already, it will be canceled.
-		*/ kt(e) {
+		*/ Yn(e) {
 			this.cancel();
-			const t = Math.floor(this.Nt + this.qt()), n = Math.max(0, Date.now() - this.Bt), r = Math.max(0, t - n);
-			r > 0 && __PRIVATE_logDebug("ExponentialBackoff", `Backing off for ${r} ms (base delay: ${this.Nt} ms, delay with jitter: ${t} ms, last attempt: ${n} ms ago)`), this.Lt = this.Ct.enqueueAfterDelay(this.timerId, r, (() => (this.Bt = Date.now(), e()))), this.Nt *= this.Ot, this.Nt < this.Ft && (this.Nt = this.Ft), this.Nt > this.Mt && (this.Nt = this.Mt);
+			const t = Math.floor(this.jn + this.Zn()), n = Math.max(0, Date.now() - this.Hn), r = Math.max(0, t - n);
+			r > 0 && __PRIVATE_logDebug("ExponentialBackoff", `Backing off for ${r} ms (base delay: ${this.jn} ms, delay with jitter: ${t} ms, last attempt: ${n} ms ago)`), this.zn = this.Kn.enqueueAfterDelay(this.timerId, r, (() => (this.Hn = Date.now(), e()))), this.jn *= this.Wn, this.jn < this.$n && (this.jn = this.$n), this.jn > this.Gn && (this.jn = this.Gn);
 		}
-		$t() {
-			null !== this.Lt && (this.Lt.skipDelay(), this.Lt = null);
+		Xn() {
+			null !== this.zn && (this.zn.skipDelay(), this.zn = null);
 		}
 		cancel() {
-			null !== this.Lt && (this.Lt.cancel(), this.Lt = null);
+			null !== this.zn && (this.zn.cancel(), this.zn = null);
 		}
-		/** Returns a random value in the range [-currentBaseMs/2, currentBaseMs/2] */ qt() {
-			return (Math.random() - .5) * this.Nt;
+		/** Returns a random value in the range [-currentBaseMs/2, currentBaseMs/2] */ Zn() {
+			return (Math.random() - .5) * this.jn;
 		}
 	};
 	/**
@@ -17052,7 +18590,7 @@
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const At = "PersistentStream";
+	*/ const jt = "PersistentStream";
 	/** The time a stream stays open after it is marked idle. */
 	/**
 	* A PersistentStream is an abstract base class that represents a streaming RPC
@@ -17088,7 +18626,7 @@
 	*/
 	var __PRIVATE_PersistentStream = class {
 		constructor(e, t, n, r, i, s, _, o) {
-			this.Ct = e, this.Kt = n, this.Qt = r, this.connection = i, this.authCredentialsProvider = s, this.appCheckCredentialsProvider = _, this.listener = o, this.state = 0, this.Wt = 0, this.Gt = null, this.zt = null, this.stream = null, this.jt = 0, this.Ht = new __PRIVATE_ExponentialBackoff(e, t);
+			this.Kn = e, this.er = n, this.tr = r, this.connection = i, this.authCredentialsProvider = s, this.appCheckCredentialsProvider = _, this.listener = o, this.state = 0, this.nr = 0, this.rr = null, this.ir = null, this.stream = null, this.sr = 0, this._r = new __PRIVATE_ExponentialBackoff(e, t);
 		}
 		/**
 		* Returns true if start() has been called and no error has occurred. True
@@ -17096,13 +18634,13 @@
 		* encompasses respecting backoff, getting auth tokens, and starting the
 		* actual RPC). Use isOpen() to determine if the stream is open and ready for
 		* outbound requests.
-		*/ Jt() {
-			return 1 === this.state || 5 === this.state || this.Yt();
+		*/ ar() {
+			return 1 === this.state || 5 === this.state || this.ur();
 		}
 		/**
 		* Returns true if the underlying RPC is open (the onOpen() listener has been
 		* called) and the stream is ready for outbound requests.
-		*/ Yt() {
+		*/ ur() {
 			return 2 === this.state || 3 === this.state;
 		}
 		/**
@@ -17112,7 +18650,7 @@
 		*
 		* When start returns, isStarted() will return true.
 		*/ start() {
-			this.jt = 0, 4 !== this.state ? this.auth() : this.Zt();
+			this.sr = 0, 4 !== this.state ? this.auth() : this.cr();
 		}
 		/**
 		* Stops the RPC. This call is idempotent and allowed regardless of the
@@ -17120,7 +18658,7 @@
 		*
 		* When stop returns, isStarted() and isOpen() will both return false.
 		*/ async stop() {
-			this.Jt() && await this.close(0);
+			this.ar() && await this.close(0);
 		}
 		/**
 		* After an error the stream will usually back off on the next attempt to
@@ -17129,8 +18667,8 @@
 		*
 		* Each error will call the onClose() listener. That function can decide to
 		* inhibit backoff if required.
-		*/ Xt() {
-			this.state = 0, this.Ht.reset();
+		*/ lr() {
+			this.state = 0, this._r.reset();
 		}
 		/**
 		* Marks this stream as idle. If no further actions are performed on the
@@ -17141,20 +18679,20 @@
 		*
 		* Only streams that are in state 'Open' can be marked idle, as all other
 		* states imply pending network operations.
-		*/ en() {
-			this.Yt() && null === this.Gt && (this.Gt = this.Ct.enqueueAfterDelay(this.Kt, 6e4, (() => this.tn())));
+		*/ Er() {
+			this.ur() && null === this.rr && (this.rr = this.Kn.enqueueAfterDelay(this.er, 6e4, (() => this.hr())));
 		}
-		/** Sends a message to the underlying stream. */ nn(e) {
-			this.rn(), this.stream.send(e);
+		/** Sends a message to the underlying stream. */ Tr(e) {
+			this.Pr(), this.stream.send(e);
 		}
-		/** Called by the idle timer when the stream should close due to inactivity. */ async tn() {
-			if (this.Yt()) return this.close(0);
+		/** Called by the idle timer when the stream should close due to inactivity. */ async hr() {
+			if (this.ur()) return this.close(0);
 		}
-		/** Marks the stream as active again. */ rn() {
-			this.Gt && (this.Gt.cancel(), this.Gt = null);
+		/** Marks the stream as active again. */ Pr() {
+			this.rr && (this.rr.cancel(), this.rr = null);
 		}
-		/** Cancels the health check delayed operation. */ sn() {
-			this.zt && (this.zt.cancel(), this.zt = null);
+		/** Cancels the health check delayed operation. */ Ir() {
+			this.ir && (this.ir.cancel(), this.ir = null);
 		}
 		/**
 		* Closes the stream and cleans up as necessary:
@@ -17169,52 +18707,52 @@
 		* @param finalState - the intended state of the stream after closing.
 		* @param error - the error the connection was closed with.
 		*/ async close(e, t) {
-			this.rn(), this.sn(), this.Ht.cancel(), this.Wt++, 4 !== e ? this.Ht.reset() : t && t.code === ta.RESOURCE_EXHAUSTED ? (__PRIVATE_logError(t.toString()), __PRIVATE_logError("Using maximum backoff delay to prevent overloading the backend."), this.Ht.Ut()) : t && t.code === ta.UNAUTHENTICATED && 3 !== this.state && (this.authCredentialsProvider.invalidateToken(), this.appCheckCredentialsProvider.invalidateToken()), null !== this.stream && (this._n(), this.stream.close(), this.stream = null), this.state = e, await this.listener.Tt(t);
+			this.Pr(), this.Ir(), this._r.cancel(), this.nr++, 4 !== e ? this._r.reset() : t && t.code === ta.RESOURCE_EXHAUSTED ? (__PRIVATE_logError(t.toString()), __PRIVATE_logError("Using maximum backoff delay to prevent overloading the backend."), this._r.Jn()) : t && t.code === ta.UNAUTHENTICATED && 3 !== this.state && (this.authCredentialsProvider.invalidateToken(), this.appCheckCredentialsProvider.invalidateToken()), null !== this.stream && (this.Rr(), this.stream.close(), this.stream = null), this.state = e, await this.listener.bn(t);
 		}
 		/**
 		* Can be overridden to perform additional cleanup before the stream is closed.
 		* Calling super.tearDown() is not required.
-		*/ _n() {}
+		*/ Rr() {}
 		auth() {
 			this.state = 1;
-			const t = this.an(this.Wt), n = this.Wt;
+			const t = this.Ar(this.nr), n = this.nr;
 			Promise.all([this.authCredentialsProvider.getToken(), this.appCheckCredentialsProvider.getToken()]).then((([e, t]) => {
-				this.Wt === n && this.un(e, t);
+				this.nr === n && this.Vr(e, t);
 			}), ((n) => {
 				t((() => {
 					const t = new e(ta.UNKNOWN, "Fetching auth token failed: " + n.message);
-					return this.cn(t);
+					return this.dr(t);
 				}));
 			}));
 		}
-		un(e, t) {
-			const n = this.an(this.Wt);
-			this.stream = this.En(e, t), this.stream.ct((() => {
-				n((() => this.listener.ct()));
-			})), this.stream.Et((() => {
-				n((() => (this.state = 2, this.zt = this.Ct.enqueueAfterDelay(this.Qt, 1e4, (() => (this.Yt() && (this.state = 3), Promise.resolve()))), this.listener.Et())));
-			})), this.stream.Tt(((e) => {
-				n((() => this.cn(e)));
+		Vr(e, t) {
+			const n = this.Ar(this.nr);
+			this.stream = this.mr(e, t), this.stream.pn((() => {
+				n((() => this.listener.pn()));
+			})), this.stream.yn((() => {
+				n((() => (this.state = 2, this.ir = this.Kn.enqueueAfterDelay(this.tr, 1e4, (() => (this.ur() && (this.state = 3), Promise.resolve()))), this.listener.yn())));
+			})), this.stream.bn(((e) => {
+				n((() => this.dr(e)));
 			})), this.stream.onMessage(((e) => {
-				n((() => 1 == ++this.jt ? this.hn(e) : this.onNext(e)));
+				n((() => 1 == ++this.sr ? this.pr(e) : this.onNext(e)));
 			}));
 		}
-		Zt() {
-			this.state = 5, this.Ht.kt((async () => {
+		cr() {
+			this.state = 5, this._r.Yn((async () => {
 				this.state = 0, this.start();
 			}));
 		}
-		cn(e) {
-			return __PRIVATE_logDebug(At, `close with error: ${e}`), this.stream = null, this.close(4, e);
+		dr(e) {
+			return __PRIVATE_logDebug(jt, `close with error: ${e}`), this.stream = null, this.close(4, e);
 		}
 		/**
 		* Returns a "dispatcher" function that dispatches operations onto the
 		* AsyncQueue but only runs them if closeCount remains unchanged. This allows
 		* us to turn auth / stream callbacks into no-ops if the stream is closed /
 		* re-opened, etc.
-		*/ an(e) {
+		*/ Ar(e) {
 			return (t) => {
-				this.Ct.enqueueAndForget((() => this.Wt === e ? t() : (__PRIVATE_logDebug(At, "stream callback skipped by getCloseGuardedDispatcher."), Promise.resolve())));
+				this.Kn.enqueueAndForget((() => this.nr === e ? t() : (__PRIVATE_logDebug(jt, "stream callback skipped by getCloseGuardedDispatcher."), Promise.resolve())));
 			};
 		}
 	};
@@ -17228,32 +18766,32 @@
 		constructor(e, t, n, r, i, s) {
 			super(e, "listen_stream_connection_backoff", "listen_stream_idle", "health_check_timeout", t, n, r, s), this.serializer = i;
 		}
-		En(e, t) {
-			return this.connection.vt("Listen", e, t);
+		mr(e, t) {
+			return this.connection.kn("Listen", e, t);
 		}
-		hn(e) {
+		pr(e) {
 			return this.onNext(e);
 		}
 		onNext(e) {
-			this.Ht.reset();
+			this._r.reset();
 			const t = __PRIVATE_fromWatchChange(this.serializer, e), n = function __PRIVATE_versionFromListenResponse(e) {
 				if (!("targetChange" in e)) return SnapshotVersion.min();
 				const t = e.targetChange;
 				return t.targetIds && t.targetIds.length ? SnapshotVersion.min() : t.readTime ? __PRIVATE_fromVersion(t.readTime) : SnapshotVersion.min();
 			}(e);
-			return this.listener.Tn(t, n);
+			return this.listener.gr(t, n);
 		}
 		/**
 		* Registers interest in the results of the given target. If the target
 		* includes a resumeToken it will be included in the request. Results that
 		* affect the target will be streamed back as WatchChange messages that
 		* reference the targetId.
-		*/ Pn(e) {
+		*/ yr(e) {
 			const t = {};
 			t.database = __PRIVATE_getEncodedDatabaseId(this.serializer), t.addTarget = function __PRIVATE_toTarget(e, t) {
 				let n;
 				const r = t.target;
-				if (n = __PRIVATE_targetIsPipelineTarget(r) ? { pipelineQuery: __PRIVATE_toPipelineTarget(e, r) } : __PRIVATE_targetIsDocumentTarget(r) ? { documents: __PRIVATE_toDocumentsTarget(e, r) } : { query: __PRIVATE_toQueryTarget(e, r).Se }, n.targetId = t.targetId, t.resumeToken.approximateByteSize() > 0) {
+				if (n = __PRIVATE_targetIsPipelineTarget(r) ? { pipelineQuery: __PRIVATE_toPipelineTarget(e, r) } : __PRIVATE_targetIsDocumentTarget(r) ? { documents: __PRIVATE_toDocumentsTarget(e, r) } : { query: __PRIVATE_toQueryTarget(e, r).Lt }, n.targetId = t.targetId, t.resumeToken.approximateByteSize() > 0) {
 					n.resumeToken = __PRIVATE_toBytes(e, t.resumeToken);
 					const r = __PRIVATE_toInt32Proto(e, t.expectedCount);
 					null !== r && (n.expectedCount = r);
@@ -17265,14 +18803,14 @@
 				return n;
 			}(this.serializer, e);
 			const n = __PRIVATE_toListenRequestLabels(this.serializer, e);
-			n && (t.labels = n), this.nn(t);
+			n && (t.labels = n), this.Tr(t);
 		}
 		/**
 		* Unregisters interest in the results of the target associated with the
 		* given targetId.
-		*/ In(e) {
+		*/ wr(e) {
 			const t = {};
-			t.database = __PRIVATE_getEncodedDatabaseId(this.serializer), t.removeTarget = e, this.nn(t);
+			t.database = __PRIVATE_getEncodedDatabaseId(this.serializer), t.removeTarget = e, this.Tr(t);
 		}
 	};
 	/**
@@ -17301,23 +18839,23 @@
 	* consumption.
 	*/ var __PRIVATE_DatastoreImpl = class extends Datastore {
 		constructor(e, t, n, r) {
-			super(), this.authCredentials = e, this.appCheckCredentials = t, this.connection = n, this.serializer = r, this.mn = false;
+			super(), this.authCredentials = e, this.appCheckCredentials = t, this.connection = n, this.serializer = r, this.Fr = false;
 		}
-		pn() {
-			if (this.mn) throw new e(ta.FAILED_PRECONDITION, "The client has already been terminated.");
+		Or() {
+			if (this.Fr) throw new e(ta.FAILED_PRECONDITION, "The client has already been terminated.");
 		}
-		/** Invokes the provided RPC with auth and AppCheck tokens. */ nt(t, n, r, i) {
-			return this.pn(), Promise.all([this.authCredentials.getToken(), this.appCheckCredentials.getToken()]).then((([e, s]) => this.connection.nt(t, __PRIVATE_toResourcePath(n, r), i, e, s))).catch(((t) => {
+		/** Invokes the provided RPC with auth and AppCheck tokens. */ In(t, n, r, i) {
+			return this.Or(), Promise.all([this.authCredentials.getToken(), this.appCheckCredentials.getToken()]).then((([e, s]) => this.connection.In(t, __PRIVATE_toResourcePath(n, r), i, e, s))).catch(((t) => {
 				throw "FirebaseError" === t.name ? (t.code === ta.UNAUTHENTICATED && (this.authCredentials.invalidateToken(), this.appCheckCredentials.invalidateToken()), t) : new e(ta.UNKNOWN, t.toString());
 			}));
 		}
-		/** Invokes the provided RPC with streamed results with auth and AppCheck tokens. */ _t(t, n, r, i, s) {
-			return this.pn(), Promise.all([this.authCredentials.getToken(), this.appCheckCredentials.getToken()]).then((([e, _]) => this.connection._t(t, __PRIVATE_toResourcePath(n, r), i, e, _, s))).catch(((t) => {
+		/** Invokes the provided RPC with streamed results with auth and AppCheck tokens. */ fn(t, n, r, i, s) {
+			return this.Or(), Promise.all([this.authCredentials.getToken(), this.appCheckCredentials.getToken()]).then((([e, _]) => this.connection.fn(t, __PRIVATE_toResourcePath(n, r), i, e, _, s))).catch(((t) => {
 				throw "FirebaseError" === t.name ? (t.code === ta.UNAUTHENTICATED && (this.authCredentials.invalidateToken(), this.appCheckCredentials.invalidateToken()), t) : new e(ta.UNKNOWN, t.toString());
 			}));
 		}
 		terminate() {
-			this.mn = true, this.connection.terminate();
+			this.Fr = true, this.connection.terminate();
 		}
 	};
 	function __PRIVATE_newDatastore(e, t, n, r) {
@@ -17339,7 +18877,8 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	const Vt = "ComponentProvider", dt = /* @__PURE__ */ new Map();
+	const zt = "ComponentProvider";
+	const Ht = /* @__PURE__ */ new Map();
 	/**
 	* An instance map that ensures only one Datastore exists per Firestore
 	* instance.
@@ -17361,12 +18900,13 @@
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const ft = {
+	*/ const Jt = {
 		didRun: false,
 		sequenceNumbersCollected: 0,
 		targetsRemoved: 0,
 		documentsRemoved: 0
-	}, mt = 41943040;
+	};
+	const Yt = 41943040;
 	var LruParams = class LruParams {
 		static withCacheSize(e) {
 			return new LruParams(e, LruParams.DEFAULT_COLLECTION_PERCENTILE, LruParams.DEFAULT_MAX_SEQUENCE_NUMBERS_TO_COLLECT);
@@ -17375,7 +18915,7 @@
 			this.cacheSizeCollectionThreshold = e, this.percentileToCollect = t, this.maximumSequenceNumbersToCollect = n;
 		}
 	};
-	LruParams.DEFAULT_COLLECTION_PERCENTILE = 10, LruParams.DEFAULT_MAX_SEQUENCE_NUMBERS_TO_COLLECT = 1e3, LruParams.DEFAULT = new LruParams(mt, LruParams.DEFAULT_COLLECTION_PERCENTILE, LruParams.DEFAULT_MAX_SEQUENCE_NUMBERS_TO_COLLECT), LruParams.DISABLED = new LruParams(-1, 0, 0);
+	LruParams.DEFAULT_COLLECTION_PERCENTILE = 10, LruParams.DEFAULT_MAX_SEQUENCE_NUMBERS_TO_COLLECT = 1e3, LruParams.DEFAULT = new LruParams(Yt, LruParams.DEFAULT_COLLECTION_PERCENTILE, LruParams.DEFAULT_MAX_SEQUENCE_NUMBERS_TO_COLLECT), LruParams.DISABLED = new LruParams(-1, 0, 0);
 	/**
 	* @license
 	* Copyright 2018 Google LLC
@@ -17400,17 +18940,17 @@
 	*/
 	var __PRIVATE_ListenSequence = class {
 		constructor(e, t) {
-			this.previousValue = e, t && (t.sequenceNumberHandler = (e) => this.gn(e), this.yn = (e) => t.writeSequenceNumber(e));
+			this.previousValue = e, t && (t.sequenceNumberHandler = (e) => this.Mr(e), this.Nr = (e) => t.writeSequenceNumber(e));
 		}
-		gn(e) {
+		Mr(e) {
 			return this.previousValue = Math.max(e, this.previousValue), this.previousValue;
 		}
 		next() {
 			const e = ++this.previousValue;
-			return this.yn && this.yn(e), e;
+			return this.Nr && this.Nr(e), e;
 		}
 	};
-	__PRIVATE_ListenSequence.wn = -1;
+	__PRIVATE_ListenSequence.Br = -1;
 	/**
 	* @license
 	* Copyright 2020 Google LLC
@@ -17427,7 +18967,7 @@
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	const pt = "The current tab is not in the required state to perform this operation. It might be necessary to refresh the browser tab.";
+	const Zt = "The current tab is not in the required state to perform this operation. It might be necessary to refresh the browser tab.";
 	/**
 	* A base class representing a persistence transaction, encapsulating both the
 	* transaction's sequence numbers as well as a list of onCommitted listeners.
@@ -17472,7 +19012,7 @@
 	* @param err - An error returned by a LocalStore operation.
 	* @returns A Promise that resolves after we recovered, or the original error.
 	*/ async function __PRIVATE_ignoreIfPrimaryLeaseLoss(e) {
-		if (e.code !== ta.FAILED_PRECONDITION || e.message !== pt) throw e;
+		if (e.code !== ta.FAILED_PRECONDITION || e.message !== Zt) throw e;
 		__PRIVATE_logDebug("LocalStore", "Unexpectedly lost primary lease");
 	}
 	/**
@@ -17608,6 +19148,22 @@
 			}));
 		}
 	};
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/** Parse User Agent to determine Android version. Returns -1 if not found. */ function __PRIVATE_getAndroidVersion(e) {
 		const t = e.match(/Android ([\d.]+)/i), n = t ? t[1].split(".").slice(0, 2).join(".") : "-1";
 		return Number(n);
@@ -17630,7 +19186,8 @@
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const wt = "LruGarbageCollector", bt = 1048576;
+	*/ const tn = "LruGarbageCollector";
+	const nn = 1048576;
 	function __PRIVATE_bufferEntryComparator([e, t], [n, r]) {
 		const i = __PRIVATE_primitiveComparator(e, n);
 		return 0 === i ? __PRIVATE_primitiveComparator(t, r) : i;
@@ -17641,14 +19198,14 @@
 	* them in `maxValue`.
 	*/ var __PRIVATE_RollingSequenceNumberBuffer = class {
 		constructor(e) {
-			this.Yn = e, this.buffer = new SortedSet(__PRIVATE_bufferEntryComparator), this.Zn = 0;
+			this.ai = e, this.buffer = new SortedSet(__PRIVATE_bufferEntryComparator), this.ui = 0;
 		}
-		Xn() {
-			return ++this.Zn;
+		ci() {
+			return ++this.ui;
 		}
-		er(e) {
-			const t = [e, this.Xn()];
-			if (this.buffer.size < this.Yn) this.buffer = this.buffer.add(t);
+		li(e) {
+			const t = [e, this.ci()];
+			if (this.buffer.size < this.ai) this.buffer = this.buffer.add(t);
 			else {
 				const e = this.buffer.last();
 				__PRIVATE_bufferEntryComparator(t, e) < 0 && (this.buffer = this.buffer.delete(e).add(t));
@@ -17663,26 +19220,26 @@
 	* whether or not GC is enabled, as well as which delay to use before the next run.
 	*/ var __PRIVATE_LruScheduler = class {
 		constructor(e, t, n) {
-			this.garbageCollector = e, this.asyncQueue = t, this.localStore = n, this.tr = null;
+			this.garbageCollector = e, this.asyncQueue = t, this.localStore = n, this.Ei = null;
 		}
 		start() {
-			-1 !== this.garbageCollector.params.cacheSizeCollectionThreshold && this.nr(6e4);
+			-1 !== this.garbageCollector.params.cacheSizeCollectionThreshold && this.hi(6e4);
 		}
 		stop() {
-			this.tr && (this.tr.cancel(), this.tr = null);
+			this.Ei && (this.Ei.cancel(), this.Ei = null);
 		}
 		get started() {
-			return null !== this.tr;
+			return null !== this.Ei;
 		}
-		nr(e) {
-			__PRIVATE_logDebug(wt, `Garbage collection scheduled in ${e}ms`), this.tr = this.asyncQueue.enqueueAfterDelay("lru_garbage_collection", e, (async () => {
-				this.tr = null;
+		hi(e) {
+			__PRIVATE_logDebug(tn, `Garbage collection scheduled in ${e}ms`), this.Ei = this.asyncQueue.enqueueAfterDelay("lru_garbage_collection", e, (async () => {
+				this.Ei = null;
 				try {
 					await this.localStore.collectGarbage(this.garbageCollector);
 				} catch (e) {
-					__PRIVATE_isIndexedDbTransactionError(e) ? __PRIVATE_logDebug(wt, "Ignoring IndexedDB error during garbage collection: ", e) : await __PRIVATE_ignoreIfPrimaryLeaseLoss(e);
+					__PRIVATE_isIndexedDbTransactionError(e) ? __PRIVATE_logDebug(tn, "Ignoring IndexedDB error during garbage collection: ", e) : await __PRIVATE_ignoreIfPrimaryLeaseLoss(e);
 				}
-				await this.nr(3e5);
+				await this.hi(3e5);
 			}));
 		}
 	};
@@ -17690,29 +19247,29 @@
 	* Implements the steps for LRU garbage collection.
 	*/ var __PRIVATE_LruGarbageCollectorImpl = class {
 		constructor(e, t) {
-			this.rr = e, this.params = t;
+			this.Ti = e, this.params = t;
 		}
 		calculateTargetCount(e, t) {
-			return this.rr.ir(e).next(((e) => Math.floor(t / 100 * e)));
+			return this.Ti.Pi(e).next(((e) => Math.floor(t / 100 * e)));
 		}
 		nthSequenceNumber(e, t) {
-			if (0 === t) return PersistencePromise.resolve(__PRIVATE_ListenSequence.wn);
+			if (0 === t) return PersistencePromise.resolve(__PRIVATE_ListenSequence.Br);
 			const n = new __PRIVATE_RollingSequenceNumberBuffer(t);
-			return this.rr.forEachTarget(e, ((e) => n.er(e.sequenceNumber))).next((() => this.rr.sr(e, ((e) => n.er(e))))).next((() => n.maxValue));
+			return this.Ti.forEachTarget(e, ((e) => n.li(e.sequenceNumber))).next((() => this.Ti.Ii(e, ((e) => n.li(e))))).next((() => n.maxValue));
 		}
 		removeTargets(e, t, n) {
-			return this.rr.removeTargets(e, t, n);
+			return this.Ti.removeTargets(e, t, n);
 		}
 		removeOrphanedDocuments(e, t) {
-			return this.rr.removeOrphanedDocuments(e, t);
+			return this.Ti.removeOrphanedDocuments(e, t);
 		}
 		collect(e, t) {
-			return -1 === this.params.cacheSizeCollectionThreshold ? (__PRIVATE_logDebug("LruGarbageCollector", "Garbage collection skipped; disabled"), PersistencePromise.resolve(ft)) : this.getCacheSize(e).next(((n) => n < this.params.cacheSizeCollectionThreshold ? (__PRIVATE_logDebug("LruGarbageCollector", `Garbage collection skipped; Cache size ${n} is lower than threshold ${this.params.cacheSizeCollectionThreshold}`), ft) : this._r(e, t)));
+			return -1 === this.params.cacheSizeCollectionThreshold ? (__PRIVATE_logDebug("LruGarbageCollector", "Garbage collection skipped; disabled"), PersistencePromise.resolve(Jt)) : this.getCacheSize(e).next(((n) => n < this.params.cacheSizeCollectionThreshold ? (__PRIVATE_logDebug("LruGarbageCollector", `Garbage collection skipped; Cache size ${n} is lower than threshold ${this.params.cacheSizeCollectionThreshold}`), Jt) : this.Ri(e, t)));
 		}
 		getCacheSize(e) {
-			return this.rr.getCacheSize(e);
+			return this.Ti.getCacheSize(e);
 		}
-		_r(e, t) {
+		Ri(e, t) {
 			let n, r, i, s, _, o, a;
 			const u = Date.now();
 			return this.calculateTargetCount(e, this.params.percentileToCollect).next(((t) => (t > this.params.maximumSequenceNumbersToCollect ? (__PRIVATE_logDebug("LruGarbageCollector", `Capping sequence numbers to collect down to the maximum of ${this.params.maximumSequenceNumbersToCollect} from ${t}`), r = this.params.maximumSequenceNumbersToCollect) : r = t, s = Date.now(), this.nthSequenceNumber(e, r)))).next(((r) => (n = r, _ = Date.now(), this.removeTargets(e, n, t)))).next(((t) => (i = t, o = Date.now(), this.removeOrphanedDocuments(e, n)))).next(((e) => {
@@ -17748,7 +19305,8 @@ Total Duration: ${a - u}ms`);
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	const St = "firestore.googleapis.com", vt = true;
+	const rn = "firestore.googleapis.com";
+	const sn = true;
 	/**
 	* A concrete type describing all the values that can be applied via a
 	* user-supplied `FirestoreSettings` object. This is a separate type so that
@@ -17758,11 +19316,11 @@ Total Duration: ${a - u}ms`);
 		constructor(t) {
 			if (void 0 === t.host) {
 				if (void 0 !== t.ssl) throw new e(ta.INVALID_ARGUMENT, "Can't provide ssl option if host option is not set");
-				this.host = St, this.ssl = vt;
-			} else this.host = t.host, this.ssl = t.ssl ?? vt;
-			if (this.isUsingEmulator = void 0 !== t.emulatorOptions, this.credentials = t.credentials, this.ignoreUndefinedProperties = !!t.ignoreUndefinedProperties, this.localCache = t.localCache, t._customHeaders && (this._customHeaders = { ...t._customHeaders }), void 0 === t.cacheSizeBytes) this.cacheSizeBytes = mt;
+				this.host = rn, this.ssl = sn;
+			} else this.host = t.host, this.ssl = t.ssl ?? sn;
+			if (this.isUsingEmulator = void 0 !== t.emulatorOptions, this.credentials = t.credentials, this.ignoreUndefinedProperties = !!t.ignoreUndefinedProperties, this.localCache = t.localCache, t._customHeaders && (this._customHeaders = { ...t._customHeaders }), void 0 === t.cacheSizeBytes) this.cacheSizeBytes = Yt;
 			else {
-				if (-1 !== t.cacheSizeBytes && t.cacheSizeBytes < bt) throw new e(ta.INVALID_ARGUMENT, "cacheSizeBytes must be at least 1048576");
+				if (-1 !== t.cacheSizeBytes && t.cacheSizeBytes < nn) throw new e(ta.INVALID_ARGUMENT, "cacheSizeBytes must be at least 1048576");
 				this.cacheSizeBytes = t.cacheSizeBytes;
 			}
 			if (__PRIVATE_validateIsNotUsedTogether("experimentalForceLongPolling", t.experimentalForceLongPolling, "experimentalAutoDetectLongPolling", t.experimentalAutoDetectLongPolling), this.experimentalForceLongPolling = !!t.experimentalForceLongPolling, this.experimentalForceLongPolling ? this.experimentalAutoDetectLongPolling = false : void 0 === t.experimentalAutoDetectLongPolling ? this.experimentalAutoDetectLongPolling = true : this.experimentalAutoDetectLongPolling = !!t.experimentalAutoDetectLongPolling, this.experimentalLongPollingOptions = __PRIVATE_cloneLongPollingOptions(t.experimentalLongPollingOptions ?? {}), function __PRIVATE_validateLongPollingOptions(t) {
@@ -17772,12 +19330,44 @@ Total Duration: ${a - u}ms`);
 					if (t.timeoutSeconds > 30) throw new e(ta.INVALID_ARGUMENT, `invalid long polling timeout: ${t.timeoutSeconds} (maximum allowed value is 30)`);
 				}
 			}(this.experimentalLongPollingOptions), this.useFetchStreams = !!t.useFetchStreams, void 0 !== t.grpcFlowControlWindow) {
+				/**
+				* @license
+				* Copyright 2020 Google LLC
+				*
+				* Licensed under the Apache License, Version 2.0 (the "License");
+				* you may not use this file except in compliance with the License.
+				* You may obtain a copy of the License at
+				*
+				*   http://www.apache.org/licenses/LICENSE-2.0
+				*
+				* Unless required by applicable law or agreed to in writing, software
+				* distributed under the License is distributed on an "AS IS" BASIS,
+				* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+				* See the License for the specific language governing permissions and
+				* limitations under the License.
+				*/
 				if ("number" != typeof t.grpcFlowControlWindow || t.grpcFlowControlWindow <= 0 || t.grpcFlowControlWindow > 2147483647 || !Number.isInteger(t.grpcFlowControlWindow)) throw new e(ta.INVALID_ARGUMENT, "grpcFlowControlWindow must be a positive integer and cannot exceed 2147483647");
 				this.grpcFlowControlWindow = t.grpcFlowControlWindow;
 			}
 		}
 		isEqual(e) {
 			return this.host === e.host && this.ssl === e.ssl && this.credentials === e.credentials && this.cacheSizeBytes === e.cacheSizeBytes && this.experimentalForceLongPolling === e.experimentalForceLongPolling && this.experimentalAutoDetectLongPolling === e.experimentalAutoDetectLongPolling && function __PRIVATE_longPollingOptionsEqual(e, t) {
+				/**
+				* @license
+				* Copyright 2023 Google LLC
+				*
+				* Licensed under the Apache License, Version 2.0 (the "License");
+				* you may not use this file except in compliance with the License.
+				* You may obtain a copy of the License at
+				*
+				*   http://www.apache.org/licenses/LICENSE-2.0
+				*
+				* Unless required by applicable law or agreed to in writing, software
+				* distributed under the License is distributed on an "AS IS" BASIS,
+				* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+				* See the License for the specific language governing permissions and
+				* limitations under the License.
+				*/
 				return e.timeoutSeconds === t.timeoutSeconds;
 			}(this.experimentalLongPollingOptions, e.experimentalLongPollingOptions) && this.ignoreUndefinedProperties === e.ignoreUndefinedProperties && this.useFetchStreams === e.useFetchStreams && this.grpcFlowControlWindow === e.grpcFlowControlWindow && function __PRIVATE_customHeadersEqual(e, t) {
 				if (e === t) return true;
@@ -17789,7 +19379,7 @@ Total Duration: ${a - u}ms`);
 			}(this._customHeaders, e._customHeaders);
 		}
 	};
-	let Dt = class Firestore {
+	let _n = class Firestore {
 		/** @hideconstructor */
 		constructor(e, t, n, r) {
 			this._authCredentials = e, this._appCheckCredentials = t, this._databaseId = n, this._app = r, this.type = "firestore-lite", this._persistenceKey = "(lite)", this._settings = new FirestoreSettingsImpl({}), this._settingsFrozen = false, this._emulatorOptions = {}, this._terminateTask = "notTerminated";
@@ -17852,8 +19442,8 @@ Total Duration: ${a - u}ms`);
 			* when the `Firestore` instance is terminated.
 			*/
 			return function __PRIVATE_removeComponents(e) {
-				const t = dt.get(e);
-				t && (__PRIVATE_logDebug(Vt, "Removing Datastore"), dt.delete(e), t.terminate());
+				const t = Ht.get(e);
+				t && (__PRIVATE_logDebug(zt, "Removing Datastore"), Ht.delete(e), t.terminate());
 			}(this), Promise.resolve();
 		}
 	};
@@ -17870,12 +19460,12 @@ Total Duration: ${a - u}ms`);
 	* @param options.mockUserToken - the mock auth token to use for unit testing
 	* Security Rules.
 	*/ function connectFirestoreEmulator(t, n, r, i = {}) {
-		t = ra(t, Dt);
+		t = ra(t, _n);
 		const s = isCloudWorkstation(n), _ = t._getSettings(), o = {
 			..._,
 			emulatorOptions: t._getEmulatorOptions()
 		}, a = `${n}:${r}`;
-		s && pingServer(`https://${a}`), _.host !== St && _.host !== a && __PRIVATE_logWarn("Host has been set in both settings() and connectFirestoreEmulator(), emulator host will be used.");
+		s && pingServer(`https://${a}`), _.host !== rn && _.host !== a && __PRIVATE_logWarn("Host has been set in both settings() and connectFirestoreEmulator(), emulator host will be used.");
 		const u = {
 			..._,
 			host: a,
@@ -18001,7 +19591,7 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	function collection(t, n, ...r) {
-		if (t = getModularInstance(t), __PRIVATE_validateNonEmptyArgument("collection", "path", n), t instanceof Dt) {
+		if (t = getModularInstance(t), __PRIVATE_validateNonEmptyArgument("collection", "path", n), t instanceof _n) {
 			const e = ResourcePath.fromString(n, ...r);
 			return __PRIVATE_validateCollectionPath(e), new na(t, null, e);
 		}
@@ -18011,6 +19601,39 @@ Total Duration: ${a - u}ms`);
 			return __PRIVATE_validateCollectionPath(i), new na(t.firestore, null, i);
 		}
 	}
+	/**
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* Represents a regular expression type in Firestore documents.
+	*
+	* @class RegexValue
+	*/ var RegexValue = class {
+		constructor(e, t) {
+			this.pattern = e, this.options = t;
+		}
+		/**
+		* Returns true if this `RegexValue` is equal to the provided one.
+		*
+		* @param other - The `RegexValue` to compare against.
+		* @return 'true' if this `RegexValue` is equal to the provided one.
+		*/ isEqual(e) {
+			return this.pattern === e.pattern && this.options === e.options;
+		}
+	};
 	/**
 	* @license
 	* Copyright 2017 Google LLC
@@ -18141,7 +19764,7 @@ Total Duration: ${a - u}ms`);
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
-	const xt = /^__.*__$/;
+	const on = /^__.*__$/;
 	function __PRIVATE_isWrite(e) {
 		switch (e) {
 			case 0:
@@ -18217,7 +19840,7 @@ Total Duration: ${a - u}ms`);
 		}
 		validatePathSegment(e) {
 			if (0 === e.length) throw this.createError("Document fields must not be empty");
-			if (__PRIVATE_isWrite(this.dataSource) && xt.test(e)) throw this.createError("Document fields cannot begin and end with \"__\"");
+			if (__PRIVATE_isWrite(this.dataSource) && on.test(e)) throw this.createError("Document fields cannot begin and end with \"__\"");
 		}
 	};
 	/**
@@ -18232,7 +19855,7 @@ Total Duration: ${a - u}ms`);
 				dataSource: e,
 				methodName: t,
 				targetDoc: n,
-				path: Oe.emptyPath(),
+				path: Me$1.emptyPath(),
 				arrayElement: false,
 				hasConverter: r
 			}, this.databaseId, this.serializer, this.ignoreUndefinedProperties);
@@ -18306,7 +19929,15 @@ Total Duration: ${a - u}ms`);
 				latitude: e.latitude,
 				longitude: e.longitude
 			} };
-			if (e instanceof Bytes) return { bytesValue: __PRIVATE_toBytes(t.serializer, e._byteString) };
+			if (e instanceof Bytes) return 0 === e.subtype ? { bytesValue: __PRIVATE_toBytes(t.serializer, e._byteString) } : 
+			/**
+			* Parses Bytes with a non-zero subtype.
+			*/
+			function __PRIVATE_parseBytesWithSubtype(e, t) {
+				const n = t.toUint8Array(), r = new Uint8Array(n.length + 1);
+				r[0] = t.subtype, r.set(n, 1);
+				return { mapValue: { fields: { [Et]: { bytesValue: __PRIVATE_toBytes(e, ByteString.fromUint8Array(r)) } } } };
+			}(t.serializer, e);
 			if (e instanceof aa) {
 				const n = t.databaseId, r = e.firestore._databaseId;
 				if (!r.isEqual(n)) throw t.createError(`Document reference is for database ${r.projectId}/${r.database} but should be for database ${n.projectId}/${n.database}`);
@@ -18319,13 +19950,40 @@ Total Duration: ${a - u}ms`);
 			return function __PRIVATE_parseVectorValue(e, t) {
 				const r = e instanceof n ? e.toArray() : e;
 				return { mapValue: { fields: {
-					[Qe]: { stringValue: ze },
-					[je]: { arrayValue: { values: r.map(((e) => {
+					[Ye]: { stringValue: Ze },
+					[Xe]: { arrayValue: { values: r.map(((e) => {
 						if ("number" != typeof e) throw t.createError("VectorValues must only contain numeric values.");
 						return __PRIVATE_toDouble(t.serializer, e);
 					})) } }
 				} } };
 			}(e, t);
+			if (e instanceof RegexValue) return function __PRIVATE_parseRegexValue(e) {
+				return { mapValue: { fields: { [rt]: { mapValue: { fields: {
+					[it]: { stringValue: e.pattern },
+					[st]: { stringValue: e.options }
+				} } } } } };
+			}(e);
+			if (e instanceof BsonObjectId) return function __PRIVATE_parseBsonObjectId(e) {
+				return { mapValue: { fields: { [_t]: { stringValue: e.value } } } };
+			}(e);
+			if (e instanceof Int32Value) return function __PRIVATE_parseInt32Value(e) {
+				return { mapValue: { fields: { [ot]: __PRIVATE_toInteger(e.value) } } };
+			}(e);
+			if (e instanceof Decimal128Value) return function __PRIVATE_parseDecimal128Value(e) {
+				return { mapValue: { fields: { [at]: { stringValue: e.stringValue } } } };
+			}(e);
+			if (e instanceof BsonTimestamp) return function __PRIVATE_parseBsonTimestamp(e) {
+				return { mapValue: { fields: { [ut]: { mapValue: { fields: {
+					[ct]: __PRIVATE_toInteger(e.seconds),
+					[lt]: __PRIVATE_toInteger(e.increment)
+				} } } } } };
+			}(e);
+			if (e instanceof MinKey) return function __PRIVATE_parseMinKey() {
+				return { mapValue: { fields: { [tt]: { nullValue: "NULL_VALUE" } } } };
+			}();
+			if (e instanceof MaxKey) return function __PRIVATE_parseMaxKey() {
+				return { mapValue: { fields: { [nt]: { nullValue: "NULL_VALUE" } } } };
+			}();
 			if (__PRIVATE_isProtoValueSerializable(e)) return e._toProto(t.serializer);
 			throw t.createError(`Unsupported field value: ${__PRIVATE_valueDescription(e)}`);
 		}(e, t);
@@ -18346,7 +20004,7 @@ Total Duration: ${a - u}ms`);
 		return "Temporal.Instant" === t[Symbol.toStringTag] && "bigint" == typeof t.t;
 	}
 	function __PRIVATE_looksLikeJsonObject(e) {
-		return !("object" != typeof e || null === e || e instanceof Array || e instanceof Date || e instanceof Timestamp || e instanceof GeoPoint || e instanceof Bytes || e instanceof aa || e instanceof FieldValue || e instanceof n || __PRIVATE_isTemporalInstant(e) || __PRIVATE_isProtoValueSerializable(e));
+		return !("object" != typeof e || null === e || e instanceof Array || e instanceof Date || e instanceof Timestamp || e instanceof GeoPoint || e instanceof Bytes || e instanceof aa || e instanceof FieldValue || e instanceof n || e instanceof MinKey || e instanceof MaxKey || e instanceof Int32Value || e instanceof Decimal128Value || e instanceof RegexValue || e instanceof BsonObjectId || e instanceof BsonTimestamp || __PRIVATE_isTemporalInstant(e) || __PRIVATE_isProtoValueSerializable(e));
 	}
 	function __PRIVATE_validatePlainObject(e, t, n) {
 		if (!__PRIVATE_looksLikeJsonObject(n) || !p(n)) {
@@ -18363,7 +20021,7 @@ Total Duration: ${a - u}ms`);
 	}
 	/**
 	* Matches any characters in a field path string that are reserved.
-	*/ const Ct = /* @__PURE__ */ new RegExp("[~\\*/\\[\\]]");
+	*/ const an = /* @__PURE__ */ new RegExp("[~\\*/\\[\\]]");
 	/**
 	* Wraps fromDotSeparatedString with an error message about the method that
 	* was thrown.
@@ -18373,7 +20031,7 @@ Total Duration: ${a - u}ms`);
 	* @param targetDoc - The document against which the field path will be
 	* evaluated.
 	*/ function __PRIVATE_fieldPathFromDotSeparatedString(e, t, n) {
-		if (t.search(Ct) >= 0) throw createError(`Invalid field path (${t}). Paths must not contain '~', '*', '/', '[', or ']'`, e, false, void 0, n);
+		if (t.search(an) >= 0) throw createError(`Invalid field path (${t}). Paths must not contain '~', '*', '/', '[', or ']'`, e, false, void 0, n);
 		try {
 			return new FieldPath(...t.split("."))._internalPath;
 		} catch (r) {
@@ -18418,7 +20076,7 @@ Total Duration: ${a - u}ms`);
 					let _;
 					if (i.nestedOptions && p(s)) _ = { mapValue: { fields: new OptionsUtil(i.nestedOptions).getOptionsProto(t, s) } };
 					else s && (_ = __PRIVATE_parseData(s, t) ?? void 0);
-					_ && n.set(Oe.fromServerFormat(i.serverName), _);
+					_ && n.set(Me$1.fromServerFormat(i.serverName), _);
 				}
 			}
 			return n;
@@ -18426,7 +20084,7 @@ Total Duration: ${a - u}ms`);
 		getOptionsProto(e, t, n) {
 			const r = this._getKnownOptions(t, e);
 			if (n) {
-				const t = new Map(__PRIVATE_mapToArray(n, ((t, n) => [Oe.fromServerFormat(n), void 0 !== t ? __PRIVATE_parseData(t, e) : null])));
+				const t = new Map(__PRIVATE_mapToArray(n, ((t, n) => [Me$1.fromServerFormat(n), void 0 !== t ? __PRIVATE_parseData(t, e) : null])));
 				r.setAll(t);
 			}
 			return r.value.mapValue.fields ?? {};
@@ -19949,19 +21607,19 @@ Total Duration: ${a - u}ms`);
 	* @internal
 	*/ var __PRIVATE_ListOfExprs = class extends t {
 		constructor(e, t) {
-			super(), this.cr = e, this._methodName = t, this.expressionType = "ListOfExpressions";
+			super(), this.fi = e, this._methodName = t, this.expressionType = "ListOfExpressions";
 		}
 		/**
 		* @private
 		* @internal
 		*/ _toProto(e) {
-			return { arrayValue: { values: this.cr.map(((t) => t._toProto(e))) } };
+			return { arrayValue: { values: this.fi.map(((t) => t._toProto(e))) } };
 		}
 		/**
 		* @private
 		* @internal
 		*/ _readUserData(e) {
-			this.cr.forEach(((t) => t._readUserData(e)));
+			this.fi.forEach(((t) => t._readUserData(e)));
 		}
 	};
 	/**
@@ -20030,7 +21688,7 @@ Total Duration: ${a - u}ms`);
 		return G(e, "field");
 	}
 	function G(e, t) {
-		return new o("string" == typeof e ? Ce === e ? documentId$1()._internalPath : K("field", e) : e._internalPath, t);
+		return new o("string" == typeof e ? Fe === e ? documentId$1()._internalPath : K("field", e) : e._internalPath, t);
 	}
 	/**
 	* @internal
@@ -20384,7 +22042,7 @@ Total Duration: ${a - u}ms`);
 			return new OptionsUtil({ forceIndex: { serverName: "force_index" } });
 		}
 		constructor(e, t) {
-			super(t), this.hr = e.startsWith("/") ? e : "/" + e;
+			super(t), this.pi = e.startsWith("/") ? e : "/" + e;
 		}
 		/**
 		* @internal
@@ -20392,7 +22050,7 @@ Total Duration: ${a - u}ms`);
 		*/ _toProto(e) {
 			return {
 				...super._toProto(e),
-				args: [{ referenceValue: this.hr }]
+				args: [{ referenceValue: this.pi }]
 			};
 		}
 		_readUserData(e) {
@@ -20450,7 +22108,7 @@ Total Duration: ${a - u}ms`);
 			if (super(n), !t || 0 === t.length) throw new e(ta.INVALID_ARGUMENT, "Empty document paths are not allowed in DocumentsSource");
 			const r = t.map(((e) => e.startsWith("/") ? e : "/" + e)), i = new Set(r);
 			if (i.size !== r.length) throw new e(ta.INVALID_ARGUMENT, "Duplicate document paths are not allowed in DocumentsSource");
-			this.Tr = r, this.Pr = i;
+			this.gi = r, this.yi = i;
 		}
 		/**
 		* @internal
@@ -20458,7 +22116,7 @@ Total Duration: ${a - u}ms`);
 		*/ _toProto(e) {
 			return {
 				...super._toProto(e),
-				args: this.Tr.map(((e) => ({ referenceValue: e })))
+				args: this.gi.map(((e) => ({ referenceValue: e })))
 			};
 		}
 		_readUserData(e) {
@@ -20496,7 +22154,7 @@ Total Duration: ${a - u}ms`);
 			return new OptionsUtil({});
 		}
 		constructor(e, t) {
-			__PRIVATE_hardAssert(!isNaN(e) && e !== Infinity && e !== -Infinity, 34860), super(t), this.limit = e;
+			__PRIVATE_hardAssert(!isNaN(e) && e !== 1 / 0 && e !== -1 / 0, 34860), super(t), this.limit = e;
 		}
 		/**
 		* @internal
@@ -20587,14 +22245,14 @@ Total Duration: ${a - u}ms`);
 		_toProto(e) {
 			return {
 				...super._toProto(e),
-				args: [this.map._toProto(e), __PRIVATE_toStringValue($.Ir)]
+				args: [this.map._toProto(e), __PRIVATE_toStringValue($.wi)]
 			};
 		}
 		_readUserData(e) {
 			super._readUserData(e), __PRIVATE_readUserDataHelper(this.map, e);
 		}
 	};
-	$.Ir = "full_replace";
+	$.wi = "full_replace";
 	/**
 	* Helper to read user data across a number of different formats.
 	* @param name - Name of the calling function. Used for error messages when invalid user data is encountered.
@@ -20674,13 +22332,13 @@ Total Duration: ${a - u}ms`);
 		* @return the expressionMap argument.
 		* @private
 		* @internal
-		*/ Vr(e, t) {
+		*/ xi(e, t) {
 			const n = this.userDataReader.createContext(3, e);
 			return __PRIVATE_isUserData(t) ? t._readUserData(n) : Array.isArray(t) ? t.forEach(((e) => e._readUserData(n))) : t.forEach(((e) => e._readUserData(n))), t;
 		}
 		where(e) {
 			const t = this.stages.map(((e) => e));
-			return this.Vr("where", e), t.push(new A(e, {})), new __PRIVATE_RealtimePipeline(this._db, this.userDataReader, this._userDataWriter, t);
+			return this.xi("where", e), t.push(new A(e, {})), new __PRIVATE_RealtimePipeline(this._db, this.userDataReader, this._userDataWriter, t);
 		}
 		limit(e) {
 			const t = this.stages.map(((e) => e));
@@ -20688,15 +22346,16 @@ Total Duration: ${a - u}ms`);
 		}
 		sort(e, ...t) {
 			const n = this.stages.map(((e) => e));
-			return "orderings" in e ? n.push(new L(this.Vr("sort", e.orderings), {})) : n.push(new L(this.Vr("sort", [e, ...t]), {})), new __PRIVATE_RealtimePipeline(this._db, this.userDataReader, this._userDataWriter, n);
+			return "orderings" in e ? n.push(new L(this.xi("sort", e.orderings), {})) : n.push(new L(this.xi("sort", [e, ...t]), {})), new __PRIVATE_RealtimePipeline(this._db, this.userDataReader, this._userDataWriter, n);
 		}
 		/**
 		* @internal
 		* @private
-		*/ dr(e) {
+		*/ Di(e) {
 			return { pipeline: { stages: this.stages.map(((t) => t._toProto(e))) } };
 		}
 	};
+	// Copyright 2024 Google LLC* @license
 	var CorePipeline = class {
 		constructor(e, t, n) {
 			this.serializer = e, this.stages = t, this.listenOptions = n, this.isCorePipeline = true;
@@ -20720,6 +22379,7 @@ Total Duration: ${a - u}ms`);
 					n._name !== M.name && n._name !== O.name || (t = "keyless"), n._name === x.name && "exact" === t && (t = "augmented"), n._name === w.name && r < e.stages.length - 1 && "exact" === t && (t = "augmented");
 				})), t;
 			}(this);
+			// Copyright 2024 Google LLC* @license
 		}
 		getPipelineSourceType() {
 			return getPipelineSourceType(this);
@@ -20730,7 +22390,7 @@ Total Duration: ${a - u}ms`);
 		return t instanceof X || t instanceof Y || t instanceof Z || t instanceof sa ? t._name : "unknown";
 	}
 	function getPipelineCollection(e) {
-		if ("collection" === getPipelineSourceType(e)) return e.stages[0].hr;
+		if ("collection" === getPipelineSourceType(e)) return e.stages[0].pi;
 	}
 	function getPipelineCollectionGroup(e) {
 		if ("collection_group" === getPipelineSourceType(e)) return e.stages[0].collectionId;
@@ -20743,25 +22403,25 @@ Total Duration: ${a - u}ms`);
 		}
 	}
 	function getPipelineDocuments(e) {
-		if ("documents" === getPipelineSourceType(e)) return e.stages[0].Tr;
+		if ("documents" === getPipelineSourceType(e)) return e.stages[0].gi;
 	}
 	var __PRIVATE_EvaluateResult = class __PRIVATE_EvaluateResult {
 		constructor(e, t) {
 			this.type = e, this.value = t;
 		}
-		static mr() {
+		static Ci() {
 			return new __PRIVATE_EvaluateResult("ERROR", void 0);
 		}
-		static pr() {
+		static Fi() {
 			return new __PRIVATE_EvaluateResult("UNSET", void 0);
 		}
-		static gr() {
-			return new __PRIVATE_EvaluateResult("NULL", He);
+		static Oi() {
+			return new __PRIVATE_EvaluateResult("NULL", ht);
 		}
 		static newValue(e) {
-			return __PRIVATE_isNullValue(e) ? new __PRIVATE_EvaluateResult("NULL", He) : function __PRIVATE_isBoolean(e) {
+			return __PRIVATE_isNullValue(e) ? new __PRIVATE_EvaluateResult("NULL", ht) : function __PRIVATE_isBoolean(e) {
 				return !!e && "booleanValue" in e;
-			}(e) ? new __PRIVATE_EvaluateResult("BOOLEAN", e) : isInteger(e) ? new __PRIVATE_EvaluateResult("INT", e) : __PRIVATE_isDouble(e) ? new __PRIVATE_EvaluateResult("DOUBLE", e) : function __PRIVATE_isTimestampValue(e) {
+			}(e) ? new __PRIVATE_EvaluateResult("BOOLEAN", e) : __PRIVATE_isIntegerValue(e) ? new __PRIVATE_EvaluateResult("INT", e) : __PRIVATE_isDoubleValue(e) ? new __PRIVATE_EvaluateResult("DOUBLE", e) : function __PRIVATE_isTimestampValue(e) {
 				return !!e && "timestampValue" in e && !!e.timestampValue;
 			}(e) ? new __PRIVATE_EvaluateResult("TIMESTAMP", e) : function __PRIVATE_isString(e) {
 				return !!e && "stringValue" in e;
@@ -20769,15 +22429,15 @@ Total Duration: ${a - u}ms`);
 				return !!e && "bytesValue" in e;
 			}(e) ? new __PRIVATE_EvaluateResult("BYTES", e) : e.referenceValue ? new __PRIVATE_EvaluateResult("REFERENCE", e) : e.geoPointValue ? new __PRIVATE_EvaluateResult("GEO_POINT", e) : isArray(e) ? new __PRIVATE_EvaluateResult("ARRAY", e) : __PRIVATE_isVectorValue(e) ? new __PRIVATE_EvaluateResult("VECTOR", e) : __PRIVATE_isMapValue(e) ? new __PRIVATE_EvaluateResult("MAP", e) : new __PRIVATE_EvaluateResult("ERROR", void 0);
 		}
-		yr() {
+		Mi() {
 			return "ERROR" === this.type || "UNSET" === this.type;
 		}
-		wr() {
+		Ni() {
 			return "NULL" === this.type;
 		}
 	};
 	function __PRIVATE_valueOrUndefined(e) {
-		if (!e.yr()) return e.value;
+		if (!e.Mi()) return e.value;
 	}
 	function __PRIVATE_unwrapExpression(e) {
 		return e instanceof BooleanExpression ? e._expr : e;
@@ -20856,7 +22516,7 @@ Total Duration: ${a - u}ms`);
 			this.expr = e;
 		}
 		evaluate(e, t) {
-			if (this.expr.fieldName === Ce) return __PRIVATE_EvaluateResult.newValue({ referenceValue: __PRIVATE_toName(e.serializer, t.key) });
+			if (this.expr.fieldName === Fe) return __PRIVATE_EvaluateResult.newValue({ referenceValue: __PRIVATE_toName(e.serializer, t.key) });
 			if ("__update_time__" === this.expr.fieldName) return __PRIVATE_EvaluateResult.newValue({ timestampValue: __PRIVATE_toVersion(e.serializer, t.version) });
 			if ("__create_time__" === this.expr.fieldName) return __PRIVATE_EvaluateResult.newValue({ timestampValue: __PRIVATE_toVersion(e.serializer, t.createTime) });
 			const n = t.data.field(this.expr._fieldPath);
@@ -20867,7 +22527,7 @@ Total Duration: ${a - u}ms`);
 					if (e) return e;
 				}
 				return { nullValue: "NULL_VALUE" };
-			}(e, n)) : __PRIVATE_EvaluateResult.newValue(n) : __PRIVATE_EvaluateResult.pr();
+			}(e, n)) : __PRIVATE_EvaluateResult.newValue(n) : __PRIVATE_EvaluateResult.Fi();
 		}
 	};
 	var __PRIVATE_CoreConstant = class {
@@ -20883,17 +22543,18 @@ Total Duration: ${a - u}ms`);
 			this.expr = e;
 		}
 		evaluate(e, t) {
-			const n = this.expr.cr.map(((n) => __PRIVATE_toEvaluable(n).evaluate(e, t)));
-			return n.some(((e) => e.yr())) ? __PRIVATE_EvaluateResult.mr() : __PRIVATE_EvaluateResult.newValue({ arrayValue: { values: n.map(((e) => e.value)) } });
+			const n = this.expr.fi.map(((n) => __PRIVATE_toEvaluable(n).evaluate(e, t)));
+			return n.some(((e) => e.Mi())) ? __PRIVATE_EvaluateResult.Ci() : __PRIVATE_EvaluateResult.newValue({ arrayValue: { values: n.map(((e) => e.value)) } });
 		}
 	};
 	function __PRIVATE_asDouble(e) {
-		return __PRIVATE_isDouble(e) ? Number(e.doubleValue) : Number(e.integerValue);
+		return __PRIVATE_isDoubleValue(e) ? Number(e.doubleValue) : Number(e.integerValue);
 	}
 	function __PRIVATE_asBigInt(e) {
 		return BigInt(e.integerValue);
 	}
-	const Ft = BigInt("0x7fffffffffffffff"), Ot = -BigInt("0x8000000000000000");
+	const un = BigInt("0x7fffffffffffffff");
+	const cn = -BigInt("0x8000000000000000");
 	var __PRIVATE_BigIntOrDoubleArithmetics = class {
 		constructor(e) {
 			this.expr = e;
@@ -20901,27 +22562,27 @@ Total Duration: ${a - u}ms`);
 		evaluate(e, t) {
 			__PRIVATE_hardAssert(this.expr.params.length >= 2, 24778);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t), r = __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t);
-			let i = this.br(n, r);
+			let i = this.Bi(n, r);
 			for (const n of this.expr.params.slice(2)) {
 				const r = __PRIVATE_toEvaluable(n).evaluate(e, t);
-				i = this.br(i, r);
+				i = this.Bi(i, r);
 			}
 			return i;
 		}
-		br(e, t) {
-			if (e.yr() || t.yr()) return __PRIVATE_EvaluateResult.mr();
-			if (e.wr() || t.wr()) return __PRIVATE_EvaluateResult.gr();
+		Bi(e, t) {
+			if (e.Mi() || t.Mi()) return __PRIVATE_EvaluateResult.Ci();
+			if (e.Ni() || t.Ni()) return __PRIVATE_EvaluateResult.Oi();
 			const n = e.value, r = t.value;
-			if (!__PRIVATE_isDouble(n) && !isInteger(n) || !__PRIVATE_isDouble(r) && !isInteger(r)) return __PRIVATE_EvaluateResult.mr();
-			if (__PRIVATE_isDouble(n) || __PRIVATE_isDouble(r)) {
-				const e = this.Sr(n, r);
-				return e ? __PRIVATE_EvaluateResult.newValue(e) : __PRIVATE_EvaluateResult.mr();
+			if (!__PRIVATE_isDoubleValue(n) && !__PRIVATE_isIntegerValue(n) || !__PRIVATE_isDoubleValue(r) && !__PRIVATE_isIntegerValue(r)) return __PRIVATE_EvaluateResult.Ci();
+			if (__PRIVATE_isDoubleValue(n) || __PRIVATE_isDoubleValue(r)) {
+				const e = this.Li(n, r);
+				return e ? __PRIVATE_EvaluateResult.newValue(e) : __PRIVATE_EvaluateResult.Ci();
 			}
-			if (isInteger(n) && isInteger(r)) {
-				const e = this.vr(n, r);
-				return void 0 === e ? __PRIVATE_EvaluateResult.mr() : "number" == typeof e ? __PRIVATE_EvaluateResult.newValue({ doubleValue: e }) : e < Ot || e > Ft ? __PRIVATE_EvaluateResult.mr() : __PRIVATE_EvaluateResult.newValue({ integerValue: `${e}` });
+			if (__PRIVATE_isIntegerValue(n) && __PRIVATE_isIntegerValue(r)) {
+				const e = this.Ui(n, r);
+				return void 0 === e ? __PRIVATE_EvaluateResult.Ci() : "number" == typeof e ? __PRIVATE_EvaluateResult.newValue({ doubleValue: e }) : e < cn || e > un ? __PRIVATE_EvaluateResult.Ci() : __PRIVATE_EvaluateResult.newValue({ integerValue: `${e}` });
 			}
-			return __PRIVATE_EvaluateResult.mr();
+			return __PRIVATE_EvaluateResult.Ci();
 		}
 	};
 	function __PRIVATE_strictValueEquals(e, t) {
@@ -20938,8 +22599,8 @@ Total Duration: ${a - u}ms`);
 						n = true;
 						break;
 					default: l(44609, {
-						Dr: i,
-						Cr: s
+						ki: i,
+						Qi: s
 					});
 				}
 			}
@@ -20961,17 +22622,17 @@ Total Duration: ${a - u}ms`);
 			return "EQ";
 		}(e.mapValue, t.mapValue) : function __PRIVATE_valueEquals(e, t) {
 			return __PRIVATE_valueEquals$1(e, t, {
-				u: false,
-				i: true,
-				o: true
+				be: false,
+				ye: true,
+				we: true
 			});
 		}(e, t) ? "EQ" : "NOT_EQ";
 	}
 	var __PRIVATE_CoreAdd = class extends __PRIVATE_BigIntOrDoubleArithmetics {
-		vr(e, t) {
+		Ui(e, t) {
 			return __PRIVATE_asBigInt(e) + __PRIVATE_asBigInt(t);
 		}
-		Sr(e, t) {
+		Li(e, t) {
 			return { doubleValue: __PRIVATE_asDouble(e) + __PRIVATE_asDouble(t) };
 		}
 	};
@@ -20979,10 +22640,10 @@ Total Duration: ${a - u}ms`);
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		vr(e, t) {
+		Ui(e, t) {
 			return __PRIVATE_asBigInt(e) - __PRIVATE_asBigInt(t);
 		}
-		Sr(e, t) {
+		Li(e, t) {
 			return { doubleValue: __PRIVATE_asDouble(e) - __PRIVATE_asDouble(t) };
 		}
 	};
@@ -20990,10 +22651,10 @@ Total Duration: ${a - u}ms`);
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		vr(e, t) {
+		Ui(e, t) {
 			return __PRIVATE_asBigInt(e) * __PRIVATE_asBigInt(t);
 		}
-		Sr(e, t) {
+		Li(e, t) {
 			return { doubleValue: __PRIVATE_asDouble(e) * __PRIVATE_asDouble(t) };
 		}
 	};
@@ -21001,11 +22662,11 @@ Total Duration: ${a - u}ms`);
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		vr(e, t) {
+		Ui(e, t) {
 			const n = __PRIVATE_asBigInt(t);
 			if (n !== BigInt(0)) return __PRIVATE_asBigInt(e) / n;
 		}
-		Sr(e, t) {
+		Li(e, t) {
 			const n = __PRIVATE_asDouble(t);
 			return 0 === n ? { doubleValue: __PRIVATE_isNegativeZero(n) ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY } : { doubleValue: __PRIVATE_asDouble(e) / n };
 		}
@@ -21014,11 +22675,11 @@ Total Duration: ${a - u}ms`);
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		vr(e, t) {
+		Ui(e, t) {
 			const n = __PRIVATE_asBigInt(t);
 			if (n !== BigInt(0)) return __PRIVATE_asBigInt(e) % n;
 		}
-		Sr(e, t) {
+		Li(e, t) {
 			const n = __PRIVATE_asDouble(t);
 			if (0 !== n) return { doubleValue: __PRIVATE_asDouble(e) % n };
 		}
@@ -21033,7 +22694,7 @@ Total Duration: ${a - u}ms`);
 				const s = __PRIVATE_toEvaluable(i).evaluate(e, t);
 				switch (s.type) {
 					case "BOOLEAN":
-						if (!s.value?.booleanValue) return __PRIVATE_EvaluateResult.newValue(Ye);
+						if (!s.value?.booleanValue) return __PRIVATE_EvaluateResult.newValue(bt);
 						break;
 					case "NULL":
 						r = true;
@@ -21041,7 +22702,7 @@ Total Duration: ${a - u}ms`);
 					default: n = true;
 				}
 			}
-			return n ? __PRIVATE_EvaluateResult.mr() : r ? __PRIVATE_EvaluateResult.gr() : __PRIVATE_EvaluateResult.newValue(Je);
+			return n ? __PRIVATE_EvaluateResult.Ci() : r ? __PRIVATE_EvaluateResult.Oi() : __PRIVATE_EvaluateResult.newValue(wt);
 		}
 	};
 	var __PRIVATE_CoreNot = class {
@@ -21053,8 +22714,8 @@ Total Duration: ${a - u}ms`);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
 				case "BOOLEAN": return __PRIVATE_EvaluateResult.newValue({ booleanValue: !n.value?.booleanValue });
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
-				default: return __PRIVATE_EvaluateResult.mr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21068,7 +22729,7 @@ Total Duration: ${a - u}ms`);
 				const s = __PRIVATE_toEvaluable(i).evaluate(e, t);
 				switch (s.type) {
 					case "BOOLEAN":
-						if (s.value?.booleanValue) return __PRIVATE_EvaluateResult.newValue(Je);
+						if (s.value?.booleanValue) return __PRIVATE_EvaluateResult.newValue(wt);
 						break;
 					case "NULL":
 						r = true;
@@ -21076,7 +22737,7 @@ Total Duration: ${a - u}ms`);
 					default: n = true;
 				}
 			}
-			return n ? __PRIVATE_EvaluateResult.mr() : r ? __PRIVATE_EvaluateResult.gr() : __PRIVATE_EvaluateResult.newValue(Ye);
+			return n ? __PRIVATE_EvaluateResult.Ci() : r ? __PRIVATE_EvaluateResult.Oi() : __PRIVATE_EvaluateResult.newValue(bt);
 		}
 	};
 	var __PRIVATE_CoreXor = class __PRIVATE_CoreXor {
@@ -21094,10 +22755,10 @@ Total Duration: ${a - u}ms`);
 					case "NULL":
 						r = true;
 						break;
-					default: return __PRIVATE_EvaluateResult.mr();
+					default: return __PRIVATE_EvaluateResult.Ci();
 				}
 			}
-			return r ? __PRIVATE_EvaluateResult.gr() : __PRIVATE_EvaluateResult.newValue({ booleanValue: n });
+			return r ? __PRIVATE_EvaluateResult.Oi() : __PRIVATE_EvaluateResult.newValue({ booleanValue: n });
 		}
 		static xor(e, t) {
 			return (e || t) && !(e && t);
@@ -21116,7 +22777,7 @@ Total Duration: ${a - u}ms`);
 					n = true;
 					break;
 				case "ERROR":
-				case "UNSET": return __PRIVATE_EvaluateResult.mr();
+				case "UNSET": return __PRIVATE_EvaluateResult.Ci();
 			}
 			const i = __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t);
 			switch (i.type) {
@@ -21124,11 +22785,11 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
-			if (n) return __PRIVATE_EvaluateResult.gr();
+			if (n) return __PRIVATE_EvaluateResult.Oi();
 			for (const e of i.value?.arrayValue?.values ?? []) switch (__PRIVATE_isNullValue(r.value) && __PRIVATE_isNullValue(e) ? "EQ" : __PRIVATE_strictValueEquals(r.value, e)) {
-				case "EQ": return __PRIVATE_EvaluateResult.newValue(Je);
+				case "EQ": return __PRIVATE_EvaluateResult.newValue(wt);
 				case "NOT_EQ":
 				case "TYPE_MISMATCH": break;
 				case "NULL":
@@ -21139,7 +22800,7 @@ Total Duration: ${a - u}ms`);
 					candidate: e
 				});
 			}
-			return n ? __PRIVATE_EvaluateResult.gr() : __PRIVATE_EvaluateResult.newValue(Ye);
+			return n ? __PRIVATE_EvaluateResult.Oi() : __PRIVATE_EvaluateResult.newValue(bt);
 		}
 	};
 	var __PRIVATE_CoreNotEqAny = class {
@@ -21158,10 +22819,10 @@ Total Duration: ${a - u}ms`);
 			__PRIVATE_hardAssert(1 === this.expr.params.length, 23322);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
-				case "INT": return __PRIVATE_EvaluateResult.newValue(Ye);
+				case "INT": return __PRIVATE_EvaluateResult.newValue(bt);
 				case "DOUBLE": return __PRIVATE_EvaluateResult.newValue({ booleanValue: isNaN(__PRIVATE_asDouble(n.value)) });
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
-				default: return __PRIVATE_EvaluateResult.mr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21181,10 +22842,10 @@ Total Duration: ${a - u}ms`);
 		evaluate(e, t) {
 			__PRIVATE_hardAssert(1 === this.expr.params.length, 23123);
 			switch (__PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t).type) {
-				case "NULL": return __PRIVATE_EvaluateResult.newValue(Je);
+				case "NULL": return __PRIVATE_EvaluateResult.newValue(wt);
 				case "UNSET":
-				case "ERROR": return __PRIVATE_EvaluateResult.mr();
-				default: return __PRIVATE_EvaluateResult.newValue(Ye);
+				case "ERROR": return __PRIVATE_EvaluateResult.Ci();
+				default: return __PRIVATE_EvaluateResult.newValue(bt);
 			}
 		}
 	};
@@ -21203,7 +22864,7 @@ Total Duration: ${a - u}ms`);
 		}
 		evaluate(e, t) {
 			__PRIVATE_hardAssert(1 === this.expr.params.length, 5228);
-			return "ERROR" === __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t).type ? __PRIVATE_EvaluateResult.newValue(Je) : __PRIVATE_EvaluateResult.newValue(Ye);
+			return "ERROR" === __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t).type ? __PRIVATE_EvaluateResult.newValue(wt) : __PRIVATE_EvaluateResult.newValue(bt);
 		}
 	};
 	var __PRIVATE_CoreExists = class {
@@ -21213,9 +22874,9 @@ Total Duration: ${a - u}ms`);
 		evaluate(e, t) {
 			__PRIVATE_hardAssert(1 === this.expr.params.length, 6877);
 			switch (__PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t).type) {
-				case "ERROR": return __PRIVATE_EvaluateResult.mr();
-				case "UNSET": return __PRIVATE_EvaluateResult.newValue(Ye);
-				default: return __PRIVATE_EvaluateResult.newValue(Je);
+				case "ERROR": return __PRIVATE_EvaluateResult.Ci();
+				case "UNSET": return __PRIVATE_EvaluateResult.newValue(bt);
+				default: return __PRIVATE_EvaluateResult.newValue(wt);
 			}
 		}
 	};
@@ -21229,7 +22890,7 @@ Total Duration: ${a - u}ms`);
 			switch (n.type) {
 				case "BOOLEAN": return n.value?.booleanValue ? __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t) : __PRIVATE_toEvaluable(this.expr.params[2]).evaluate(e, t);
 				case "NULL": return __PRIVATE_toEvaluable(this.expr.params[2]).evaluate(e, t);
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21246,7 +22907,7 @@ Total Duration: ${a - u}ms`);
 				case "NULL": continue;
 				default: r = void 0 === r || __PRIVATE_valueCompare(e.value, r.value) > 0 ? e : r;
 			}
-			return void 0 === r ? __PRIVATE_EvaluateResult.gr() : r;
+			return void 0 === r ? __PRIVATE_EvaluateResult.Oi() : r;
 		}
 	};
 	var __PRIVATE_CoreLogicalMinimum = class {
@@ -21262,7 +22923,7 @@ Total Duration: ${a - u}ms`);
 				case "NULL": continue;
 				default: r = void 0 === r || __PRIVATE_valueCompare(e.value, r.value) < 0 ? e : r;
 			}
-			return void 0 === r ? __PRIVATE_EvaluateResult.gr() : r;
+			return void 0 === r ? __PRIVATE_EvaluateResult.Oi() : r;
 		}
 	};
 	var __PRIVATE_ComparisonBase = class {
@@ -21274,29 +22935,29 @@ Total Duration: ${a - u}ms`);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
 				case "ERROR":
-				case "UNSET": return __PRIVATE_EvaluateResult.mr();
+				case "UNSET": return __PRIVATE_EvaluateResult.Ci();
 			}
 			const r = __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t);
 			switch (r.type) {
 				case "ERROR":
-				case "UNSET": return __PRIVATE_EvaluateResult.mr();
+				case "UNSET": return __PRIVATE_EvaluateResult.Ci();
 			}
-			return this.Fr(n, r);
+			return this.qi(n, r);
 		}
 	};
 	var __PRIVATE_CoreEq = class extends __PRIVATE_ComparisonBase {
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		Fr(e, t) {
-			if (e.wr() && t.wr()) return __PRIVATE_EvaluateResult.newValue(Je);
-			if (e.wr() || t.wr()) return __PRIVATE_EvaluateResult.newValue(Ye);
-			if (__PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value)) return __PRIVATE_EvaluateResult.newValue(Ye);
-			if (__PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value)) return __PRIVATE_EvaluateResult.newValue(Ye);
+		qi(e, t) {
+			if (e.Ni() && t.Ni()) return __PRIVATE_EvaluateResult.newValue(wt);
+			if (e.Ni() || t.Ni()) return __PRIVATE_EvaluateResult.newValue(bt);
+			if (__PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value)) return __PRIVATE_EvaluateResult.newValue(bt);
+			if (__PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value)) return __PRIVATE_EvaluateResult.newValue(bt);
 			switch (__PRIVATE_strictValueEquals(e.value, t.value)) {
-				case "EQ": return __PRIVATE_EvaluateResult.newValue(Je);
-				case "NOT_EQ": return __PRIVATE_EvaluateResult.newValue(Ye);
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
+				case "EQ": return __PRIVATE_EvaluateResult.newValue(wt);
+				case "NOT_EQ": return __PRIVATE_EvaluateResult.newValue(bt);
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
 				default: l(44615, {
 					left: e,
 					right: t
@@ -21308,12 +22969,12 @@ Total Duration: ${a - u}ms`);
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		Fr(e, t) {
+		qi(e, t) {
 			switch (__PRIVATE_strictValueEquals(e.value, t.value)) {
-				case "EQ": return __PRIVATE_EvaluateResult.newValue(Ye);
+				case "EQ": return __PRIVATE_EvaluateResult.newValue(bt);
 				case "NOT_EQ":
-				case "TYPE_MISMATCH": return __PRIVATE_EvaluateResult.newValue(Je);
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
+				case "TYPE_MISMATCH": return __PRIVATE_EvaluateResult.newValue(wt);
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
 				default: l(44614, {
 					left: e,
 					right: t
@@ -21325,32 +22986,32 @@ Total Duration: ${a - u}ms`);
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		Fr(e, t) {
-			return __PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value) || __PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value) ? __PRIVATE_EvaluateResult.newValue(Ye) : __PRIVATE_EvaluateResult.newValue({ booleanValue: __PRIVATE_valueCompare(e.value, t.value) < 0 });
+		qi(e, t) {
+			return __PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value) || __PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value) ? __PRIVATE_EvaluateResult.newValue(bt) : __PRIVATE_EvaluateResult.newValue({ booleanValue: __PRIVATE_valueCompare(e.value, t.value) < 0 });
 		}
 	};
 	var __PRIVATE_CoreLte = class extends __PRIVATE_ComparisonBase {
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		Fr(e, t) {
-			return __PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value) || __PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value) ? __PRIVATE_EvaluateResult.newValue(Ye) : "EQ" === __PRIVATE_strictValueEquals(e.value, t.value) ? __PRIVATE_EvaluateResult.newValue(Je) : __PRIVATE_EvaluateResult.newValue({ booleanValue: __PRIVATE_valueCompare(e.value, t.value) < 0 });
+		qi(e, t) {
+			return __PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value) || __PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value) ? __PRIVATE_EvaluateResult.newValue(bt) : "EQ" === __PRIVATE_strictValueEquals(e.value, t.value) ? __PRIVATE_EvaluateResult.newValue(wt) : __PRIVATE_EvaluateResult.newValue({ booleanValue: __PRIVATE_valueCompare(e.value, t.value) < 0 });
 		}
 	};
 	var __PRIVATE_CoreGt = class extends __PRIVATE_ComparisonBase {
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		Fr(e, t) {
-			return __PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value) || __PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value) ? __PRIVATE_EvaluateResult.newValue(Ye) : __PRIVATE_EvaluateResult.newValue({ booleanValue: __PRIVATE_valueCompare(e.value, t.value) > 0 });
+		qi(e, t) {
+			return __PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value) || __PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value) ? __PRIVATE_EvaluateResult.newValue(bt) : __PRIVATE_EvaluateResult.newValue({ booleanValue: __PRIVATE_valueCompare(e.value, t.value) > 0 });
 		}
 	};
 	var __PRIVATE_CoreGte = class extends __PRIVATE_ComparisonBase {
 		constructor(e) {
 			super(e), this.expr = e;
 		}
-		Fr(e, t) {
-			return __PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value) || __PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value) ? __PRIVATE_EvaluateResult.newValue(Ye) : "EQ" === __PRIVATE_strictValueEquals(e.value, t.value) ? __PRIVATE_EvaluateResult.newValue(Je) : __PRIVATE_EvaluateResult.newValue({ booleanValue: __PRIVATE_valueCompare(e.value, t.value) > 0 });
+		qi(e, t) {
+			return __PRIVATE_typeOrder(e.value) !== __PRIVATE_typeOrder(t.value) || __PRIVATE_isNanValue(e.value) || __PRIVATE_isNanValue(t.value) ? __PRIVATE_EvaluateResult.newValue(bt) : "EQ" === __PRIVATE_strictValueEquals(e.value, t.value) ? __PRIVATE_EvaluateResult.newValue(wt) : __PRIVATE_EvaluateResult.newValue({ booleanValue: __PRIVATE_valueCompare(e.value, t.value) > 0 });
 		}
 	};
 	var __PRIVATE_CoreArrayConcat = class {
@@ -21369,12 +23030,12 @@ Total Duration: ${a - u}ms`);
 			__PRIVATE_hardAssert(1 === this.expr.params.length, 216);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
 				case "ARRAY": {
 					const e = n.value.arrayValue?.values ?? [];
 					return __PRIVATE_EvaluateResult.newValue({ arrayValue: { values: [...e].reverse() } });
 				}
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21399,7 +23060,7 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 			const i = __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t);
 			switch (i.type) {
@@ -21407,9 +23068,9 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
-			if (n) return __PRIVATE_EvaluateResult.gr();
+			if (n) return __PRIVATE_EvaluateResult.Oi();
 			const s = i.value?.arrayValue?.values ?? [], _ = r.value?.arrayValue?.values ?? [];
 			for (const e of s) {
 				let t = false;
@@ -21431,9 +23092,9 @@ Total Duration: ${a - u}ms`);
 					}
 					if (t) break;
 				}
-				if (!t) return __PRIVATE_EvaluateResult.newValue(Ye);
+				if (!t) return __PRIVATE_EvaluateResult.newValue(bt);
 			}
-			return __PRIVATE_EvaluateResult.newValue(Je);
+			return __PRIVATE_EvaluateResult.newValue(wt);
 		}
 	};
 	var __PRIVATE_CoreArrayContainsAny = class {
@@ -21449,7 +23110,7 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 			const i = __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t);
 			switch (i.type) {
@@ -21457,12 +23118,12 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
-			if (n) return __PRIVATE_EvaluateResult.gr();
+			if (n) return __PRIVATE_EvaluateResult.Oi();
 			const s = i.value?.arrayValue?.values ?? [], _ = r.value?.arrayValue?.values ?? [];
 			for (const e of _) for (const t of s) switch (__PRIVATE_isNullValue(e) && __PRIVATE_isNullValue(t) ? "EQ" : __PRIVATE_strictValueEquals(e, t)) {
-				case "EQ": return __PRIVATE_EvaluateResult.newValue(Je);
+				case "EQ": return __PRIVATE_EvaluateResult.newValue(wt);
 				case "NOT_EQ":
 				case "TYPE_MISMATCH": break;
 				case "NULL":
@@ -21473,7 +23134,7 @@ Total Duration: ${a - u}ms`);
 					search: t
 				});
 			}
-			return n ? __PRIVATE_EvaluateResult.gr() : __PRIVATE_EvaluateResult.newValue(Ye);
+			return n ? __PRIVATE_EvaluateResult.Oi() : __PRIVATE_EvaluateResult.newValue(bt);
 		}
 	};
 	var __PRIVATE_CoreArrayLength = class {
@@ -21484,9 +23145,9 @@ Total Duration: ${a - u}ms`);
 			__PRIVATE_hardAssert(1 === this.expr.params.length, 38605);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
 				case "ARRAY": return __PRIVATE_EvaluateResult.newValue({ integerValue: `${n.value?.arrayValue?.values?.length ?? 0}` });
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21506,7 +23167,7 @@ Total Duration: ${a - u}ms`);
 			__PRIVATE_hardAssert(1 === this.expr.params.length, 1508);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
 				case "BYTES": {
 					const e = n.value?.bytesValue;
 					if ("string" == typeof e) {
@@ -21519,7 +23180,7 @@ Total Duration: ${a - u}ms`);
 					const e = n.value?.stringValue, t = new Intl.__PRIVATE_Segmenter(void 0, { granularity: "grapheme" }).segment(e), r = Array.from(t, ((e) => e.segment)).reverse();
 					return __PRIVATE_EvaluateResult.newValue({ stringValue: r.join("") });
 				}
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21547,7 +23208,7 @@ Total Duration: ${a - u}ms`);
 			__PRIVATE_hardAssert(1 === this.expr.params.length, 19400);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
 				case "STRING": {
 					const e = function __PRIVATE_getUnicodePointCount(e) {
 						let t = 0;
@@ -21566,9 +23227,9 @@ Total Duration: ${a - u}ms`);
 						}
 						return t;
 					}(n.value.stringValue);
-					return void 0 === e ? __PRIVATE_EvaluateResult.mr() : __PRIVATE_EvaluateResult.newValue({ integerValue: e });
+					return void 0 === e ? __PRIVATE_EvaluateResult.Ci() : __PRIVATE_EvaluateResult.newValue({ integerValue: e });
 				}
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21607,10 +23268,10 @@ Total Duration: ${a - u}ms`);
 						}
 						return t;
 					}(n.value?.stringValue);
-					return void 0 === e ? __PRIVATE_EvaluateResult.mr() : __PRIVATE_EvaluateResult.newValue({ integerValue: e });
+					return void 0 === e ? __PRIVATE_EvaluateResult.Ci() : __PRIVATE_EvaluateResult.newValue({ integerValue: e });
 				}
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
-				default: return __PRIVATE_EvaluateResult.mr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21627,7 +23288,7 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 			const i = __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t);
 			switch (i.type) {
@@ -21635,13 +23296,13 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
-			return n ? __PRIVATE_EvaluateResult.gr() : this.Or(r.value?.stringValue, i.value?.stringValue);
+			return n ? __PRIVATE_EvaluateResult.Oi() : this.Ki(r.value?.stringValue, i.value?.stringValue);
 		}
 	};
 	var __PRIVATE_CoreLike = class extends __PRIVATE_StringSearchFunctionBase {
-		Or(e, t) {
+		Ki(e, t) {
 			try {
 				const n = function __PRIVATE_likeToRegex(e) {
 					let t = "";
@@ -21677,41 +23338,41 @@ Total Duration: ${a - u}ms`);
 				}(t), r = RE2JS.compile(n);
 				return __PRIVATE_EvaluateResult.newValue({ booleanValue: r.matches(e) });
 			} catch (e) {
-				return __PRIVATE_logWarn(`Invalid LIKE pattern converted to regex: ${t}, returning error. Error: ${e}`), __PRIVATE_EvaluateResult.mr();
+				return __PRIVATE_logWarn(`Invalid LIKE pattern converted to regex: ${t}, returning error. Error: ${e}`), __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
 	var __PRIVATE_CoreRegexContains = class extends __PRIVATE_StringSearchFunctionBase {
-		Or(e, t) {
+		Ki(e, t) {
 			try {
 				const n = RE2JS.compile(t);
 				return __PRIVATE_EvaluateResult.newValue({ booleanValue: n.test(e) });
 			} catch (e) {
-				return __PRIVATE_logWarn(`Invalid regex pattern found in regex_contains: ${t}, returning error`), __PRIVATE_EvaluateResult.mr();
+				return __PRIVATE_logWarn(`Invalid regex pattern found in regex_contains: ${t}, returning error`), __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
 	var __PRIVATE_CoreRegexMatch = class extends __PRIVATE_StringSearchFunctionBase {
-		Or(e, t) {
+		Ki(e, t) {
 			try {
 				return __PRIVATE_EvaluateResult.newValue({ booleanValue: RE2JS.compile(t).matches(e) });
 			} catch (e) {
-				return __PRIVATE_logWarn(`Invalid regex pattern found in regex_match: ${t}, returning error`), __PRIVATE_EvaluateResult.mr();
+				return __PRIVATE_logWarn(`Invalid regex pattern found in regex_match: ${t}, returning error`), __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
 	var __PRIVATE_CoreStrContains = class extends __PRIVATE_StringSearchFunctionBase {
-		Or(e, t) {
+		Ki(e, t) {
 			return __PRIVATE_EvaluateResult.newValue({ booleanValue: e.includes(t) });
 		}
 	};
 	var __PRIVATE_CoreStartsWith = class extends __PRIVATE_StringSearchFunctionBase {
-		Or(e, t) {
+		Ki(e, t) {
 			return __PRIVATE_EvaluateResult.newValue({ booleanValue: e.startsWith(t) });
 		}
 	};
 	var __PRIVATE_CoreEndsWith = class extends __PRIVATE_StringSearchFunctionBase {
-		Or(e, t) {
+		Ki(e, t) {
 			return __PRIVATE_EvaluateResult.newValue({ booleanValue: e.endsWith(t) });
 		}
 	};
@@ -21724,8 +23385,8 @@ Total Duration: ${a - u}ms`);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
 				case "STRING": return __PRIVATE_EvaluateResult.newValue({ stringValue: n.value?.stringValue?.toLowerCase() });
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
-				default: return __PRIVATE_EvaluateResult.mr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21738,8 +23399,8 @@ Total Duration: ${a - u}ms`);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
 				case "STRING": return __PRIVATE_EvaluateResult.newValue({ stringValue: n.value?.stringValue?.toUpperCase() });
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
-				default: return __PRIVATE_EvaluateResult.mr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21752,8 +23413,8 @@ Total Duration: ${a - u}ms`);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
 				case "STRING": return __PRIVATE_EvaluateResult.newValue({ stringValue: n.value?.stringValue?.trim() });
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
-				default: return __PRIVATE_EvaluateResult.mr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
@@ -21771,9 +23432,9 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					i = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
-			return i ? __PRIVATE_EvaluateResult.gr() : __PRIVATE_EvaluateResult.newValue({ stringValue: r });
+			return i ? __PRIVATE_EvaluateResult.Oi() : __PRIVATE_EvaluateResult.newValue({ stringValue: r });
 		}
 	};
 	var __PRIVATE_CoreMapGet = class {
@@ -21784,14 +23445,14 @@ Total Duration: ${a - u}ms`);
 			__PRIVATE_hardAssert(2 === this.expr.params.length, 4483);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
-				case "UNSET": return __PRIVATE_EvaluateResult.pr();
+				case "UNSET": return __PRIVATE_EvaluateResult.Fi();
 				case "MAP": break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 			const r = __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t);
-			if ("STRING" !== r.type) return __PRIVATE_EvaluateResult.mr();
+			if ("STRING" !== r.type) return __PRIVATE_EvaluateResult.Ci();
 			const i = n.value?.mapValue?.fields?.[r.value?.stringValue];
-			return void 0 === i ? __PRIVATE_EvaluateResult.pr() : __PRIVATE_EvaluateResult.newValue(i);
+			return void 0 === i ? __PRIVATE_EvaluateResult.Fi() : __PRIVATE_EvaluateResult.newValue(i);
 		}
 	};
 	var __PRIVATE_DistanceBase = class {
@@ -21807,7 +23468,7 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 			const i = __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t);
 			switch (i.type) {
@@ -21815,17 +23476,17 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
-			if (n) return __PRIVATE_EvaluateResult.gr();
+			if (n) return __PRIVATE_EvaluateResult.Oi();
 			const s = __PRIVATE_getVectorValue(r.value), _ = __PRIVATE_getVectorValue(i.value);
-			if (void 0 === s || void 0 === _ || s.values?.length !== _.values?.length) return __PRIVATE_EvaluateResult.mr();
-			const o = this.Mr(s, _);
-			return void 0 === o || isNaN(o) ? __PRIVATE_EvaluateResult.mr() : __PRIVATE_EvaluateResult.newValue({ doubleValue: o });
+			if (void 0 === s || void 0 === _ || s.values?.length !== _.values?.length) return __PRIVATE_EvaluateResult.Ci();
+			const o = this.$i(s, _);
+			return void 0 === o || isNaN(o) ? __PRIVATE_EvaluateResult.Ci() : __PRIVATE_EvaluateResult.newValue({ doubleValue: o });
 		}
 	};
 	var __PRIVATE_CoreCosineDistance = class extends __PRIVATE_DistanceBase {
-		Mr(e, t) {
+		$i(e, t) {
 			const n = e?.values ?? [], r = t?.values ?? [];
 			if (0 === n.length) return;
 			let i = 0, s = 0, _ = 0;
@@ -21840,7 +23501,7 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	var __PRIVATE_CoreDotProduct = class extends __PRIVATE_DistanceBase {
-		Mr(e, t) {
+		$i(e, t) {
 			const n = e?.values ?? [], r = t?.values ?? [];
 			if (0 === n.length) return 0;
 			let i = 0;
@@ -21852,7 +23513,7 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	var __PRIVATE_CoreEuclideanDistance = class extends __PRIVATE_DistanceBase {
-		Mr(e, t) {
+		$i(e, t) {
 			const n = e?.values ?? [], r = t?.values ?? [];
 			if (0 === n.length) return 0;
 			let i = 0;
@@ -21876,21 +23537,28 @@ Total Duration: ${a - u}ms`);
 					const e = __PRIVATE_getVectorValue(n.value);
 					return __PRIVATE_EvaluateResult.newValue({ integerValue: e?.values?.length ?? 0 });
 				}
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
-				default: return __PRIVATE_EvaluateResult.mr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
-	const Mt = BigInt(-62135596800), Nt = BigInt(253402300799), Lt = BigInt(1e3), Bt = BigInt(1e6), Ut = Mt * Lt, kt = Nt * Lt + BigInt(999), qt = Mt * Bt, $t = Nt * Bt + BigInt(999999);
+	const En = BigInt(-62135596800);
+	const hn = BigInt(253402300799);
+	const Tn = BigInt(1e3);
+	const Pn = BigInt(1e6);
+	const In = En * Tn;
+	const Rn = hn * Tn + BigInt(999);
+	const An = En * Pn;
+	const Vn = hn * Pn + BigInt(999999);
 	function __PRIVATE_isMicrosInBounds(e) {
-		return e >= qt && e <= $t;
+		return e >= An && e <= Vn;
 	}
 	function __PRIVATE_isSecondsInBounds(e) {
-		return e >= Mt && e <= Nt;
+		return e >= En && e <= hn;
 	}
 	function __PRIVATE_isTimestampInBounds(e, t) {
 		const n = BigInt(e);
-		return !(n < Mt || n > Nt) && !(t < 0 || t >= 1e9) && (n !== Mt || 0 === t) && !(n === Nt && t > 999999999);
+		return !(n < En || n > hn) && !(t < 0 || t >= 1e9) && (n !== En || 0 === t) && !(n === hn && t > 999999999);
 	}
 	function __PRIVATE_adjustTimestamp(e, t) {
 		return t < 0 ? {
@@ -21902,7 +23570,7 @@ Total Duration: ${a - u}ms`);
 		};
 	}
 	function __PRIVATE_timestampToMicros(e) {
-		return BigInt(e.seconds) * Bt + BigInt(Math.trunc(e.nanoseconds / 1e3));
+		return BigInt(e.seconds) * Pn + BigInt(Math.trunc(e.nanoseconds / 1e3));
 	}
 	var __PRIVATE_UnixToTimestamp = class {
 		constructor(e) {
@@ -21913,38 +23581,38 @@ Total Duration: ${a - u}ms`);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
 				case "INT": return this.toTimestamp(BigInt(n.value.integerValue));
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
-				default: return __PRIVATE_EvaluateResult.mr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 		}
 	};
 	var __PRIVATE_CoreUnixMicrosToTimestamp = class extends __PRIVATE_UnixToTimestamp {
 		toTimestamp(e) {
-			if (!__PRIVATE_isMicrosInBounds(e)) return __PRIVATE_EvaluateResult.mr();
-			let t = Number(e / Bt), n = Number(e % Bt * BigInt(1e3));
+			if (!__PRIVATE_isMicrosInBounds(e)) return __PRIVATE_EvaluateResult.Ci();
+			let t = Number(e / Pn), n = Number(e % Pn * BigInt(1e3));
 			const r = __PRIVATE_adjustTimestamp(t, n);
 			return t = r.seconds, n = r.nanos, __PRIVATE_isTimestampInBounds(t, n) ? __PRIVATE_EvaluateResult.newValue({ timestampValue: {
 				seconds: t,
 				nanos: n
-			} }) : __PRIVATE_EvaluateResult.mr();
+			} }) : __PRIVATE_EvaluateResult.Ci();
 		}
 	};
 	var __PRIVATE_CoreUnixMillisToTimestamp = class extends __PRIVATE_UnixToTimestamp {
 		toTimestamp(e) {
 			if (!function __PRIVATE_isMillisInBounds(e) {
-				return e >= Ut && e <= kt;
-			}(e)) return __PRIVATE_EvaluateResult.mr();
-			let t = Number(e / Lt), n = Number(e % Lt * BigInt(1e6));
+				return e >= In && e <= Rn;
+			}(e)) return __PRIVATE_EvaluateResult.Ci();
+			let t = Number(e / Tn), n = Number(e % Tn * BigInt(1e6));
 			const r = __PRIVATE_adjustTimestamp(t, n);
 			return t = r.seconds, n = r.nanos, __PRIVATE_isTimestampInBounds(t, n) ? __PRIVATE_EvaluateResult.newValue({ timestampValue: {
 				seconds: t,
 				nanos: n
-			} }) : __PRIVATE_EvaluateResult.mr();
+			} }) : __PRIVATE_EvaluateResult.Ci();
 		}
 	};
 	var __PRIVATE_CoreUnixSecondsToTimestamp = class extends __PRIVATE_UnixToTimestamp {
 		toTimestamp(e) {
-			if (!__PRIVATE_isSecondsInBounds(e)) return __PRIVATE_EvaluateResult.mr();
+			if (!__PRIVATE_isSecondsInBounds(e)) return __PRIVATE_EvaluateResult.Ci();
 			const t = Number(e);
 			return __PRIVATE_EvaluateResult.newValue({ timestampValue: {
 				seconds: t,
@@ -21961,29 +23629,29 @@ Total Duration: ${a - u}ms`);
 			const n = __PRIVATE_toEvaluable(this.expr.params[0]).evaluate(e, t);
 			switch (n.type) {
 				case "TIMESTAMP": break;
-				case "NULL": return __PRIVATE_EvaluateResult.gr();
-				default: return __PRIVATE_EvaluateResult.mr();
+				case "NULL": return __PRIVATE_EvaluateResult.Oi();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 			const r = fromTimestamp(n.value.timestampValue);
-			return __PRIVATE_isTimestampInBounds(r.seconds, r.nanoseconds) ? this.Nr(r) : __PRIVATE_EvaluateResult.mr();
+			return __PRIVATE_isTimestampInBounds(r.seconds, r.nanoseconds) ? this.Wi(r) : __PRIVATE_EvaluateResult.Ci();
 		}
 	};
 	var __PRIVATE_CoreTimestampToUnixMicros = class extends __PRIVATE_TimestampToUnix {
-		Nr(e) {
+		Wi(e) {
 			const t = __PRIVATE_timestampToMicros(e);
-			return __PRIVATE_isMicrosInBounds(t) ? __PRIVATE_EvaluateResult.newValue({ integerValue: `${t.toString()}` }) : __PRIVATE_EvaluateResult.mr();
+			return __PRIVATE_isMicrosInBounds(t) ? __PRIVATE_EvaluateResult.newValue({ integerValue: `${t.toString()}` }) : __PRIVATE_EvaluateResult.Ci();
 		}
 	};
 	var __PRIVATE_CoreTimestampToUnixMillis = class extends __PRIVATE_TimestampToUnix {
-		Nr(e) {
+		Wi(e) {
 			const t = __PRIVATE_timestampToMicros(e), n = t / BigInt(1e3), r = t % BigInt(1e3);
 			return n > BigInt(0) || r === BigInt(0) ? __PRIVATE_EvaluateResult.newValue({ integerValue: n.toString() }) : __PRIVATE_EvaluateResult.newValue({ integerValue: (n - BigInt(1)).toString() });
 		}
 	};
 	var __PRIVATE_CoreTimestampToUnixSeconds = class extends __PRIVATE_TimestampToUnix {
-		Nr(e) {
+		Wi(e) {
 			const t = BigInt(e.seconds);
-			return __PRIVATE_isSecondsInBounds(t) ? __PRIVATE_EvaluateResult.newValue({ integerValue: t.toString() }) : __PRIVATE_EvaluateResult.mr();
+			return __PRIVATE_isSecondsInBounds(t) ? __PRIVATE_EvaluateResult.newValue({ integerValue: t.toString() }) : __PRIVATE_EvaluateResult.Ci();
 		}
 	};
 	var __PRIVATE_TimestampArithmetic = class {
@@ -21999,7 +23667,7 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 			const i = __PRIVATE_toEvaluable(this.expr.params[1]).evaluate(e, t);
 			let s;
@@ -22015,12 +23683,12 @@ Total Duration: ${a - u}ms`);
 							case "day": return "day";
 							default: return;
 						}
-					}(i.value.stringValue), void 0 === s) return __PRIVATE_EvaluateResult.mr();
+					}(i.value.stringValue), void 0 === s) return __PRIVATE_EvaluateResult.Ci();
 					break;
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
 			const _ = __PRIVATE_toEvaluable(this.expr.params[2]).evaluate(e, t);
 			switch (_.type) {
@@ -22028,9 +23696,9 @@ Total Duration: ${a - u}ms`);
 				case "NULL":
 					n = true;
 					break;
-				default: return __PRIVATE_EvaluateResult.mr();
+				default: return __PRIVATE_EvaluateResult.Ci();
 			}
-			if (n) return __PRIVATE_EvaluateResult.gr();
+			if (n) return __PRIVATE_EvaluateResult.Oi();
 			const o = BigInt(_.value.integerValue);
 			let a;
 			try {
@@ -22053,23 +23721,23 @@ Total Duration: ${a - u}ms`);
 					case "day":
 						a = o * BigInt(864e8);
 						break;
-					default: return __PRIVATE_EvaluateResult.mr();
+					default: return __PRIVATE_EvaluateResult.Ci();
 				}
-				if ("microsecond" !== s && o !== BigInt(0) && a / o !== BigInt(this.Lr(s))) return __PRIVATE_EvaluateResult.mr();
+				if ("microsecond" !== s && o !== BigInt(0) && a / o !== BigInt(this.Gi(s))) return __PRIVATE_EvaluateResult.Ci();
 			} catch (e) {
-				return __PRIVATE_logWarn(`Error during timestamp arithmetic: ${e}`), __PRIVATE_EvaluateResult.mr();
+				return __PRIVATE_logWarn(`Error during timestamp arithmetic: ${e}`), __PRIVATE_EvaluateResult.Ci();
 			}
 			const u = fromTimestamp(r.value.timestampValue);
-			if (!__PRIVATE_isTimestampInBounds(u.seconds, u.nanoseconds)) return __PRIVATE_EvaluateResult.mr();
-			const c = __PRIVATE_timestampToMicros(u), l = this.Br(c, a);
-			if (!__PRIVATE_isMicrosInBounds(l)) return __PRIVATE_EvaluateResult.mr();
-			const E = Number(l / Bt), h = l % Bt, T = Number((h < 0 ? h + Bt : h) * BigInt(1e3)), P = h < 0 ? E - 1 : E;
+			if (!__PRIVATE_isTimestampInBounds(u.seconds, u.nanoseconds)) return __PRIVATE_EvaluateResult.Ci();
+			const c = __PRIVATE_timestampToMicros(u), l = this.ji(c, a);
+			if (!__PRIVATE_isMicrosInBounds(l)) return __PRIVATE_EvaluateResult.Ci();
+			const E = Number(l / Pn), h = l % Pn, T = Number((h < 0 ? h + Pn : h) * BigInt(1e3)), P = h < 0 ? E - 1 : E;
 			return __PRIVATE_isTimestampInBounds(P, T) ? __PRIVATE_EvaluateResult.newValue({ timestampValue: {
 				seconds: P,
 				nanos: T
-			} }) : __PRIVATE_EvaluateResult.mr();
+			} }) : __PRIVATE_EvaluateResult.Ci();
 		}
-		Lr(e) {
+		Gi(e) {
 			switch (e) {
 				case "millisecond": return 1e3;
 				case "second": return 1e6;
@@ -22081,22 +23749,38 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	var __PRIVATE_CoreTimestampAdd = class extends __PRIVATE_TimestampArithmetic {
-		Br(e, t) {
+		ji(e, t) {
 			return e + t;
 		}
 	};
 	var __PRIVATE_CoreTimestampSub = class extends __PRIVATE_TimestampArithmetic {
-		Br(e, t) {
+		ji(e, t) {
 			return e - t;
 		}
 	};
+	/**
+	* @license
+	* Copyright 2024 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	function __PRIVATE_canonifyExpr(e) {
 		if ((e = __PRIVATE_unwrapExpression(e)) instanceof o) return `fld(${e.fieldName})`;
 		if (e instanceof Constant) return `cst(${function __PRIVATE_canonifyConstantValue(e) {
 			return null === e ? "null" : "number" == typeof e ? e.toString() : "string" == typeof e ? `"${e}"` : e instanceof aa ? `ref(${e.path})` : e instanceof n ? `vec(${JSON.stringify(e)})` : JSON.stringify(e);
 		}(e.value)})`;
 		if (e instanceof y) return `fn(${e.name},[${e.params.map(__PRIVATE_canonifyExpr).join(",")}])`;
-		if ("ListOfExpressions" === e.expressionType) return `list([${e.cr.map(__PRIVATE_canonifyExpr).join(",")}])`;
+		if ("ListOfExpressions" === e.expressionType) return `list([${e.fi.map(__PRIVATE_canonifyExpr).join(",")}])`;
 		throw new Error(`Unrecognized expr ${JSON.stringify(e, null, 2)}`);
 	}
 	function __PRIVATE_canonifyStage(e) {
@@ -22106,10 +23790,10 @@ Total Duration: ${a - u}ms`);
 			return e.groups.size > 0 && (t += `grouping(${__PRIVATE_canonifyExprMap(e.groups)})`), t;
 		}
 		if (e instanceof M) return `${e._name}(${__PRIVATE_canonifyExprMap(e.groups)})`;
-		if (e instanceof X) return `${e._name}(${e.hr})`;
+		if (e instanceof X) return `${e._name}(${e.pi})`;
 		if (e instanceof Y) return `${e._name}(${e.collectionId})`;
 		if (e instanceof Z) return `${e._name}()`;
-		if (e instanceof sa) return `${e._name}(${e.Tr.sort()})`;
+		if (e instanceof sa) return `${e._name}(${e.gi.sort()})`;
 		if (e instanceof A) return `${e._name}(${__PRIVATE_canonifyExpr(e.condition)})`;
 		if (e instanceof v) return `${e._name}(${e.limit})`;
 		if (e instanceof L) return `${e._name}(${function __PRIVATE_canonifySortOrderings(e) {
@@ -22150,13 +23834,13 @@ Total Duration: ${a - u}ms`);
 		const n = function __PRIVATE_rewriteStages(e) {
 			let t = false;
 			const n = [];
-			for (const r of e) if (r instanceof L) if (t = true, r.orderings.some(((e) => e.expr instanceof o && e.expr.fieldName === Ce))) n.push(r);
+			for (const r of e) if (r instanceof L) if (t = true, r.orderings.some(((e) => e.expr instanceof o && e.expr.fieldName === Fe))) n.push(r);
 			else {
 				const e = r.orderings.map(((e) => e));
-				e.push(s(Ce).ascending()), n.push(new L(e, {}));
+				e.push(s(Fe).ascending()), n.push(new L(e, {}));
 			}
-			else r instanceof v ? (t || (n.push(new L([s(Ce).ascending()], {})), t = true), n.push(r)) : n.push(r);
-			return t || n.push(new L([s(Ce).ascending()], {})), n;
+			else r instanceof v ? (t || (n.push(new L([s(Fe).ascending()], {})), t = true), n.push(r)) : n.push(r);
+			return t || n.push(new L([s(Fe).ascending()], {})), n;
 		}(e.stages);
 		if (e.userDataReader) {
 			const t = e.userDataReader.createContext(3, "toCorePipeline");
@@ -22259,7 +23943,7 @@ Total Duration: ${a - u}ms`);
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const Kt = "";
+	*/ const fn = "";
 	/**
 	* Encodes a resource path into a IndexedDb-compatible string form.
 	*/
@@ -22277,7 +23961,7 @@ Total Duration: ${a - u}ms`);
 				case "\0":
 					n += "";
 					break;
-				case Kt:
+				case fn:
 					n += "";
 					break;
 				default: n += r;
@@ -22286,8 +23970,72 @@ Total Duration: ${a - u}ms`);
 		return n;
 	}
 	/** Encodes a path separator into the given result */ function __PRIVATE_encodeSeparator(e) {
-		return e + Kt + "";
+		return e + "";
 	}
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2022 Google LLC
@@ -22384,7 +24132,7 @@ Total Duration: ${a - u}ms`);
 	*/
 	/** Serializer for values stored in the LocalStore. */ var __PRIVATE_LocalSerializer = class {
 		constructor(e) {
-			this.$r = e;
+			this.Yi = e;
 		}
 	};
 	/**
@@ -22400,6 +24148,70 @@ Total Duration: ${a - u}ms`);
 		});
 		return "LAST" === e.limitType ? __PRIVATE_queryWithLimit(t, t.limit, "L") : t;
 	}
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2024 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2021 Google LLC
@@ -22420,63 +24232,176 @@ Total Duration: ${a - u}ms`);
 	var __PRIVATE_FirestoreIndexValueWriter = class {
 		constructor() {}
 		/** Writes an index value.  */
-		ei(e, t) {
-			this.ti(e, t), t.ni();
+		Es(e, t) {
+			this.hs(e, t), t.Ts();
 		}
-		ti(e, t) {
-			if ("nullValue" in e) this.ri(t, 5);
-			else if ("booleanValue" in e) this.ri(t, 10), t.ii(e.booleanValue ? 1 : 0);
-			else if ("integerValue" in e) this.ri(t, 15), t.ii(__PRIVATE_normalizeNumber(e.integerValue));
+		hs(e, t) {
+			if ("nullValue" in e) this.Ps(t, 5);
+			else if ("booleanValue" in e) this.Ps(t, 10), t.Is(e.booleanValue ? 1 : 0);
+			else if ("integerValue" in e) this.Ps(t, 15), t.Is(__PRIVATE_normalizeNumber(e.integerValue));
 			else if ("doubleValue" in e) {
 				const n = __PRIVATE_normalizeNumber(e.doubleValue);
-				isNaN(n) ? this.ri(t, 13) : (this.ri(t, 15), __PRIVATE_isNegativeZero(n) ? t.ii(0) : t.ii(n));
-			} else if ("timestampValue" in e) {
-				let n = e.timestampValue;
-				this.ri(t, 20), "string" == typeof n && (n = __PRIVATE_normalizeTimestamp(n)), t.si(`${n.seconds || ""}`), t.ii(n.nanos || 0);
-			} else if ("stringValue" in e) this._i(e.stringValue, t), this.oi(t);
-			else if ("bytesValue" in e) this.ri(t, 30), t.ai(__PRIVATE_normalizeByteString(e.bytesValue)), this.oi(t);
-			else if ("referenceValue" in e) this.ui(e.referenceValue, t);
-			else if ("geoPointValue" in e) {
-				const n = e.geoPointValue;
-				this.ri(t, 45), t.ii(n.latitude || 0), t.ii(n.longitude || 0);
-			} else "mapValue" in e ? __PRIVATE_isMaxValue(e) ? this.ri(t, Number.MAX_SAFE_INTEGER) : __PRIVATE_isVectorValue(e) ? this.ci(e.mapValue, t) : (this.li(e.mapValue, t), this.oi(t)) : "arrayValue" in e ? (this.Ei(e.arrayValue, t), this.oi(t)) : l(19022, { hi: e });
+				this.Rs(n, t);
+			} else if ("timestampValue" in e) this.As(e.timestampValue, t);
+			else if ("stringValue" in e) this.Vs(e.stringValue, t), this.fs(t);
+			else if ("bytesValue" in e) this.Ps(t, 30), t.ds(__PRIVATE_normalizeByteString(e.bytesValue)), this.fs(t);
+			else if ("referenceValue" in e) this.ps(e.referenceValue, t);
+			else if ("geoPointValue" in e) this.gs(e.geoPointValue, t);
+			else if ("mapValue" in e) {
+				const n = __PRIVATE_detectMapRepresentation(e);
+				if (n === dt.de) this.Ps(t, Number.MAX_SAFE_INTEGER);
+				else if (n === dt.me) this.ys(e.mapValue, t);
+				else if (n === dt.fe) this.Ps(t, 999);
+				else if (n === dt.Ve) this.Ps(t, 7);
+				else if (n === dt.Ae) {
+					const i = ((e.mapValue?.fields)?.[Et])?.bytesValue, s = __PRIVATE_normalizeByteString(i).toUint8Array();
+					if (0 === s[0]) {
+						const e = s.slice(1);
+						this.Ps(t, 30), t.ds(ByteString.fromUint8Array(e)), this.fs(t);
+					} else this.ws(e.mapValue, t);
+				} else if (n === dt.he) this.bs(e.mapValue, t);
+				else if (n === dt.Re) this.Ss(e.mapValue, t);
+				else if (n === dt.Te) this.xs(e.mapValue, t);
+				else if (n === dt.Pe) this.vs(e.mapValue, t);
+				else if (n === dt.Ie) {
+					const n = parseFloat(e.mapValue.fields[at].stringValue);
+					this.Rs(n, t);
+				} else this.Ds(e.mapValue, t), this.fs(t);
+			} else "arrayValue" in e ? (this.Cs(e.arrayValue, t), this.fs(t)) : l(19022, { Fs: e });
 		}
-		_i(e, t) {
-			this.ri(t, 25), this.Ti(e, t);
+		Vs(e, t) {
+			this.Ps(t, 25), this.Os(e, t);
 		}
-		Ti(e, t) {
-			t.si(e);
+		Os(e, t) {
+			t.Ms(e);
 		}
-		li(e, t) {
+		Rs(e, t) {
+			isNaN(e) ? this.Ps(t, 13) : (this.Ps(t, 15), __PRIVATE_isNegativeZero(e) ? t.Is(0) : t.Is(e));
+		}
+		vs(e, t) {
+			this.Ps(t, 15), t.Is(__PRIVATE_normalizeNumber(e.fields[ot].integerValue));
+		}
+		As(e, t) {
+			this.Ps(t, 20), "string" == typeof e && (e = __PRIVATE_normalizeTimestamp(e)), t.Ms(`${e.seconds || ""}`), t.Is(e.nanos || 0);
+		}
+		gs(e, t) {
+			this.Ps(t, 45), t.Is(e.latitude || 0), t.Is(e.longitude || 0);
+		}
+		Ds(e, t) {
 			const n = e.fields || {};
-			this.ri(t, 55);
-			for (const e of Object.keys(n)) this._i(e, t), this.ti(n[e], t);
+			this.Ps(t, 55);
+			for (const e of Object.keys(n)) this.Vs(e, t), this.hs(n[e], t);
 		}
-		ci(e, t) {
+		ys(e, t) {
 			const n = e.fields || {};
-			this.ri(t, 53);
-			const r = je, i = n[r].arrayValue?.values?.length || 0;
-			this.ri(t, 15), t.ii(__PRIVATE_normalizeNumber(i)), this._i(r, t), this.ti(n[r], t);
+			this.Ps(t, 53);
+			const r = Xe, i = n[r].arrayValue?.values?.length || 0;
+			this.Ps(t, 15), t.Is(__PRIVATE_normalizeNumber(i)), this.Vs(r, t), this.hs(n[r], t);
 		}
-		Ei(e, t) {
+		Cs(e, t) {
 			const n = e.values || [];
-			this.ri(t, 50);
-			for (const e of n) this.ti(e, t);
+			this.Ps(t, 50);
+			for (const e of n) this.hs(e, t);
 		}
-		ui(e, t) {
-			this.ri(t, 37);
-			DocumentKey.fromName(e).path.forEach(((e) => {
-				this.ri(t, 60), this.Ti(e, t);
+		ps(e, t) {
+			this.Ps(t, 37);
+			const n = e.split("/").filter(((e) => e.length > 0));
+			DocumentKey.fromSegments(n.slice(5)).path.forEach(((e) => {
+				this.Ps(t, 60), this.Os(e, t);
 			}));
 		}
-		ri(e, t) {
-			e.ii(t);
+		Ps(e, t) {
+			e.Is(t);
 		}
-		oi(e) {
-			e.ii(2);
+		fs(e) {
+			e.Is(2);
+		}
+		Ss(e, t) {
+			this.Ps(t, 22);
+			const n = e.fields || {};
+			n && this.Ds(n[ut].mapValue, t);
+		}
+		xs(e, t) {
+			this.Ps(t, 43);
+			const r = (e.fields || {})[_t]?.stringValue || "";
+			t.ds(__PRIVATE_normalizeByteString(r));
+		}
+		ws(e, t) {
+			this.Ps(t, 31);
+			const r = (e.fields || {})[Et]?.bytesValue || "";
+			t.ds(__PRIVATE_normalizeByteString(r)), this.fs(t);
+		}
+		bs(e, t) {
+			this.Ps(t, 47);
+			const r = (e.fields || {})[rt]?.mapValue?.fields || {};
+			r && (t.Ms(r[it]?.stringValue || ""), t.Ms(r[st]?.stringValue || "")), this.fs(t);
 		}
 	};
-	__PRIVATE_FirestoreIndexValueWriter.Pi = new __PRIVATE_FirestoreIndexValueWriter();
+	__PRIVATE_FirestoreIndexValueWriter.Ns = new __PRIVATE_FirestoreIndexValueWriter();
+	/**
+	* @license
+	* Copyright 2021 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law | agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES | CONDITIONS OF ANY KIND, either express | implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2019 Google LLC
@@ -22497,13 +24422,13 @@ Total Duration: ${a - u}ms`);
 	* An in-memory implementation of IndexManager.
 	*/ var __PRIVATE_MemoryIndexManager = class {
 		constructor() {
-			this.Zi = new __PRIVATE_MemoryCollectionParentIndex();
+			this.A_ = new __PRIVATE_MemoryCollectionParentIndex();
 		}
 		addToCollectionParentIndex(e, t) {
-			return this.Zi.add(t), PersistencePromise.resolve();
+			return this.A_.add(t), PersistencePromise.resolve();
 		}
 		getCollectionParents(e, t) {
-			return PersistencePromise.resolve(this.Zi.getEntries(t));
+			return PersistencePromise.resolve(this.A_.getEntries(t));
 		}
 		addFieldIndex(e, t) {
 			return PersistencePromise.resolve();
@@ -22562,7 +24487,22 @@ Total Duration: ${a - u}ms`);
 			return (this.index[e] || new SortedSet(ResourcePath.comparator)).toArray();
 		}
 	};
-	new Uint8Array(0);
+	/**
+	* @license
+	* Copyright 2019 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2017 Google LLC
@@ -22596,18 +24536,51 @@ Total Duration: ${a - u}ms`);
 	*/
 	var __PRIVATE_TargetIdGenerator = class __PRIVATE_TargetIdGenerator {
 		constructor(e) {
-			this.ys = e;
+			this.Q_ = e;
 		}
 		next() {
-			return this.ys += 2, this.ys;
+			return this.Q_ += 2, this.Q_;
 		}
-		static ws() {
+		static q_() {
 			return new __PRIVATE_TargetIdGenerator(0);
 		}
-		static bs() {
+		static K_() {
 			return new __PRIVATE_TargetIdGenerator(-1);
 		}
 	};
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	// Copyright 2024 Google LLC* @license
 	function __PRIVATE_runPipeline(e, t) {
 		let n = t;
 		for (const t of e.stages) n = evaluate({
@@ -22624,12 +24597,12 @@ Total Duration: ${a - u}ms`);
 	}
 	function evaluate(e, t, n) {
 		if (t instanceof X) return function __PRIVATE_evaluateCollection(e, t, n) {
-			return n.filter(((e) => e.isFoundDocument() && `/${e.key.getCollectionPath().canonicalString()}` === t.hr));
+			return n.filter(((e) => e.isFoundDocument() && `/${e.key.getCollectionPath().canonicalString()}` === t.pi));
 		}(0, t, n);
 		if (t instanceof A) return function __PRIVATE_evaluateWhere(e, t, n) {
 			return n.filter(((n) => {
 				const r = __PRIVATE_valueOrUndefined(__PRIVATE_toEvaluable(t.condition).evaluate(e, n));
-				return void 0 !== r && __PRIVATE_valueEquals$1(r, Je);
+				return void 0 !== r && __PRIVATE_valueEquals$1(r, wt);
 			}));
 		}(e, t, n);
 		if (t instanceof Y) return function __PRIVATE_evaluateCollectionGroup(e, t, n) {
@@ -22639,19 +24612,19 @@ Total Duration: ${a - u}ms`);
 			return n.filter(((e) => e.isFoundDocument()));
 		}(0, 0, n);
 		if (t instanceof sa) return function __PRIVATE_evaluateDocuments(e, t, n) {
-			return n.filter(((e) => e.isFoundDocument() && t.Pr.has(e.key.path.toStringWithLeadingSlash())));
+			return n.filter(((e) => e.isFoundDocument() && t.yi.has(e.key.path.toStringWithLeadingSlash())));
 		}(0, t, n);
 		if (t instanceof v) return function __PRIVATE_evaluateLimit(e, t, n) {
 			return n.slice(0, t.limit);
 		}(0, t, n);
 		if (t instanceof L) return function __PRIVATE_evaluateSort(e, t, n) {
 			const r = t.orderings.map(((e) => ({
-				Ms: __PRIVATE_toEvaluable(e.expr),
+				Z_: __PRIVATE_toEvaluable(e.expr),
 				direction: e.direction
 			})));
 			return [...n].sort(((t, n) => {
-				for (const { Ms: i, direction: s } of r) {
-					const r = __PRIVATE_valueOrUndefined(i.evaluate(e, t)), _ = __PRIVATE_valueOrUndefined(i.evaluate(e, n)), o = __PRIVATE_valueCompare(r ?? He, _ ?? He);
+				for (const { Z_: i, direction: s } of r) {
+					const r = __PRIVATE_valueOrUndefined(i.evaluate(e, t)), _ = __PRIVATE_valueOrUndefined(i.evaluate(e, n)), o = __PRIVATE_valueCompare(r ?? ht, _ ?? ht);
 					if (0 !== o) return "ascending" === s ? o : -o;
 				}
 				return 0;
@@ -22669,7 +24642,7 @@ Total Duration: ${a - u}ms`);
 		}(e);
 		return (n, r) => {
 			for (const i of t) {
-				const t = __PRIVATE_valueOrUndefined(__PRIVATE_toEvaluable(i.expr).evaluate({ serializer: e.serializer }, n)), s = __PRIVATE_valueOrUndefined(__PRIVATE_toEvaluable(i.expr).evaluate({ serializer: e.serializer }, r)), _ = __PRIVATE_valueCompare(t || He, s || He);
+				const t = __PRIVATE_valueOrUndefined(__PRIVATE_toEvaluable(i.expr).evaluate({ serializer: e.serializer }, n)), s = __PRIVATE_valueOrUndefined(__PRIVATE_toEvaluable(i.expr).evaluate({ serializer: e.serializer }, r)), _ = __PRIVATE_valueCompare(t || ht, s || ht);
 				if (0 !== _) return "ascending" === i.direction ? _ : -_;
 			}
 			return 0;
@@ -22765,6 +24738,22 @@ Total Duration: ${a - u}ms`);
 		}
 		/** Helper to assert this.changes is not null  */ assertNotApplied() {}
 	};
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2017 Google LLC
@@ -22995,7 +24984,7 @@ Total Duration: ${a - u}ms`);
 		*/ getNextDocuments(e, t, n, r) {
 			return this.remoteDocumentCache.getAllFromCollectionGroup(e, t, n, r).next(((i) => {
 				const s = r - i.size > 0 ? this.documentOverlayCache.getOverlaysForCollectionGroup(e, t, n.largestBatchId, r - i.size) : PersistencePromise.resolve(__PRIVATE_newOverlayMap());
-				let _ = Xe, o = i;
+				let _ = St, o = i;
 				return s.next(((t) => PersistencePromise.forEach(t, ((t, n) => (_ < n.largestBatchId && (_ = n.largestBatchId), i.get(t) ? PersistencePromise.resolve() : this.remoteDocumentCache.getEntry(e, t).next(((e) => {
 					o = o.insert(t, e);
 				}))))).next((() => this.populateOverlays(e, t, i))).next((() => this.computeViews(e, o, t, __PRIVATE_documentKeySet()))).next(((e) => ({
@@ -23097,13 +25086,13 @@ Total Duration: ${a - u}ms`);
 	* limitations under the License.
 	*/ var __PRIVATE_MemoryBundleCache = class {
 		constructor(e) {
-			this.serializer = e, this.Qs = /* @__PURE__ */ new Map(), this.Ws = /* @__PURE__ */ new Map();
+			this.serializer = e, this.ao = /* @__PURE__ */ new Map(), this.uo = /* @__PURE__ */ new Map();
 		}
 		getBundleMetadata(e, t) {
-			return PersistencePromise.resolve(this.Qs.get(t));
+			return PersistencePromise.resolve(this.ao.get(t));
 		}
 		saveBundleMetadata(e, t) {
-			return this.Qs.set(
+			return this.ao.set(
 				t.id,
 				/** Decodes a BundleMetadata proto into a BundleMetadata object. */
 				function __PRIVATE_fromBundleMetadata(e) {
@@ -23116,10 +25105,10 @@ Total Duration: ${a - u}ms`);
 			), PersistencePromise.resolve();
 		}
 		getNamedQuery(e, t) {
-			return PersistencePromise.resolve(this.Ws.get(t));
+			return PersistencePromise.resolve(this.uo.get(t));
 		}
 		saveNamedQuery(e, t) {
-			return this.Ws.set(t.name, function __PRIVATE_fromProtoNamedQuery(e) {
+			return this.uo.set(t.name, function __PRIVATE_fromProtoNamedQuery(e) {
 				return {
 					name: e.name,
 					query: __PRIVATE_fromBundledQuery(e.bundledQuery),
@@ -23148,7 +25137,7 @@ Total Duration: ${a - u}ms`);
 	* An in-memory implementation of DocumentOverlayCache.
 	*/ var __PRIVATE_MemoryDocumentOverlayCache = class {
 		constructor() {
-			this.overlays = new SortedMap(DocumentKey.comparator), this.Gs = /* @__PURE__ */ new Map();
+			this.overlays = new SortedMap(DocumentKey.comparator), this.co = /* @__PURE__ */ new Map();
 		}
 		getOverlay(e, t) {
 			return PersistencePromise.resolve(this.overlays.get(t));
@@ -23167,12 +25156,12 @@ Total Duration: ${a - u}ms`);
 		}
 		saveOverlays(e, t, n) {
 			return n.forEach(((n, r) => {
-				this.Zr(e, t, r);
+				this.cs(e, t, r);
 			})), PersistencePromise.resolve();
 		}
 		removeOverlaysForBatchId(e, t, n) {
-			const r = this.Gs.get(n);
-			return void 0 !== r && (r.forEach(((e) => this.overlays = this.overlays.remove(e))), this.Gs.delete(n)), PersistencePromise.resolve();
+			const r = this.co.get(n);
+			return void 0 !== r && (r.forEach(((e) => this.overlays = this.overlays.remove(e))), this.co.delete(n)), PersistencePromise.resolve();
 		}
 		getOverlaysForCollection(e, t, n) {
 			const r = __PRIVATE_newOverlayMap(), i = t.length + 1, s = new DocumentKey(t.child("")), _ = this.overlays.getIteratorFrom(s);
@@ -23197,15 +25186,15 @@ Total Duration: ${a - u}ms`);
 			for (; o.hasNext();) if (o.getNext().value.forEach(((e, t) => _.set(e, t))), _.size() >= r) break;
 			return PersistencePromise.resolve(_);
 		}
-		Zr(e, t, n) {
+		cs(e, t, n) {
 			const r = this.overlays.get(n.key);
 			if (null !== r) {
-				const e = this.Gs.get(r.largestBatchId).delete(n.key);
-				this.Gs.set(r.largestBatchId, e);
+				const e = this.co.get(r.largestBatchId).delete(n.key);
+				this.co.set(r.largestBatchId, e);
 			}
 			this.overlays = this.overlays.insert(n.key, new Overlay(t, n));
-			let i = this.Gs.get(t);
-			void 0 === i && (i = __PRIVATE_documentKeySet(), this.Gs.set(t, i)), this.Gs.set(t, i.add(n.key));
+			let i = this.co.get(t);
+			void 0 === i && (i = __PRIVATE_documentKeySet(), this.co.set(t, i)), this.co.set(t, i.add(n.key));
 		}
 	};
 	/**
@@ -23266,63 +25255,63 @@ Total Duration: ${a - u}ms`);
 	* some target ID.
 	*/ var __PRIVATE_ReferenceSet = class {
 		constructor() {
-			this.zs = new SortedSet(__PRIVATE_DocReference.js), this.Hs = new SortedSet(__PRIVATE_DocReference.Js);
+			this.lo = new SortedSet(__PRIVATE_DocReference.Eo), this.ho = new SortedSet(__PRIVATE_DocReference.To);
 		}
 		/** Returns true if the reference set contains no references. */ isEmpty() {
-			return this.zs.isEmpty();
+			return this.lo.isEmpty();
 		}
 		/** Adds a reference to the given document key for the given ID. */ addReference(e, t) {
 			const n = new __PRIVATE_DocReference(e, t);
-			this.zs = this.zs.add(n), this.Hs = this.Hs.add(n);
+			this.lo = this.lo.add(n), this.ho = this.ho.add(n);
 		}
-		/** Add references to the given document keys for the given ID. */ Ys(e, t) {
+		/** Add references to the given document keys for the given ID. */ Po(e, t) {
 			e.forEach(((e) => this.addReference(e, t)));
 		}
 		/**
 		* Removes a reference to the given document key for the given
 		* ID.
 		*/ removeReference(e, t) {
-			this.Zs(new __PRIVATE_DocReference(e, t));
+			this.Io(new __PRIVATE_DocReference(e, t));
 		}
-		Xs(e, t) {
+		Ro(e, t) {
 			e.forEach(((e) => this.removeReference(e, t)));
 		}
 		/**
 		* Clears all references with a given ID. Calls removeRef() for each key
 		* removed.
-		*/ e_(e) {
+		*/ Ao(e) {
 			const t = new DocumentKey(new ResourcePath([])), n = new __PRIVATE_DocReference(t, e), r = new __PRIVATE_DocReference(t, e + 1), i = [];
-			return this.Hs.forEachInRange([n, r], ((e) => {
-				this.Zs(e), i.push(e.key);
+			return this.ho.forEachInRange([n, r], ((e) => {
+				this.Io(e), i.push(e.key);
 			})), i;
 		}
-		t_() {
-			this.zs.forEach(((e) => this.Zs(e)));
+		Vo() {
+			this.lo.forEach(((e) => this.Io(e)));
 		}
-		Zs(e) {
-			this.zs = this.zs.delete(e), this.Hs = this.Hs.delete(e);
+		Io(e) {
+			this.lo = this.lo.delete(e), this.ho = this.ho.delete(e);
 		}
-		n_(e) {
+		fo(e) {
 			const t = new DocumentKey(new ResourcePath([])), n = new __PRIVATE_DocReference(t, e), r = new __PRIVATE_DocReference(t, e + 1);
 			let i = __PRIVATE_documentKeySet();
-			return this.Hs.forEachInRange([n, r], ((e) => {
+			return this.ho.forEachInRange([n, r], ((e) => {
 				i = i.add(e.key);
 			})), i;
 		}
 		containsKey(e) {
-			const t = new __PRIVATE_DocReference(e, 0), n = this.zs.firstAfterOrEqual(t);
+			const t = new __PRIVATE_DocReference(e, 0), n = this.lo.firstAfterOrEqual(t);
 			return null !== n && e.isEqual(n.key);
 		}
 	};
 	var __PRIVATE_DocReference = class {
 		constructor(e, t) {
-			this.key = e, this.r_ = t;
+			this.key = e, this.mo = t;
 		}
-		/** Compare by key then by ID */ static js(e, t) {
-			return DocumentKey.comparator(e.key, t.key) || __PRIVATE_primitiveComparator(e.r_, t.r_);
+		/** Compare by key then by ID */ static Eo(e, t) {
+			return DocumentKey.comparator(e.key, t.key) || __PRIVATE_primitiveComparator(e.mo, t.mo);
 		}
-		/** Compare by ID then by key */ static Js(e, t) {
-			return __PRIVATE_primitiveComparator(e.r_, t.r_) || DocumentKey.comparator(e.key, t.key);
+		/** Compare by ID then by key */ static To(e, t) {
+			return __PRIVATE_primitiveComparator(e.mo, t.mo) || DocumentKey.comparator(e.key, t.key);
 		}
 	};
 	/**
@@ -23342,36 +25331,36 @@ Total Duration: ${a - u}ms`);
 	* limitations under the License.
 	*/ var __PRIVATE_MemoryMutationQueue = class {
 		constructor(e, t) {
-			this.indexManager = e, this.referenceDelegate = t, this.mutationQueue = [], this.Gr = 1, this.i_ = new SortedSet(__PRIVATE_DocReference.js);
+			this.indexManager = e, this.referenceDelegate = t, this.mutationQueue = [], this.ts = 1, this.po = new SortedSet(__PRIVATE_DocReference.Eo);
 		}
 		checkEmpty(e) {
 			return PersistencePromise.resolve(0 === this.mutationQueue.length);
 		}
 		addMutationBatch(e, t, n, r) {
-			const i = this.Gr;
-			this.Gr++, this.mutationQueue.length > 0 && this.mutationQueue[this.mutationQueue.length - 1];
+			const i = this.ts;
+			this.ts++, this.mutationQueue.length > 0 && this.mutationQueue[this.mutationQueue.length - 1];
 			const s = new MutationBatch(i, t, n, r);
 			this.mutationQueue.push(s);
-			for (const t of r) this.i_ = this.i_.add(new __PRIVATE_DocReference(t.key, i)), this.indexManager.addToCollectionParentIndex(e, t.key.path.popLast());
+			for (const t of r) this.po = this.po.add(new __PRIVATE_DocReference(t.key, i)), this.indexManager.addToCollectionParentIndex(e, t.key.path.popLast());
 			return PersistencePromise.resolve(s);
 		}
 		lookupMutationBatch(e, t) {
-			return PersistencePromise.resolve(this.s_(t));
+			return PersistencePromise.resolve(this.yo(t));
 		}
 		getNextMutationBatchAfterBatchId(e, t) {
-			const n = t + 1, r = this.__(n), i = r < 0 ? 0 : r;
+			const n = t + 1, r = this.wo(n), i = r < 0 ? 0 : r;
 			return PersistencePromise.resolve(this.mutationQueue.length > i ? this.mutationQueue[i] : null);
 		}
 		getHighestUnacknowledgedBatchId() {
-			return PersistencePromise.resolve(0 === this.mutationQueue.length ? Ke : this.Gr - 1);
+			return PersistencePromise.resolve(0 === this.mutationQueue.length ? Je : this.ts - 1);
 		}
 		getAllMutationBatches(e) {
 			return PersistencePromise.resolve(this.mutationQueue.slice());
 		}
 		getAllMutationBatchesAffectingDocumentKey(e, t) {
 			const n = new __PRIVATE_DocReference(t, 0), r = new __PRIVATE_DocReference(t, Number.POSITIVE_INFINITY), i = [];
-			return this.i_.forEachInRange([n, r], ((e) => {
-				const t = this.s_(e.r_);
+			return this.po.forEachInRange([n, r], ((e) => {
+				const t = this.yo(e.mo);
 				i.push(t);
 			})), PersistencePromise.resolve(i);
 		}
@@ -23379,10 +25368,10 @@ Total Duration: ${a - u}ms`);
 			let n = new SortedSet(__PRIVATE_primitiveComparator);
 			return t.forEach(((e) => {
 				const t = new __PRIVATE_DocReference(e, 0), r = new __PRIVATE_DocReference(e, Number.POSITIVE_INFINITY);
-				this.i_.forEachInRange([t, r], ((e) => {
-					n = n.add(e.r_);
+				this.po.forEachInRange([t, r], ((e) => {
+					n = n.add(e.mo);
 				}));
-			})), PersistencePromise.resolve(this.o_(n));
+			})), PersistencePromise.resolve(this.bo(n));
 		}
 		getAllMutationBatchesAffectingQuery(e, t) {
 			const n = t.path, r = n.length + 1;
@@ -23390,31 +25379,31 @@ Total Duration: ${a - u}ms`);
 			DocumentKey.isDocumentKey(i) || (i = i.child(""));
 			const s = new __PRIVATE_DocReference(new DocumentKey(i), 0);
 			let _ = new SortedSet(__PRIVATE_primitiveComparator);
-			return this.i_.forEachWhile(((e) => {
+			return this.po.forEachWhile(((e) => {
 				const t = e.key.path;
-				return !!n.isPrefixOf(t) && (t.length === r && (_ = _.add(e.r_)), true);
-			}), s), PersistencePromise.resolve(this.o_(_));
+				return !!n.isPrefixOf(t) && (t.length === r && (_ = _.add(e.mo)), true);
+			}), s), PersistencePromise.resolve(this.bo(_));
 		}
-		o_(e) {
+		bo(e) {
 			const t = [];
 			return e.forEach(((e) => {
-				const n = this.s_(e);
+				const n = this.yo(e);
 				null !== n && t.push(n);
 			})), t;
 		}
 		removeMutationBatch(e, t) {
-			__PRIVATE_hardAssert(0 === this.a_(t.batchId, "removed"), 55003), this.mutationQueue.shift();
-			let n = this.i_;
+			__PRIVATE_hardAssert(0 === this.So(t.batchId, "removed"), 55003), this.mutationQueue.shift();
+			let n = this.po;
 			return PersistencePromise.forEach(t.mutations, ((r) => {
 				const i = new __PRIVATE_DocReference(r.key, t.batchId);
 				return n = n.delete(i), this.referenceDelegate.markPotentiallyOrphaned(e, r.key);
 			})).next((() => {
-				this.i_ = n;
+				this.po = n;
 			}));
 		}
-		Hr(e) {}
+		ss(e) {}
 		containsKey(e, t) {
-			const n = new __PRIVATE_DocReference(t, 0), r = this.i_.firstAfterOrEqual(n);
+			const n = new __PRIVATE_DocReference(t, 0), r = this.po.firstAfterOrEqual(n);
 			return PersistencePromise.resolve(t.isEqual(r && r.key));
 		}
 		performConsistencyCheck(e) {
@@ -23427,8 +25416,8 @@ Total Duration: ${a - u}ms`);
 		* @param batchId - The batchId to search for
 		* @param action - A description of what the caller is doing, phrased in passive
 		* form (e.g. "acknowledged" in a routine that acknowledges batches).
-		*/ a_(e, t) {
-			return this.__(e);
+		*/ So(e, t) {
+			return this.wo(e);
 		}
 		/**
 		* Finds the index of the given batchId in the mutation queue. This operation
@@ -23438,15 +25427,15 @@ Total Duration: ${a - u}ms`);
 		* the state of the queue. Note this index can be negative if the requested
 		* batchId has already been removed from the queue or past the end of the
 		* queue if the batchId is larger than the last added batch.
-		*/ __(e) {
+		*/ wo(e) {
 			if (0 === this.mutationQueue.length) return 0;
 			return e - this.mutationQueue[0].batchId;
 		}
 		/**
 		* A version of lookupMutationBatch that doesn't return a promise, this makes
 		* other functions that uses this code easier to read and more efficient.
-		*/ s_(e) {
-			const t = this.__(e);
+		*/ yo(e) {
+			const t = this.wo(e);
 			if (t < 0 || t >= this.mutationQueue.length) return null;
 			return this.mutationQueue[t];
 		}
@@ -23481,7 +25470,7 @@ Total Duration: ${a - u}ms`);
 		* calculating the size.
 		*/
 		constructor(e) {
-			this.u_ = e, this.docs = function __PRIVATE_documentEntryMap() {
+			this.xo = e, this.docs = function __PRIVATE_documentEntryMap() {
 				return new SortedMap(DocumentKey.comparator);
 			}(), this.size = 0;
 		}
@@ -23494,7 +25483,7 @@ Total Duration: ${a - u}ms`);
 		* All calls of `addEntry`  are required to go through the RemoteDocumentChangeBuffer
 		* returned by `newChangeBuffer()`.
 		*/ addEntry(e, t) {
-			const n = t.key, r = this.docs.get(n), i = r ? r.size : 0, s = this.u_(t);
+			const n = t.key, r = this.docs.get(n), i = r ? r.size : 0, s = this.xo(t);
 			return this.docs = this.docs.insert(n, {
 				document: t.mutableCopy(),
 				size: s
@@ -23541,7 +25530,7 @@ Total Duration: ${a - u}ms`);
 		getAllFromCollectionGroup(e, t, n, r) {
 			l(9500);
 		}
-		c_(e, t) {
+		vo(e, t) {
 			return PersistencePromise.forEach(this.docs, ((e) => t(e)));
 		}
 		newChangeBuffer(e) {
@@ -23563,19 +25552,19 @@ Total Duration: ${a - u}ms`);
 	*/
 	var __PRIVATE_MemoryRemoteDocumentChangeBuffer = class extends RemoteDocumentChangeBuffer {
 		constructor(e) {
-			super(), this.$s = e;
+			super(), this._o = e;
 		}
 		applyChanges(e) {
 			const t = [];
 			return this.changes.forEach(((n, r) => {
-				r.isValidDocument() ? t.push(this.$s.addEntry(e, r)) : this.$s.removeEntry(n);
+				r.isValidDocument() ? t.push(this._o.addEntry(e, r)) : this._o.removeEntry(n);
 			})), PersistencePromise.waitFor(t);
 		}
 		getFromCache(e, t) {
-			return this.$s.getEntry(e, t);
+			return this._o.getEntry(e, t);
 		}
 		getAllFromCache(e, t) {
-			return this.$s.getEntries(e, t);
+			return this._o.getEntries(e, t);
 		}
 	};
 	/**
@@ -23595,70 +25584,70 @@ Total Duration: ${a - u}ms`);
 	* limitations under the License.
 	*/ var __PRIVATE_MemoryTargetCache = class {
 		constructor(e) {
-			this.persistence = e, this.l_ = new ObjectMap(((e) => __PRIVATE_canonifyTargetOrPipeline(e)), __PRIVATE_targetOrPipelineEqual), this.lastRemoteSnapshotVersion = SnapshotVersion.min(), this.highestTargetId = 0, this.E_ = 0, this.h_ = new __PRIVATE_ReferenceSet(), this.targetCount = 0, this.T_ = __PRIVATE_TargetIdGenerator.ws();
+			this.persistence = e, this.Do = new ObjectMap(((e) => __PRIVATE_canonifyTargetOrPipeline(e)), __PRIVATE_targetOrPipelineEqual), this.lastRemoteSnapshotVersion = SnapshotVersion.min(), this.highestTargetId = 0, this.Co = 0, this.Fo = new __PRIVATE_ReferenceSet(), this.targetCount = 0, this.Oo = __PRIVATE_TargetIdGenerator.q_();
 		}
 		forEachTarget(e, t) {
-			return this.l_.forEach(((e, n) => t(n))), PersistencePromise.resolve();
+			return this.Do.forEach(((e, n) => t(n))), PersistencePromise.resolve();
 		}
 		getLastRemoteSnapshotVersion(e) {
 			return PersistencePromise.resolve(this.lastRemoteSnapshotVersion);
 		}
 		getHighestSequenceNumber(e) {
-			return PersistencePromise.resolve(this.E_);
+			return PersistencePromise.resolve(this.Co);
 		}
 		allocateTargetId(e) {
-			return this.highestTargetId = this.T_.next(), PersistencePromise.resolve(this.highestTargetId);
+			return this.highestTargetId = this.Oo.next(), PersistencePromise.resolve(this.highestTargetId);
 		}
 		setTargetsMetadata(e, t, n) {
-			return n && (this.lastRemoteSnapshotVersion = n), t > this.E_ && (this.E_ = t), PersistencePromise.resolve();
+			return n && (this.lastRemoteSnapshotVersion = n), t > this.Co && (this.Co = t), PersistencePromise.resolve();
 		}
-		Ds(e) {
-			this.l_.set(e.target, e);
+		j_(e) {
+			this.Do.set(e.target, e);
 			const t = e.targetId;
-			t > this.highestTargetId && (this.T_ = new __PRIVATE_TargetIdGenerator(t), this.highestTargetId = t), e.sequenceNumber > this.E_ && (this.E_ = e.sequenceNumber);
+			t > this.highestTargetId && (this.Oo = new __PRIVATE_TargetIdGenerator(t), this.highestTargetId = t), e.sequenceNumber > this.Co && (this.Co = e.sequenceNumber);
 		}
 		addTargetData(e, t) {
-			return this.Ds(t), this.targetCount += 1, PersistencePromise.resolve();
+			return this.j_(t), this.targetCount += 1, PersistencePromise.resolve();
 		}
 		updateTargetData(e, t) {
-			return this.Ds(t), PersistencePromise.resolve();
+			return this.j_(t), PersistencePromise.resolve();
 		}
 		removeTargetData(e, t) {
-			return this.l_.delete(t.target), this.h_.e_(t.targetId), this.targetCount -= 1, PersistencePromise.resolve();
+			return this.Do.delete(t.target), this.Fo.Ao(t.targetId), this.targetCount -= 1, PersistencePromise.resolve();
 		}
 		removeTargets(e, t, n) {
 			let r = 0;
 			const i = [];
-			return this.l_.forEach(((s, _) => {
-				_.sequenceNumber <= t && null === n.get(_.targetId) && (this.l_.delete(s), i.push(this.removeMatchingKeysForTargetId(e, _.targetId)), r++);
+			return this.Do.forEach(((s, _) => {
+				_.sequenceNumber <= t && null === n.get(_.targetId) && (this.Do.delete(s), i.push(this.removeMatchingKeysForTargetId(e, _.targetId)), r++);
 			})), PersistencePromise.waitFor(i).next((() => r));
 		}
 		getTargetCount(e) {
 			return PersistencePromise.resolve(this.targetCount);
 		}
 		getTargetData(e, t) {
-			const n = this.l_.get(t) || null;
+			const n = this.Do.get(t) || null;
 			return PersistencePromise.resolve(n);
 		}
 		addMatchingKeys(e, t, n) {
-			return this.h_.Ys(t, n), PersistencePromise.resolve();
+			return this.Fo.Po(t, n), PersistencePromise.resolve();
 		}
 		removeMatchingKeys(e, t, n) {
-			this.h_.Xs(t, n);
+			this.Fo.Ro(t, n);
 			const r = this.persistence.referenceDelegate, i = [];
 			return r && t.forEach(((t) => {
 				i.push(r.markPotentiallyOrphaned(e, t));
 			})), PersistencePromise.waitFor(i);
 		}
 		removeMatchingKeysForTargetId(e, t) {
-			return this.h_.e_(t), PersistencePromise.resolve();
+			return this.Fo.Ao(t), PersistencePromise.resolve();
 		}
 		getMatchingKeysForTargetId(e, t) {
-			const n = this.h_.n_(t);
+			const n = this.Fo.fo(t);
 			return PersistencePromise.resolve(n);
 		}
 		containsKey(e, t) {
-			return PersistencePromise.resolve(this.h_.containsKey(t));
+			return PersistencePromise.resolve(this.Fo.containsKey(t));
 		}
 	};
 	/**
@@ -23689,19 +25678,19 @@ Total Duration: ${a - u}ms`);
 		* checked or asserted on every access.
 		*/
 		constructor(e, t) {
-			this.P_ = {}, this.overlays = {}, this.I_ = new __PRIVATE_ListenSequence(0), this.R_ = false, this.R_ = true, this.A_ = new __PRIVATE_MemoryGlobalsCache(), this.referenceDelegate = e(this), this.V_ = new __PRIVATE_MemoryTargetCache(this);
+			this.Mo = {}, this.overlays = {}, this.No = new __PRIVATE_ListenSequence(0), this.Bo = false, this.Bo = true, this.Lo = new __PRIVATE_MemoryGlobalsCache(), this.referenceDelegate = e(this), this.Uo = new __PRIVATE_MemoryTargetCache(this);
 			this.indexManager = new __PRIVATE_MemoryIndexManager(), this.remoteDocumentCache = function __PRIVATE_newMemoryRemoteDocumentCache(e) {
 				return new __PRIVATE_MemoryRemoteDocumentCacheImpl(e);
-			}(((e) => this.referenceDelegate.d_(e))), this.serializer = new __PRIVATE_LocalSerializer(t), this.f_ = new __PRIVATE_MemoryBundleCache(this.serializer);
+			}(((e) => this.referenceDelegate.ko(e))), this.serializer = new __PRIVATE_LocalSerializer(t), this.Qo = new __PRIVATE_MemoryBundleCache(this.serializer);
 		}
 		start() {
 			return Promise.resolve();
 		}
 		shutdown() {
-			return this.R_ = false, Promise.resolve();
+			return this.Bo = false, Promise.resolve();
 		}
 		get started() {
-			return this.R_;
+			return this.Bo;
 		}
 		setDatabaseDeletedListener() {}
 		setNetworkEnabled() {}
@@ -23713,28 +25702,28 @@ Total Duration: ${a - u}ms`);
 			return t || (t = new __PRIVATE_MemoryDocumentOverlayCache(), this.overlays[e.toKey()] = t), t;
 		}
 		getMutationQueue(e, t) {
-			let n = this.P_[e.toKey()];
-			return n || (n = new __PRIVATE_MemoryMutationQueue(t, this.referenceDelegate), this.P_[e.toKey()] = n), n;
+			let n = this.Mo[e.toKey()];
+			return n || (n = new __PRIVATE_MemoryMutationQueue(t, this.referenceDelegate), this.Mo[e.toKey()] = n), n;
 		}
 		getGlobalsCache() {
-			return this.A_;
+			return this.Lo;
 		}
 		getTargetCache() {
-			return this.V_;
+			return this.Uo;
 		}
 		getRemoteDocumentCache() {
 			return this.remoteDocumentCache;
 		}
 		getBundleCache() {
-			return this.f_;
+			return this.Qo;
 		}
 		runTransaction(e, t, n) {
 			__PRIVATE_logDebug("MemoryPersistence", "Starting transaction:", e);
-			const r = new __PRIVATE_MemoryTransaction(this.I_.next());
-			return this.referenceDelegate.m_(), n(r).next(((e) => this.referenceDelegate.p_(r).next((() => e)))).toPromise().then(((e) => (r.raiseOnCommittedEvent(), e)));
+			const r = new __PRIVATE_MemoryTransaction(this.No.next());
+			return this.referenceDelegate.qo(), n(r).next(((e) => this.referenceDelegate.Ko(r).next((() => e)))).toPromise().then(((e) => (r.raiseOnCommittedEvent(), e)));
 		}
-		g_(e, t) {
-			return PersistencePromise.or(Object.values(this.P_).map(((n) => () => n.containsKey(e, t))));
+		$o(e, t) {
+			return PersistencePromise.or(Object.values(this.Mo).map(((n) => () => n.containsKey(e, t))));
 		}
 	};
 	/**
@@ -23747,85 +25736,85 @@ Total Duration: ${a - u}ms`);
 	};
 	var __PRIVATE_MemoryEagerDelegate = class __PRIVATE_MemoryEagerDelegate {
 		constructor(e) {
-			this.persistence = e, this.y_ = new __PRIVATE_ReferenceSet(), this.w_ = null;
+			this.persistence = e, this.Wo = new __PRIVATE_ReferenceSet(), this.Go = null;
 		}
-		static b_(e) {
+		static jo(e) {
 			return new __PRIVATE_MemoryEagerDelegate(e);
 		}
-		get S_() {
-			if (this.w_) return this.w_;
+		get zo() {
+			if (this.Go) return this.Go;
 			throw l(60996);
 		}
 		addReference(e, t, n) {
-			return this.y_.addReference(n, t), this.S_.delete(n.toString()), PersistencePromise.resolve();
+			return this.Wo.addReference(n, t), this.zo.delete(n.toString()), PersistencePromise.resolve();
 		}
 		removeReference(e, t, n) {
-			return this.y_.removeReference(n, t), this.S_.add(n.toString()), PersistencePromise.resolve();
+			return this.Wo.removeReference(n, t), this.zo.add(n.toString()), PersistencePromise.resolve();
 		}
 		markPotentiallyOrphaned(e, t) {
-			return this.S_.add(t.toString()), PersistencePromise.resolve();
+			return this.zo.add(t.toString()), PersistencePromise.resolve();
 		}
 		removeTarget(e, t) {
-			this.y_.e_(t.targetId).forEach(((e) => this.S_.add(e.toString())));
+			this.Wo.Ao(t.targetId).forEach(((e) => this.zo.add(e.toString())));
 			const n = this.persistence.getTargetCache();
 			return n.getMatchingKeysForTargetId(e, t.targetId).next(((e) => {
-				e.forEach(((e) => this.S_.add(e.toString())));
+				e.forEach(((e) => this.zo.add(e.toString())));
 			})).next((() => n.removeTargetData(e, t)));
 		}
-		m_() {
-			this.w_ = /* @__PURE__ */ new Set();
+		qo() {
+			this.Go = /* @__PURE__ */ new Set();
 		}
-		p_(e) {
+		Ko(e) {
 			const t = this.persistence.getRemoteDocumentCache().newChangeBuffer();
-			return PersistencePromise.forEach(this.S_, ((n) => {
+			return PersistencePromise.forEach(this.zo, ((n) => {
 				const r = DocumentKey.fromPath(n);
-				return this.v_(e, r).next(((e) => {
+				return this.Ho(e, r).next(((e) => {
 					e || t.removeEntry(r, SnapshotVersion.min());
 				}));
-			})).next((() => (this.w_ = null, t.apply(e))));
+			})).next((() => (this.Go = null, t.apply(e))));
 		}
 		updateLimboDocument(e, t) {
-			return this.v_(e, t).next(((e) => {
-				e ? this.S_.delete(t.toString()) : this.S_.add(t.toString());
+			return this.Ho(e, t).next(((e) => {
+				e ? this.zo.delete(t.toString()) : this.zo.add(t.toString());
 			}));
 		}
-		d_(e) {
+		ko(e) {
 			return 0;
 		}
-		v_(e, t) {
+		Ho(e, t) {
 			return PersistencePromise.or([
-				() => PersistencePromise.resolve(this.y_.containsKey(t)),
+				() => PersistencePromise.resolve(this.Wo.containsKey(t)),
 				() => this.persistence.getTargetCache().containsKey(e, t),
-				() => this.persistence.g_(e, t)
+				() => this.persistence.$o(e, t)
 			]);
 		}
 	};
 	var __PRIVATE_MemoryLruDelegate = class __PRIVATE_MemoryLruDelegate {
 		constructor(e, t) {
-			this.persistence = e, this.D_ = new ObjectMap(((e) => __PRIVATE_encodeResourcePath(e.path)), ((e, t) => e.isEqual(t))), this.garbageCollector = __PRIVATE_newLruGarbageCollector(this, t);
+			this.persistence = e, this.Jo = new ObjectMap(((e) => __PRIVATE_encodeResourcePath(e.path)), ((e, t) => e.isEqual(t))), this.garbageCollector = __PRIVATE_newLruGarbageCollector(this, t);
 		}
-		static b_(e, t) {
+		static jo(e, t) {
 			return new __PRIVATE_MemoryLruDelegate(e, t);
 		}
-		m_() {}
-		p_(e) {
+		qo() {}
+		Ko(e) {
 			return PersistencePromise.resolve();
 		}
 		forEachTarget(e, t) {
 			return this.persistence.getTargetCache().forEachTarget(e, t);
 		}
-		ir(e) {
-			const t = this.Cs(e);
+		Pi(e) {
+			const t = this.H_(e);
 			return this.persistence.getTargetCache().getTargetCount(e).next(((e) => t.next(((t) => e + t))));
 		}
-		Cs(e) {
+		H_(e) {
 			let t = 0;
-			return this.sr(e, ((e) => {
+			return this.Ii(e, ((e) => {
 				t++;
 			})).next((() => t));
 		}
-		sr(e, t) {
-			return PersistencePromise.forEach(this.D_, ((n, r) => this.Os(e, n, r).next(((e) => e ? PersistencePromise.resolve() : t(r)))));
+		Ii(e, t) {
+			return PersistencePromise.forEach(this.Jo, ((n, r) => this.Y_(e, n, r).next(((e) => e ? PersistencePromise.resolve() : t(r)))));
 		}
 		removeTargets(e, t, n) {
 			return this.persistence.getTargetCache().removeTargets(e, t, n);
@@ -23833,36 +25822,36 @@ Total Duration: ${a - u}ms`);
 		removeOrphanedDocuments(e, t) {
 			let n = 0;
 			const r = this.persistence.getRemoteDocumentCache(), i = r.newChangeBuffer();
-			return r.c_(e, ((r) => this.Os(e, r, t).next(((e) => {
+			return r.vo(e, ((r) => this.Y_(e, r, t).next(((e) => {
 				e || (n++, i.removeEntry(r, SnapshotVersion.min()));
 			})))).next((() => i.apply(e))).next((() => n));
 		}
 		markPotentiallyOrphaned(e, t) {
-			return this.D_.set(t, e.currentSequenceNumber), PersistencePromise.resolve();
+			return this.Jo.set(t, e.currentSequenceNumber), PersistencePromise.resolve();
 		}
 		removeTarget(e, t) {
 			const n = t.withSequenceNumber(e.currentSequenceNumber);
 			return this.persistence.getTargetCache().updateTargetData(e, n);
 		}
 		addReference(e, t, n) {
-			return this.D_.set(n, e.currentSequenceNumber), PersistencePromise.resolve();
+			return this.Jo.set(n, e.currentSequenceNumber), PersistencePromise.resolve();
 		}
 		removeReference(e, t, n) {
-			return this.D_.set(n, e.currentSequenceNumber), PersistencePromise.resolve();
+			return this.Jo.set(n, e.currentSequenceNumber), PersistencePromise.resolve();
 		}
 		updateLimboDocument(e, t) {
-			return this.D_.set(t, e.currentSequenceNumber), PersistencePromise.resolve();
+			return this.Jo.set(t, e.currentSequenceNumber), PersistencePromise.resolve();
 		}
-		d_(e) {
+		ko(e) {
 			let t = e.key.toString().length;
 			return e.isFoundDocument() && (t += __PRIVATE_estimateByteSize(e.data.value)), t;
 		}
-		Os(e, t, n) {
+		Y_(e, t, n) {
 			return PersistencePromise.or([
-				() => this.persistence.g_(e, t),
+				() => this.persistence.$o(e, t),
 				() => this.persistence.getTargetCache().containsKey(e, t),
 				() => {
-					const e = this.D_.get(t);
+					const e = this.Jo.get(t);
 					return PersistencePromise.resolve(void 0 !== e && e > n);
 				}
 			]);
@@ -23871,6 +25860,38 @@ Total Duration: ${a - u}ms`);
 			return this.persistence.getRemoteDocumentCache().getSize(e);
 		}
 	};
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2017 Google LLC
@@ -23894,9 +25915,9 @@ Total Duration: ${a - u}ms`);
 	*/
 	var __PRIVATE_LocalViewChanges = class __PRIVATE_LocalViewChanges {
 		constructor(e, t, n, r) {
-			this.targetId = e, this.fromCache = t, this.Vo = n, this.fo = r;
+			this.targetId = e, this.fromCache = t, this.Ba = n, this.La = r;
 		}
-		static mo(e, t) {
+		static Ua(e, t) {
 			let n = __PRIVATE_documentKeySet(), r = __PRIVATE_documentKeySet();
 			for (const e of t.docChanges) switch (e.type) {
 				case 0:
@@ -24014,67 +26035,67 @@ Total Duration: ${a - u}ms`);
 	*/
 	var __PRIVATE_QueryEngine = class {
 		constructor() {
-			this.po = false, this.yo = false, this.wo = 100, this.bo = function __PRIVATE_getDefaultRelativeIndexReadCostPerDocument() {
+			this.ka = false, this.Qa = false, this.qa = 100, this.Ka = function __PRIVATE_getDefaultRelativeIndexReadCostPerDocument() {
 				return isSafari() ? 8 : __PRIVATE_getAndroidVersion(getUA()) > 0 ? 6 : 4;
 			}();
 		}
 		/** Sets the document view to query against. */ initialize(e, t) {
-			this.So = e, this.indexManager = t, this.po = true;
+			this.$a = e, this.indexManager = t, this.ka = true;
 		}
 		/** Returns all local documents matching the specified query. */ getDocumentsMatchingQuery(e, t, n, r) {
 			const i = { result: null };
-			return this.vo(e, t).next(((e) => {
+			return this.Wa(e, t).next(((e) => {
 				i.result = e;
 			})).next((() => {
-				if (!i.result) return this.Do(e, t, r, n).next(((e) => {
+				if (!i.result) return this.Ga(e, t, r, n).next(((e) => {
 					i.result = e;
 				}));
 			})).next((() => {
 				if (i.result) return;
 				const n = new QueryContext();
-				return this.xo(e, t, n).next(((r) => {
-					if (i.result = r, this.yo) return this.Co(e, t, n, r.size);
+				return this.ja(e, t, n).next(((r) => {
+					if (i.result = r, this.Qa) return this.za(e, t, n, r.size);
 				}));
 			})).next((() => i.result));
 		}
-		Co(e, t, n, r) {
-			return __PRIVATE_isPipeline(t) ? PersistencePromise.resolve() : n.documentReadCount < this.wo ? (__PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "SDK will not create cache indexes for query:", __PRIVATE_stringifyQuery(t), "since it only creates cache indexes for collection contains", "more than or equal to", this.wo, "documents"), PersistencePromise.resolve()) : (__PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "Query:", __PRIVATE_stringifyQuery(t), "scans", n.documentReadCount, "local documents and returns", r, "documents as results."), n.documentReadCount > this.bo * r ? (__PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "The SDK decides to create cache indexes for query:", __PRIVATE_stringifyQuery(t), "as using cache indexes may help improve performance."), this.indexManager.createTargetIndexes(e, __PRIVATE_queryToTarget(t))) : PersistencePromise.resolve());
+		za(e, t, n, r) {
+			return __PRIVATE_isPipeline(t) ? PersistencePromise.resolve() : n.documentReadCount < this.qa ? (__PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "SDK will not create cache indexes for query:", __PRIVATE_stringifyQuery(t), "since it only creates cache indexes for collection contains", "more than or equal to", this.qa, "documents"), PersistencePromise.resolve()) : (__PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "Query:", __PRIVATE_stringifyQuery(t), "scans", n.documentReadCount, "local documents and returns", r, "documents as results."), n.documentReadCount > this.Ka * r ? (__PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "The SDK decides to create cache indexes for query:", __PRIVATE_stringifyQuery(t), "as using cache indexes may help improve performance."), this.indexManager.createTargetIndexes(e, __PRIVATE_queryToTarget(t))) : PersistencePromise.resolve());
 		}
 		/**
 		* Performs an indexed query that evaluates the query based on a collection's
 		* persisted index values. Returns `null` if an index is not available.
-		*/ vo(e, t) {
+		*/ Wa(e, t) {
 			if (__PRIVATE_isPipeline(t)) return PersistencePromise.resolve(null);
 			let n = t;
 			if (__PRIVATE_queryMatchesAllDocuments(n)) return PersistencePromise.resolve(null);
 			let r = __PRIVATE_queryToTarget(n);
 			return this.indexManager.getIndexType(e, r).next(((t) => 0 === t ? null : (null !== n.limit && 1 === t && (n = __PRIVATE_queryWithLimit(n, null, "F"), r = __PRIVATE_queryToTarget(n)), this.indexManager.getDocumentsMatchingTarget(e, r).next(((t) => {
 				const i = __PRIVATE_documentKeySet(...t);
-				return this.So.getDocuments(e, i).next(((t) => this.indexManager.getMinOffset(e, r).next(((r) => {
-					const s = this.Fo(n, t);
-					return this.Oo(n, s, i, r.readTime) ? this.vo(e, __PRIVATE_queryWithLimit(n, null, "F")) : this.Mo(e, s, n, r);
+				return this.$a.getDocuments(e, i).next(((t) => this.indexManager.getMinOffset(e, r).next(((r) => {
+					const s = this.Ha(n, t);
+					return this.Ja(n, s, i, r.readTime) ? this.Wa(e, __PRIVATE_queryWithLimit(n, null, "F")) : this.Ya(e, s, n, r);
 				}))));
 			})))));
 		}
 		/**
 		* Performs a query based on the target's persisted query mapping. Returns
 		* `null` if the mapping is not available or cannot be used.
-		*/ Do(e, t, n, r) {
+		*/ Ga(e, t, n, r) {
 			return (__PRIVATE_isPipeline(t) ? function __PRIVATE_pipelineMatchesAllDocuments(e) {
 				for (const t of e.stages) {
 					if (t instanceof v || t instanceof I) return false;
 					if (t instanceof A) {
-						if (t.condition instanceof __PRIVATE_BooleanFunctionExpression && "exists" === t.condition._expr.name && t.condition._expr.params[0] instanceof o && t.condition._expr.params[0].fieldName === Ce) continue;
+						if (t.condition instanceof __PRIVATE_BooleanFunctionExpression && "exists" === t.condition._expr.name && t.condition._expr.params[0] instanceof o && t.condition._expr.params[0].fieldName === Fe) continue;
 						return false;
 					}
 				}
 				return true;
-			}(t) : __PRIVATE_queryMatchesAllDocuments(t)) || r.isEqual(SnapshotVersion.min()) ? PersistencePromise.resolve(null) : this.So.getDocuments(e, n).next(((i) => {
-				const s = this.Fo(t, i);
-				return this.Oo(t, s, n, r) ? PersistencePromise.resolve(null) : (__PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "Re-using previous result from %s to execute query: %s", r.toString(), __PRIVATE_stringifyQueryOrPipeline(t)), this.Mo(e, s, t, __PRIVATE_newIndexOffsetSuccessorFromReadTime(r, Xe)).next(((e) => e)));
+			}(t) : __PRIVATE_queryMatchesAllDocuments(t)) || r.isEqual(SnapshotVersion.min()) ? PersistencePromise.resolve(null) : this.$a.getDocuments(e, n).next(((i) => {
+				const s = this.Ha(t, i);
+				return this.Ja(t, s, n, r) ? PersistencePromise.resolve(null) : (__PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "Re-using previous result from %s to execute query: %s", r.toString(), __PRIVATE_stringifyQueryOrPipeline(t)), this.Ya(e, s, t, __PRIVATE_newIndexOffsetSuccessorFromReadTime(r, St)).next(((e) => e)));
 			}));
 		}
-		/** Applies the query filter and sorting to the provided documents.  */ Fo(e, t) {
+		/** Applies the query filter and sorting to the provided documents.  */ Ha(e, t) {
 			let n, r;
 			return __PRIVATE_isPipeline(e) ? (n = new SortedSet(__PRIVATE_compareByKey), r = (t) => __PRIVATE_pipelineMatches(e, t)) : (n = new SortedSet(__PRIVATE_newQueryComparator(e)), r = (t) => __PRIVATE_queryMatches(e, t)), t.forEach(((e, t) => {
 				r(t) && (n = n.add(t));
@@ -24091,7 +26112,7 @@ Total Duration: ${a - u}ms`);
 		* snapshot.
 		* @param limboFreeSnapshotVersion - The version of the snapshot when the
 		* query was last synchronized.
-		*/ Oo(e, t, n, r) {
+		*/ Ja(e, t, n, r) {
 			if (__PRIVATE_isPipeline(e)) return function __PRIVATE_pipelineHasRanges(e) {
 				return e.stages.some(((e) => e instanceof v || e instanceof I));
 			}(e);
@@ -24100,14 +26121,14 @@ Total Duration: ${a - u}ms`);
 			const i = "F" === e.limitType ? t.last() : t.first();
 			return !!i && (i.hasPendingWrites || i.version.compareTo(r) > 0);
 		}
-		xo(e, t, n) {
-			return __PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "Using full collection scan to execute query:", __PRIVATE_stringifyQueryOrPipeline(t)), this.So.getDocumentsMatchingQuery(e, t, IndexOffset.min(), n);
+		ja(e, t, n) {
+			return __PRIVATE_getLogLevel() <= LogLevel.DEBUG && __PRIVATE_logDebug("QueryEngine", "Using full collection scan to execute query:", __PRIVATE_stringifyQueryOrPipeline(t)), this.$a.getDocumentsMatchingQuery(e, t, IndexOffset.min(), n);
 		}
 		/**
 		* Combines the results from an indexed execution with the remaining documents
 		* that have not yet been indexed.
-		*/ Mo(e, t, n, r) {
-			return this.So.getDocumentsMatchingQuery(e, n, r).next(((e) => (t.forEach(((t) => {
+		*/ Ya(e, t, n, r) {
+			return this.$a.getDocumentsMatchingQuery(e, n, r).next(((e) => (t.forEach(((t) => {
 				e = e.insert(t.key, t);
 			})), e)));
 		}
@@ -24127,7 +26148,8 @@ Total Duration: ${a - u}ms`);
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const lr = "LocalStore", Er = 3e8;
+	*/ const kr = "LocalStore";
+	const Qr = 3e8;
 	/**
 	* The maximum time to leave a resume token buffered without writing it out.
 	* This value is arbitrary: it's long enough to avoid several writes
@@ -24145,13 +26167,13 @@ Total Duration: ${a - u}ms`);
 	*/
 	var __PRIVATE_LocalStoreImpl = class {
 		constructor(e, t, n, r) {
-			this.persistence = e, this.No = t, this.serializer = r, this.Lo = new SortedMap(__PRIVATE_primitiveComparator), this.Bo = new ObjectMap(((e) => __PRIVATE_canonifyTargetOrPipeline(e)), __PRIVATE_targetOrPipelineEqual), this.Uo = /* @__PURE__ */ new Map(), this.ko = e.getRemoteDocumentCache(), this.V_ = e.getTargetCache(), this.f_ = e.getBundleCache(), this.qo(n);
+			this.persistence = e, this.Za = t, this.serializer = r, this.Xa = new SortedMap(__PRIVATE_primitiveComparator), this.eu = new ObjectMap(((e) => __PRIVATE_canonifyTargetOrPipeline(e)), __PRIVATE_targetOrPipelineEqual), this.tu = /* @__PURE__ */ new Map(), this.nu = e.getRemoteDocumentCache(), this.Uo = e.getTargetCache(), this.Qo = e.getBundleCache(), this.ru(n);
 		}
-		qo(e) {
-			this.documentOverlayCache = this.persistence.getDocumentOverlayCache(e), this.indexManager = this.persistence.getIndexManager(e), this.mutationQueue = this.persistence.getMutationQueue(e, this.indexManager), this.localDocuments = new LocalDocumentsView(this.ko, this.mutationQueue, this.documentOverlayCache, this.indexManager), this.ko.setIndexManager(this.indexManager), this.No.initialize(this.localDocuments, this.indexManager);
+		ru(e) {
+			this.documentOverlayCache = this.persistence.getDocumentOverlayCache(e), this.indexManager = this.persistence.getIndexManager(e), this.mutationQueue = this.persistence.getMutationQueue(e, this.indexManager), this.localDocuments = new LocalDocumentsView(this.nu, this.mutationQueue, this.documentOverlayCache, this.indexManager), this.nu.setIndexManager(this.indexManager), this.Za.initialize(this.localDocuments, this.indexManager);
 		}
 		collectGarbage(e) {
-			return this.persistence.runTransaction("Collect garbage", "readwrite-primary", ((t) => e.collect(t, this.Lo)));
+			return this.persistence.runTransaction("Collect garbage", "readwrite-primary", ((t) => e.collect(t, this.Xa)));
 		}
 	};
 	function __PRIVATE_newLocalStore(e, t, n, r) {
@@ -24167,7 +26189,7 @@ Total Duration: ${a - u}ms`);
 		const n = __PRIVATE_debugCast(e);
 		return await n.persistence.runTransaction("Handle user change", "readonly", ((e) => {
 			let r;
-			return n.mutationQueue.getAllMutationBatches(e).next(((i) => (r = i, n.qo(t), n.mutationQueue.getAllMutationBatches(e)))).next(((t) => {
+			return n.mutationQueue.getAllMutationBatches(e).next(((i) => (r = i, n.ru(t), n.mutationQueue.getAllMutationBatches(e)))).next(((t) => {
 				const i = [], s = [];
 				let _ = __PRIVATE_documentKeySet();
 				for (const e of r) {
@@ -24179,7 +26201,7 @@ Total Duration: ${a - u}ms`);
 					for (const t of e.mutations) _ = _.add(t.key);
 				}
 				return n.localDocuments.getDocuments(e, _).next(((e) => ({
-					$o: e,
+					iu: e,
 					removedBatchIds: i,
 					addedBatchIds: s
 				})));
@@ -24192,7 +26214,7 @@ Total Duration: ${a - u}ms`);
 	*/
 	function __PRIVATE_localStoreGetLastRemoteSnapshotVersion(e) {
 		const t = __PRIVATE_debugCast(e);
-		return t.persistence.runTransaction("Get last remote snapshot version", "readonly", ((e) => t.V_.getLastRemoteSnapshotVersion(e)));
+		return t.persistence.runTransaction("Get last remote snapshot version", "readonly", ((e) => t.Uo.getLastRemoteSnapshotVersion(e)));
 	}
 	/**
 	* Updates the "ground-state" (remote) documents. We assume that the remote
@@ -24203,33 +26225,33 @@ Total Duration: ${a - u}ms`);
 	* queue.
 	*/ function __PRIVATE_localStoreApplyRemoteEventToLocalCache(e, t) {
 		const n = __PRIVATE_debugCast(e), r = t.snapshotVersion;
-		let i = n.Lo;
+		let i = n.Xa;
 		return n.persistence.runTransaction("Apply remote event", "readwrite-primary", ((e) => {
-			const s = n.ko.newChangeBuffer({ trackRemovals: true });
-			i = n.Lo;
+			const s = n.nu.newChangeBuffer({ trackRemovals: true });
+			i = n.Xa;
 			const _ = [];
 			t.targetChanges.forEach(((s, o) => {
 				const a = i.get(o);
 				if (!a) return;
-				_.push(n.V_.removeMatchingKeys(e, s.removedDocuments, o).next((() => n.V_.addMatchingKeys(e, s.addedDocuments, o))));
+				_.push(n.Uo.removeMatchingKeys(e, s.removedDocuments, o).next((() => n.Uo.addMatchingKeys(e, s.addedDocuments, o))));
 				let u = a.withSequenceNumber(e.currentSequenceNumber);
 				null !== t.targetMismatches.get(o) ? u = u.withResumeToken(ByteString.EMPTY_BYTE_STRING, SnapshotVersion.min()).withLastLimboFreeSnapshotVersion(SnapshotVersion.min()) : s.resumeToken.approximateByteSize() > 0 && (u = u.withResumeToken(s.resumeToken, r)), i = i.insert(o, u), function __PRIVATE_shouldPersistTargetData(e, t, n) {
 					if (0 === e.resumeToken.approximateByteSize()) return true;
-					if (t.snapshotVersion.toMicroseconds() - e.snapshotVersion.toMicroseconds() >= Er) return true;
+					if (t.snapshotVersion.toMicroseconds() - e.snapshotVersion.toMicroseconds() >= Qr) return true;
 					return n.addedDocuments.size + n.modifiedDocuments.size + n.removedDocuments.size > 0;
-				}(a, u, s) && _.push(n.V_.updateTargetData(e, u));
+				}(a, u, s) && _.push(n.Uo.updateTargetData(e, u));
 			}));
 			let o = __PRIVATE_mutableDocumentMap(), a = __PRIVATE_documentKeySet();
 			if (t.documentUpdates.forEach(((r) => {
 				t.resolvedLimboDocuments.has(r) && _.push(n.persistence.referenceDelegate.updateLimboDocument(e, r));
 			})), _.push(__PRIVATE_populateDocumentChangeBuffer(e, s, t.documentUpdates).next(((e) => {
-				o = e.Ko, a = e.Qo;
+				o = e.su, a = e._u;
 			}))), !r.isEqual(SnapshotVersion.min())) {
-				const t = n.V_.getLastRemoteSnapshotVersion(e).next(((t) => n.V_.setTargetsMetadata(e, e.currentSequenceNumber, r)));
+				const t = n.Uo.getLastRemoteSnapshotVersion(e).next(((t) => n.Uo.setTargetsMetadata(e, e.currentSequenceNumber, r)));
 				_.push(t);
 			}
 			return PersistencePromise.waitFor(_).next((() => s.apply(e))).next((() => n.localDocuments.getLocalViewOfDocuments(e, o, a))).next((() => o));
-		})).then(((e) => (n.Lo = i, e)));
+		})).then(((e) => (n.Xa = i, e)));
 	}
 	/**
 	* Populates document change buffer with documents from backend or a bundle.
@@ -24246,10 +26268,10 @@ Total Duration: ${a - u}ms`);
 			let r = __PRIVATE_mutableDocumentMap();
 			return n.forEach(((n, s) => {
 				const _ = e.get(n);
-				s.isFoundDocument() !== _.isFoundDocument() && (i = i.add(n)), s.isNoDocument() && s.version.isEqual(SnapshotVersion.min()) ? (t.removeEntry(n, s.readTime), r = r.insert(n, s)) : !_.isValidDocument() || s.version.compareTo(_.version) > 0 || 0 === s.version.compareTo(_.version) && _.hasPendingWrites ? (t.addEntry(s), r = r.insert(n, s)) : __PRIVATE_logDebug(lr, "Ignoring outdated watch update for ", n, ". Current version:", _.version, " Watch version:", s.version);
+				s.isFoundDocument() !== _.isFoundDocument() && (i = i.add(n)), s.isNoDocument() && s.version.isEqual(SnapshotVersion.min()) ? (t.removeEntry(n, s.readTime), r = r.insert(n, s)) : !_.isValidDocument() || s.version.compareTo(_.version) > 0 || 0 === s.version.compareTo(_.version) && _.hasPendingWrites ? (t.addEntry(s), r = r.insert(n, s)) : __PRIVATE_logDebug(kr, "Ignoring outdated watch update for ", n, ". Current version:", _.version, " Watch version:", s.version);
 			})), {
-				Ko: r,
-				Qo: i
+				su: r,
+				_u: i
 			};
 		}));
 	}
@@ -24269,10 +26291,10 @@ Total Duration: ${a - u}ms`);
 		const n = __PRIVATE_debugCast(e);
 		return n.persistence.runTransaction("Allocate target", "readwrite", ((e) => {
 			let r;
-			return n.V_.getTargetData(e, t).next(((i) => i ? (r = i, PersistencePromise.resolve(r)) : n.V_.allocateTargetId(e).next(((i) => (r = new TargetData(t, i, "TargetPurposeListen", e.currentSequenceNumber), n.V_.addTargetData(e, r).next((() => r)))))));
+			return n.Uo.getTargetData(e, t).next(((i) => i ? (r = i, PersistencePromise.resolve(r)) : n.Uo.allocateTargetId(e).next(((i) => (r = new TargetData(t, i, "TargetPurposeListen", e.currentSequenceNumber), n.Uo.addTargetData(e, r).next((() => r)))))));
 		})).then(((e) => {
-			const r = n.Lo.get(e.targetId);
-			return (null === r || e.snapshotVersion.compareTo(r.snapshotVersion) > 0) && (n.Lo = n.Lo.insert(e.targetId, e), n.Bo.set(t, e.targetId)), e;
+			const r = n.Xa.get(e.targetId);
+			return (null === r || e.snapshotVersion.compareTo(r.snapshotVersion) > 0) && (n.Xa = n.Xa.insert(e.targetId, e), n.eu.set(t, e.targetId)), e;
 		}));
 	}
 	/**
@@ -24287,14 +26309,14 @@ Total Duration: ${a - u}ms`);
 	* Releasing a non-existing `Target` is a no-op.
 	*/
 	async function __PRIVATE_localStoreReleaseTarget(e, t, n) {
-		const r = __PRIVATE_debugCast(e), i = r.Lo.get(t), s = n ? "readwrite" : "readwrite-primary";
+		const r = __PRIVATE_debugCast(e), i = r.Xa.get(t), s = n ? "readwrite" : "readwrite-primary";
 		try {
 			n || await r.persistence.runTransaction("Release target", s, ((e) => r.persistence.referenceDelegate.removeTarget(e, i)));
 		} catch (e) {
 			if (!__PRIVATE_isIndexedDbTransactionError(e)) throw e;
-			__PRIVATE_logDebug(lr, `Failed to update sequence numbers for target ${t}: ${e}`);
+			__PRIVATE_logDebug(kr, `Failed to update sequence numbers for target ${t}: ${e}`);
 		}
-		r.Lo = r.Lo.remove(t), r.Bo.delete(i.target);
+		r.Xa = r.Xa.remove(t), r.eu.delete(i.target);
 	}
 	/**
 	* Runs the specified query against the local store and returns the results,
@@ -24307,24 +26329,56 @@ Total Duration: ${a - u}ms`);
 		const r = __PRIVATE_debugCast(e);
 		let i = SnapshotVersion.min(), s = __PRIVATE_documentKeySet();
 		return r.persistence.runTransaction("Execute query", "readwrite", ((e) => function __PRIVATE_localStoreGetTargetData(e, t, n) {
-			const r = __PRIVATE_debugCast(e), i = r.Bo.get(n);
-			return void 0 !== i ? PersistencePromise.resolve(r.Lo.get(i)) : r.V_.getTargetData(t, n);
+			const r = __PRIVATE_debugCast(e), i = r.eu.get(n);
+			return void 0 !== i ? PersistencePromise.resolve(r.Xa.get(i)) : r.Uo.getTargetData(t, n);
 		}(r, e, __PRIVATE_isPipeline(t) ? t : __PRIVATE_queryToTarget(t)).next(((t) => {
-			if (t) return i = t.lastLimboFreeSnapshotVersion, r.V_.getMatchingKeysForTargetId(e, t.targetId).next(((e) => {
+			if (t) return i = t.lastLimboFreeSnapshotVersion, r.Uo.getMatchingKeysForTargetId(e, t.targetId).next(((e) => {
 				s = e;
 			}));
-		})).next((() => r.No.getDocumentsMatchingQuery(e, t, n ? i : SnapshotVersion.min(), n ? s : __PRIVATE_documentKeySet()))).next(((e) => (__PRIVATE_setMaxReadTime(r, e), {
+		})).next((() => r.Za.getDocumentsMatchingQuery(e, t, n ? i : SnapshotVersion.min(), n ? s : __PRIVATE_documentKeySet()))).next(((e) => (__PRIVATE_setMaxReadTime(r, e), {
 			documents: e,
-			Wo: s
+			ou: s
 		})))));
 	}
 	/** Sets the collection group's maximum read time from the given documents. */
 	function __PRIVATE_setMaxReadTime(e, t) {
 		t.forEach(((t, n) => {
-			const r = n.key.getCollectionGroup(), i = e.Uo.get(r) || SnapshotVersion.min();
-			n.readTime.compareTo(i) > 0 && e.Uo.set(r, n.readTime);
+			const r = n.key.getCollectionGroup(), i = e.tu.get(r) || SnapshotVersion.min();
+			n.readTime.compareTo(i) > 0 && e.tu.set(r, n.readTime);
 		}));
 	}
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2020 Google LLC
@@ -24357,7 +26411,7 @@ Total Duration: ${a - u}ms`);
 	*/
 	var __PRIVATE_OnlineStateTracker = class {
 		constructor(e, t) {
-			this.asyncQueue = e, this.onlineStateHandler = t, this.state = "Unknown", this.Yo = 0, this.Zo = null, this.Xo = true;
+			this.asyncQueue = e, this.onlineStateHandler = t, this.state = "Unknown", this.hu = 0, this.Tu = null, this.Pu = true;
 		}
 		/**
 		* Called by RemoteStore when a watch stream is started (including on each
@@ -24365,16 +26419,16 @@ Total Duration: ${a - u}ms`);
 		*
 		* If this is the first attempt, it sets the OnlineState to Unknown and starts
 		* the onlineStateTimer.
-		*/ ea() {
-			0 === this.Yo && (this.ta("Unknown"), this.Zo = this.asyncQueue.enqueueAfterDelay("online_state_timeout", 1e4, (() => (this.Zo = null, this.na("Backend didn't respond within 10 seconds."), this.ta("Offline"), Promise.resolve()))));
+		*/ Iu() {
+			0 === this.hu && (this.Ru("Unknown"), this.Tu = this.asyncQueue.enqueueAfterDelay("online_state_timeout", 1e4, (() => (this.Tu = null, this.Au("Backend didn't respond within 10 seconds."), this.Ru("Offline"), Promise.resolve()))));
 		}
 		/**
 		* Updates our OnlineState as appropriate after the watch stream reports a
 		* failure. The first failure moves us to the 'Unknown' state. We then may
 		* allow multiple failures (based on MAX_WATCH_STREAM_FAILURES) before we
 		* actually transition to the 'Offline' state.
-		*/ ra(e) {
-			"Online" === this.state ? this.ta("Unknown") : (this.Yo++, this.Yo >= 1 && (this.ia(), this.na(`Connection failed 1 times. Most recent error: ${e.toString()}`), this.ta("Offline")));
+		*/ Vu(e) {
+			"Online" === this.state ? this.Ru("Unknown") : (this.hu++, this.hu >= 1 && (this.fu(), this.Au(`Connection failed 1 times. Most recent error: ${e.toString()}`), this.Ru("Offline")));
 		}
 		/**
 		* Explicitly sets the OnlineState to the specified state.
@@ -24383,17 +26437,17 @@ Total Duration: ${a - u}ms`);
 		* Offline heuristics, so must not be used in place of
 		* handleWatchStreamStart() and handleWatchStreamFailure().
 		*/ set(e) {
-			this.ia(), this.Yo = 0, "Online" === e && (this.Xo = false), this.ta(e);
+			this.fu(), this.hu = 0, "Online" === e && (this.Pu = false), this.Ru(e);
 		}
-		ta(e) {
+		Ru(e) {
 			e !== this.state && (this.state = e, this.onlineStateHandler(e));
 		}
-		na(e) {
+		Au(e) {
 			const t = `Could not reach Cloud Firestore backend. ${e}\nThis typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.`;
-			this.Xo ? (__PRIVATE_logError(t), this.Xo = false) : __PRIVATE_logDebug("OnlineStateTracker", t);
+			this.Pu ? (__PRIVATE_logError(t), this.Pu = false) : __PRIVATE_logDebug("OnlineStateTracker", t);
 		}
-		ia() {
-			null !== this.Zo && (this.Zo.cancel(), this.Zo = null);
+		fu() {
+			null !== this.Tu && (this.Tu.cancel(), this.Tu = null);
 		}
 	};
 	/**
@@ -24411,27 +26465,27 @@ Total Duration: ${a - u}ms`);
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const hr = "RemoteStore";
+	*/ const qr = "RemoteStore";
 	var __PRIVATE_RemoteStoreImpl = class {
 		constructor(e, t, n, r, i) {
-			this.localStore = e, this.datastore = t, this.asyncQueue = n, this.remoteSyncer = {}, this.sa = [], this._a = /* @__PURE__ */ new Map(), this.oa = /* @__PURE__ */ new Map(), this.aa = /* @__PURE__ */ new Map(), this.ua = new __PRIVATE_TargetIdGenerator(1e3), this.ca = new __PRIVATE_TargetIdGenerator(1001), this.la = /* @__PURE__ */ new Set(), this.Ea = [], this.ha = i, this.ha.Qe(((e) => {
+			this.localStore = e, this.datastore = t, this.asyncQueue = n, this.remoteSyncer = {}, this.du = [], this.mu = /* @__PURE__ */ new Map(), this.pu = /* @__PURE__ */ new Map(), this.gu = /* @__PURE__ */ new Map(), this.yu = new __PRIVATE_TargetIdGenerator(1e3), this.wu = new __PRIVATE_TargetIdGenerator(1001), this.bu = /* @__PURE__ */ new Set(), this.Su = [], this.xu = i, this.xu.tn(((e) => {
 				n.enqueueAndForget((async () => {
-					__PRIVATE_canUseNetwork(this) && (__PRIVATE_logDebug(hr, "Restarting streams for network reachability change."), await async function __PRIVATE_restartNetwork(e) {
+					__PRIVATE_canUseNetwork(this) && (__PRIVATE_logDebug(qr, "Restarting streams for network reachability change."), await async function __PRIVATE_restartNetwork(e) {
 						const t = __PRIVATE_debugCast(e);
-						t.la.add(4), await __PRIVATE_disableNetworkInternal(t), t.Ta.set("Unknown"), t.la.delete(4), await __PRIVATE_enableNetworkInternal(t);
+						t.bu.add(4), await __PRIVATE_disableNetworkInternal(t), t.vu.set("Unknown"), t.bu.delete(4), await __PRIVATE_enableNetworkInternal(t);
 					}(this));
 				}));
-			})), this.Ta = new __PRIVATE_OnlineStateTracker(n, r);
+			})), this.vu = new __PRIVATE_OnlineStateTracker(n, r);
 		}
 	};
 	async function __PRIVATE_enableNetworkInternal(e) {
-		if (__PRIVATE_canUseNetwork(e)) for (const t of e.Ea) await t(true);
+		if (__PRIVATE_canUseNetwork(e)) for (const t of e.Su) await t(true);
 	}
 	/**
 	* Temporarily disables the network. The network can be re-enabled using
 	* enableNetwork().
 	*/ async function __PRIVATE_disableNetworkInternal(e) {
-		for (const t of e.Ea) await t(false);
+		for (const t of e.Su) await t(false);
 	}
 	/**
 	* Returns the remote target ID currently mapped to this
@@ -24441,7 +26495,7 @@ Total Duration: ${a - u}ms`);
 	* @param sdkTargetId
 	*/
 	function __PRIVATE_getRemoteTargetId(e, t) {
-		return e.oa.get(t) || void 0;
+		return e.pu.get(t) || void 0;
 	}
 	/**
 	* Generates a new remote target ID that is acceptable
@@ -24455,125 +26509,125 @@ Total Duration: ${a - u}ms`);
 	*/
 	function __PRIVATE_remoteStoreListen(e, t) {
 		const n = __PRIVATE_debugCast(e), r = __PRIVATE_getRemoteTargetId(n, t.targetId);
-		if (void 0 !== r && n._a.has(r)) return;
+		if (void 0 !== r && n.mu.has(r)) return;
 		const i = function __PRIVATE_allocateRemoteTargetId(e, t) {
 			const n = __PRIVATE_getRemoteTargetId(e, t);
-			void 0 !== n && e.aa.delete(n);
+			void 0 !== n && e.gu.delete(n);
 			const r = function __PRIVATE_generateRemoteTargetId(e, t) {
-				return t % 2 != 0 ? e.ca.next() : e.ua.next();
+				return t % 2 != 0 ? e.wu.next() : e.yu.next();
 			}(e, t);
-			return e.oa.set(t, r), e.aa.set(r, t), r;
+			return e.pu.set(t, r), e.gu.set(r, t), r;
 		}(n, t.targetId);
-		__PRIVATE_logDebug(hr, "remoteStoreListen mapping SDK target ID to remote", t.targetId, i);
+		__PRIVATE_logDebug(qr, "remoteStoreListen mapping SDK target ID to remote", t.targetId, i);
 		const s = new TargetData(t.target, i, t.purpose, t.sequenceNumber, t.snapshotVersion, t.lastLimboFreeSnapshotVersion, t.resumeToken);
-		n._a.set(i, s), __PRIVATE_shouldStartWatchStream(n) ? __PRIVATE_startWatchStream(n) : __PRIVATE_ensureWatchStream(n).Yt() && __PRIVATE_sendWatchRequest(n, s);
+		n.mu.set(i, s), __PRIVATE_shouldStartWatchStream(n) ? __PRIVATE_startWatchStream(n) : __PRIVATE_ensureWatchStream(n).ur() && __PRIVATE_sendWatchRequest(n, s);
 	}
 	/**
 	* Removes the listen from server. It is a no-op if the given target id is
 	* not being listened to.
 	*/ function __PRIVATE_remoteStoreUnlisten(e, t) {
 		const n = __PRIVATE_debugCast(e), r = __PRIVATE_ensureWatchStream(n), i = __PRIVATE_getRemoteTargetId(n, t);
-		__PRIVATE_logDebug(hr, "remoteStoreUnlisten removing mapping of SDK target ID to remote", t, i), n._a.delete(i), n.oa.delete(t), n.aa.delete(i), r.Yt() && __PRIVATE_sendUnwatchRequest(n, i), 0 === n._a.size && (r.Yt() ? r.en() : __PRIVATE_canUseNetwork(n) && n.Ta.set("Unknown"));
+		__PRIVATE_logDebug(qr, "remoteStoreUnlisten removing mapping of SDK target ID to remote", t, i), n.mu.delete(i), n.pu.delete(t), n.gu.delete(i), r.ur() && __PRIVATE_sendUnwatchRequest(n, i), 0 === n.mu.size && (r.ur() ? r.Er() : __PRIVATE_canUseNetwork(n) && n.vu.set("Unknown"));
 	}
 	/**
 	* We need to increment the expected number of pending responses we're due
 	* from watch so we wait for the ack to process any messages from this target.
 	*/ function __PRIVATE_sendWatchRequest(e, t) {
-		if (e.Pa.J(t.targetId), t.resumeToken.approximateByteSize() > 0 || t.snapshotVersion.compareTo(SnapshotVersion.min()) > 0) {
-			const n = e.aa.get(t.targetId);
-			if (void 0 === n) return void __PRIVATE_logDebug(hr, "SDK target ID not found for remote ID: " + t.targetId);
+		if (e.Du.rt(t.targetId), t.resumeToken.approximateByteSize() > 0 || t.snapshotVersion.compareTo(SnapshotVersion.min()) > 0) {
+			const n = e.gu.get(t.targetId);
+			if (void 0 === n) return void __PRIVATE_logDebug(qr, "SDK target ID not found for remote ID: " + t.targetId);
 			const r = e.remoteSyncer.getRemoteKeysForTarget(n).size;
 			t = t.withExpectedCount(r);
 		}
-		__PRIVATE_ensureWatchStream(e).Pn(t);
+		__PRIVATE_ensureWatchStream(e).yr(t);
 	}
 	/**
 	* We need to increment the expected number of pending responses we're due
 	* from watch so we wait for the removal on the server before we process any
 	* messages from this target.
 	*/ function __PRIVATE_sendUnwatchRequest(e, t) {
-		e.Pa.J(t), __PRIVATE_ensureWatchStream(e).In(t);
+		e.Du.rt(t), __PRIVATE_ensureWatchStream(e).wr(t);
 	}
 	function __PRIVATE_startWatchStream(e) {
-		e.Pa = new __PRIVATE_WatchChangeAggregator({
+		e.Du = new __PRIVATE_WatchChangeAggregator({
 			getRemoteKeysForTarget: (t) => {
-				const n = e.aa.get(t);
+				const n = e.gu.get(t);
 				return void 0 !== n ? e.remoteSyncer.getRemoteKeysForTarget(n) : __PRIVATE_documentKeySet();
 			},
-			ye: (t) => e._a.get(t) || null,
-			Ve: () => e.datastore.serializer.databaseId
-		}), __PRIVATE_ensureWatchStream(e).start(), e.Ta.ea();
+			Mt: (t) => e.mu.get(t) || null,
+			xt: () => e.datastore.serializer.databaseId
+		}), __PRIVATE_ensureWatchStream(e).start(), e.vu.Iu();
 	}
 	/**
 	* Returns whether the watch stream should be started because it's necessary
 	* and has not yet been started.
 	*/ function __PRIVATE_shouldStartWatchStream(e) {
-		return __PRIVATE_canUseNetwork(e) && !__PRIVATE_ensureWatchStream(e).Jt() && e._a.size > 0;
+		return __PRIVATE_canUseNetwork(e) && !__PRIVATE_ensureWatchStream(e).ar() && e.mu.size > 0;
 	}
 	function __PRIVATE_canUseNetwork(e) {
-		return 0 === __PRIVATE_debugCast(e).la.size;
+		return 0 === __PRIVATE_debugCast(e).bu.size;
 	}
 	function __PRIVATE_cleanUpWatchStreamState(e) {
-		e.Pa = void 0;
+		e.Du = void 0;
 	}
 	async function __PRIVATE_onWatchStreamConnected(e) {
-		e.Ta.set("Online");
+		e.vu.set("Online");
 	}
 	async function __PRIVATE_onWatchStreamOpen(e) {
-		e._a.forEach(((t, n) => {
+		e.mu.forEach(((t, n) => {
 			__PRIVATE_sendWatchRequest(e, t);
 		}));
 	}
 	async function __PRIVATE_onWatchStreamClose(e, t) {
-		__PRIVATE_cleanUpWatchStreamState(e), __PRIVATE_shouldStartWatchStream(e) ? (e.Ta.ra(t), __PRIVATE_startWatchStream(e)) : e.Ta.set("Unknown");
+		__PRIVATE_cleanUpWatchStreamState(e), __PRIVATE_shouldStartWatchStream(e) ? (e.vu.Vu(t), __PRIVATE_startWatchStream(e)) : e.vu.set("Unknown");
 	}
 	async function __PRIVATE_onWatchStreamChange(e, t, n) {
-		if (e.Ta.set("Online"), t instanceof __PRIVATE_WatchTargetChange && 2 === t.state && t.cause) try {
+		if (e.vu.set("Online"), t instanceof __PRIVATE_WatchTargetChange && 2 === t.state && t.cause) try {
 			/** Handles an error on a target */
 			await async function __PRIVATE_handleTargetError(e, t) {
 				const n = t.cause;
 				for (const r of t.targetIds) {
-					if (e._a.has(r)) {
-						const t = e.aa.get(r);
-						void 0 !== t && (await e.remoteSyncer.rejectListen(t, n), e.oa.delete(t), e.aa.delete(r)), e._a.delete(r);
+					if (e.mu.has(r)) {
+						const t = e.gu.get(r);
+						void 0 !== t && (await e.remoteSyncer.rejectListen(t, n), e.pu.delete(t), e.gu.delete(r)), e.mu.delete(r);
 					}
-					e.Pa.removeTarget(r);
+					e.Du.removeTarget(r);
 				}
 			}(e, t);
 		} catch (n) {
-			__PRIVATE_logDebug(hr, "Failed to remove targets %s: %s ", t.targetIds.join(","), n), await __PRIVATE_disableNetworkUntilRecovery(e, n);
+			__PRIVATE_logDebug(qr, "Failed to remove targets %s: %s ", t.targetIds.join(","), n), await __PRIVATE_disableNetworkUntilRecovery(e, n);
 		}
-		else if (t instanceof __PRIVATE_DocumentWatchChange ? e.Pa._e(t) : t instanceof __PRIVATE_ExistenceFilterChange ? e.Pa.he(t) : e.Pa.ue(t), !n.isEqual(SnapshotVersion.min())) try {
+		else if (t instanceof __PRIVATE_DocumentWatchChange ? e.Du.Tt(t) : t instanceof __PRIVATE_ExistenceFilterChange ? e.Du.dt(t) : e.Du.Rt(t), !n.isEqual(SnapshotVersion.min())) try {
 			const t = await __PRIVATE_localStoreGetLastRemoteSnapshotVersion(e.localStore);
 			n.compareTo(t) >= 0 && await function __PRIVATE_raiseWatchSnapshot(e, t) {
-				const n = e.Pa.fe(t);
+				const n = e.Du.Dt(t);
 				n.targetChanges.forEach(((n, r) => {
 					if (n.resumeToken.approximateByteSize() > 0) {
-						const i = e._a.get(r);
-						i && e._a.set(r, i.withResumeToken(n.resumeToken, t));
+						const i = e.mu.get(r);
+						i && e.mu.set(r, i.withResumeToken(n.resumeToken, t));
 					}
 				})), n.targetMismatches.forEach(((t, n) => {
-					const r = e._a.get(t);
+					const r = e.mu.get(t);
 					if (!r) return;
-					e._a.set(t, r.withResumeToken(ByteString.EMPTY_BYTE_STRING, r.snapshotVersion)), __PRIVATE_sendUnwatchRequest(e, t);
+					e.mu.set(t, r.withResumeToken(ByteString.EMPTY_BYTE_STRING, r.snapshotVersion)), __PRIVATE_sendUnwatchRequest(e, t);
 					__PRIVATE_sendWatchRequest(e, new TargetData(r.target, t, n, r.sequenceNumber));
 				}));
 				const r = function __PRIVATE_toSdkRemoteEvent(e, t) {
 					const n = /* @__PURE__ */ new Map();
 					t.targetChanges.forEach(((t, r) => {
-						const i = e.aa.get(r);
+						const i = e.gu.get(r);
 						void 0 !== i && n.set(i, t);
 					}));
 					let r = new SortedMap(__PRIVATE_primitiveComparator);
 					return t.targetMismatches.forEach(((t, n) => {
-						const i = e.aa.get(t);
+						const i = e.gu.get(t);
 						void 0 !== i && (r = r.insert(i, n));
 					})), new RemoteEvent(t.snapshotVersion, n, r, t.documentUpdates, t.augmentedDocumentUpdates, t.resolvedLimboDocuments);
 				}(e, n);
 				return e.remoteSyncer.applyRemoteEvent(r);
 			}(e, n);
 		} catch (t) {
-			__PRIVATE_logDebug(hr, "Failed to raise snapshot:", t), await __PRIVATE_disableNetworkUntilRecovery(e, t);
+			__PRIVATE_logDebug(qr, "Failed to raise snapshot:", t), await __PRIVATE_disableNetworkUntilRecovery(e, t);
 		}
 	}
 	/**
@@ -24586,21 +26640,21 @@ Total Duration: ${a - u}ms`);
 	* any retry attempt.
 	*/ async function __PRIVATE_disableNetworkUntilRecovery(e, t, n) {
 		if (!__PRIVATE_isIndexedDbTransactionError(t)) throw t;
-		e.la.add(1), await __PRIVATE_disableNetworkInternal(e), e.Ta.set("Offline"), n || (n = () => __PRIVATE_localStoreGetLastRemoteSnapshotVersion(e.localStore)), e.asyncQueue.enqueueRetryable((async () => {
-			__PRIVATE_logDebug(hr, "Retrying IndexedDB access"), await n(), e.la.delete(1), await __PRIVATE_enableNetworkInternal(e);
+		e.bu.add(1), await __PRIVATE_disableNetworkInternal(e), e.vu.set("Offline"), n || (n = () => __PRIVATE_localStoreGetLastRemoteSnapshotVersion(e.localStore)), e.asyncQueue.enqueueRetryable((async () => {
+			__PRIVATE_logDebug(qr, "Retrying IndexedDB access"), await n(), e.bu.delete(1), await __PRIVATE_enableNetworkInternal(e);
 		}));
 	}
 	async function __PRIVATE_remoteStoreHandleCredentialChange(e, t) {
 		const n = __PRIVATE_debugCast(e);
-		n.asyncQueue.verifyOperationInProgress(), __PRIVATE_logDebug(hr, "RemoteStore received new credentials");
+		n.asyncQueue.verifyOperationInProgress(), __PRIVATE_logDebug(qr, "RemoteStore received new credentials");
 		const r = __PRIVATE_canUseNetwork(n);
-		n.la.add(3), await __PRIVATE_disableNetworkInternal(n), r && n.Ta.set("Unknown"), await n.remoteSyncer.handleCredentialChange(t), n.la.delete(3), await __PRIVATE_enableNetworkInternal(n);
+		n.bu.add(3), await __PRIVATE_disableNetworkInternal(n), r && n.vu.set("Unknown"), await n.remoteSyncer.handleCredentialChange(t), n.bu.delete(3), await __PRIVATE_enableNetworkInternal(n);
 	}
 	/**
 	* Toggles the network state when the client gains or loses its primary lease.
 	*/ async function __PRIVATE_remoteStoreApplyPrimaryState(e, t) {
 		const n = __PRIVATE_debugCast(e);
-		t ? (n.la.delete(2), await __PRIVATE_enableNetworkInternal(n)) : t || (n.la.add(2), await __PRIVATE_disableNetworkInternal(n), n.Ta.set("Unknown"));
+		t ? (n.bu.delete(2), await __PRIVATE_enableNetworkInternal(n)) : t || (n.bu.add(2), await __PRIVATE_disableNetworkInternal(n), n.vu.set("Unknown"));
 	}
 	/**
 	* If not yet initialized, registers the WatchStream and its network state
@@ -24610,17 +26664,17 @@ Total Duration: ${a - u}ms`);
 	* PORTING NOTE: On iOS and Android, the WatchStream gets registered on startup.
 	* This is not done on Web to allow it to be tree-shaken.
 	*/ function __PRIVATE_ensureWatchStream(e) {
-		return e.Ia || (e.Ia = function __PRIVATE_newPersistentWatchStream(e, t, n) {
+		return e.Cu || (e.Cu = function __PRIVATE_newPersistentWatchStream(e, t, n) {
 			const r = __PRIVATE_debugCast(e);
-			return r.pn(), new __PRIVATE_PersistentListenStream(t, r.connection, r.authCredentials, r.appCheckCredentials, r.serializer, n);
+			return r.Or(), new __PRIVATE_PersistentListenStream(t, r.connection, r.authCredentials, r.appCheckCredentials, r.serializer, n);
 		}(e.datastore, e.asyncQueue, {
-			ct: __PRIVATE_onWatchStreamConnected.bind(null, e),
-			Et: __PRIVATE_onWatchStreamOpen.bind(null, e),
-			Tt: __PRIVATE_onWatchStreamClose.bind(null, e),
-			Tn: __PRIVATE_onWatchStreamChange.bind(null, e)
-		}), e.Ea.push((async (t) => {
-			t ? (e.Ia.Xt(), __PRIVATE_shouldStartWatchStream(e) ? __PRIVATE_startWatchStream(e) : e.Ta.set("Unknown")) : (await e.Ia.stop(), __PRIVATE_cleanUpWatchStreamState(e));
-		}))), e.Ia;
+			pn: __PRIVATE_onWatchStreamConnected.bind(null, e),
+			yn: __PRIVATE_onWatchStreamOpen.bind(null, e),
+			bn: __PRIVATE_onWatchStreamClose.bind(null, e),
+			gr: __PRIVATE_onWatchStreamChange.bind(null, e)
+		}), e.Su.push((async (t) => {
+			t ? (e.Cu.lr(), __PRIVATE_shouldStartWatchStream(e) ? __PRIVATE_startWatchStream(e) : e.vu.set("Unknown")) : (await e.Cu.stop(), __PRIVATE_cleanUpWatchStreamState(e));
+		}))), e.Cu;
 	}
 	/**
 	* @license
@@ -24643,15 +26697,15 @@ Total Duration: ${a - u}ms`);
 			this.observer = e, this.muted = false;
 		}
 		next(e) {
-			this.muted || this.observer.next && this.Aa(this.observer.next, e);
+			this.muted || this.observer.next && this.Ou(this.observer.next, e);
 		}
 		error(e) {
-			this.muted || (this.observer.error ? this.Aa(this.observer.error, e) : __PRIVATE_logError("Uncaught Error in snapshot listener:", e.toString()));
+			this.muted || (this.observer.error ? this.Ou(this.observer.error, e) : __PRIVATE_logError("Uncaught Error in snapshot listener:", e.toString()));
 		}
-		Va() {
+		Mu() {
 			this.muted = true;
 		}
-		Aa(e, t) {
+		Ou(e, t) {
 			setTimeout((() => {
 				this.muted || e(t);
 			}), 0);
@@ -24705,7 +26759,7 @@ Total Duration: ${a - u}ms`);
 		*   PORTING NOTE: This exists to prevent making removeDelayedOperation() and
 		*   the DelayedOperation class public.
 		*/ static createAndSchedule(e, t, n, r, i) {
-			const _ = new DelayedOperation(e, t, Date.now() + n, r, i);
+			const s = Date.now() + n, _ = new DelayedOperation(e, t, s, r, i);
 			return _.start(n), _;
 		}
 		/**
@@ -24744,6 +26798,70 @@ Total Duration: ${a - u}ms`);
 		throw t;
 	}
 	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2019 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2018 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
 	* Metadata state of the local client. Unlike `RemoteClientState`, this class is
 	* mutable and keeps track of all pending mutations, which allows us to
 	* update the range of pending mutation batch IDs as new mutations are added or
@@ -24757,16 +26875,16 @@ Total Duration: ${a - u}ms`);
 		constructor() {
 			this.activeTargetIds = __PRIVATE_targetIdSet();
 		}
-		Ba(e) {
+		ec(e) {
 			this.activeTargetIds = this.activeTargetIds.add(e);
 		}
-		Ua(e) {
+		tc(e) {
 			this.activeTargetIds = this.activeTargetIds.delete(e);
 		}
 		/**
 		* Converts this entry into a JSON-encoded format we can use for WebStorage.
 		* Does not encode `clientId` as it is part of the key in WebStorage.
-		*/ La() {
+		*/ Xu() {
 			const e = {
 				activeTargetIds: this.activeTargetIds.toArray(),
 				updateTimeMs: Date.now()
@@ -24776,33 +26894,33 @@ Total Duration: ${a - u}ms`);
 	};
 	var __PRIVATE_MemorySharedClientState = class {
 		constructor() {
-			this.fu = new __PRIVATE_LocalClientState(), this.mu = {}, this.onlineStateHandler = null, this.sequenceNumberHandler = null;
+			this.Uc = new __PRIVATE_LocalClientState(), this.kc = {}, this.onlineStateHandler = null, this.sequenceNumberHandler = null;
 		}
 		addPendingMutation(e) {}
 		updateMutationState(e, t, n) {}
 		addLocalQueryTarget(e, t = true) {
-			return t && this.fu.Ba(e), this.mu[e] || "not-current";
+			return t && this.Uc.ec(e), this.kc[e] || "not-current";
 		}
 		updateQueryState(e, t, n) {
-			this.mu[e] = t;
+			this.kc[e] = t;
 		}
 		removeLocalQueryTarget(e) {
-			this.fu.Ua(e);
+			this.Uc.tc(e);
 		}
 		isLocalQueryTarget(e) {
-			return this.fu.activeTargetIds.has(e);
+			return this.Uc.activeTargetIds.has(e);
 		}
 		clearQueryState(e) {
-			delete this.mu[e];
+			delete this.kc[e];
 		}
 		getAllActiveQueryTargets() {
-			return this.fu.activeTargetIds;
+			return this.Uc.activeTargetIds;
 		}
 		isActiveQueryTarget(e) {
-			return this.fu.activeTargetIds.has(e);
+			return this.Uc.activeTargetIds.has(e);
 		}
 		start() {
-			return this.fu = new __PRIVATE_LocalClientState(), Promise.resolve();
+			return this.Uc = new __PRIVATE_LocalClientState(), Promise.resolve();
 		}
 		handleUserChange(e, t, n) {}
 		setOnlineState(e) {}
@@ -24810,6 +26928,22 @@ Total Duration: ${a - u}ms`);
 		writeSequenceNumber(e) {}
 		notifyBundleLoaded(e) {}
 	};
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/** The Platform's 'document' implementation or null if not available. */ function getDocument() {
 		return "undefined" != typeof document ? document : null;
 	}
@@ -24923,33 +27057,33 @@ Total Duration: ${a - u}ms`);
 	* duplicate events for the same doc.
 	*/ var __PRIVATE_DocumentChangeSet = class {
 		constructor() {
-			this.pu = new SortedMap(DocumentKey.comparator);
+			this.Qc = new SortedMap(DocumentKey.comparator);
 		}
 		track(e) {
-			const t = e.doc.key, n = this.pu.get(t);
-			n ? 0 !== e.type && 3 === n.type ? this.pu = this.pu.insert(t, e) : 3 === e.type && 1 !== n.type ? this.pu = this.pu.insert(t, {
+			const t = e.doc.key, n = this.Qc.get(t);
+			n ? 0 !== e.type && 3 === n.type ? this.Qc = this.Qc.insert(t, e) : 3 === e.type && 1 !== n.type ? this.Qc = this.Qc.insert(t, {
 				type: n.type,
 				doc: e.doc
-			}) : 2 === e.type && 2 === n.type ? this.pu = this.pu.insert(t, {
+			}) : 2 === e.type && 2 === n.type ? this.Qc = this.Qc.insert(t, {
 				type: 2,
 				doc: e.doc
-			}) : 2 === e.type && 0 === n.type ? this.pu = this.pu.insert(t, {
+			}) : 2 === e.type && 0 === n.type ? this.Qc = this.Qc.insert(t, {
 				type: 0,
 				doc: e.doc
-			}) : 1 === e.type && 0 === n.type ? this.pu = this.pu.remove(t) : 1 === e.type && 2 === n.type ? this.pu = this.pu.insert(t, {
+			}) : 1 === e.type && 0 === n.type ? this.Qc = this.Qc.remove(t) : 1 === e.type && 2 === n.type ? this.Qc = this.Qc.insert(t, {
 				type: 1,
 				doc: n.doc
-			}) : 0 === e.type && 1 === n.type ? this.pu = this.pu.insert(t, {
+			}) : 0 === e.type && 1 === n.type ? this.Qc = this.Qc.insert(t, {
 				type: 2,
 				doc: e.doc
 			}) : l(63341, {
-				we: e,
-				gu: n
-			}) : this.pu = this.pu.insert(t, e);
+				Nt: e,
+				qc: n
+			}) : this.Qc = this.Qc.insert(t, e);
 		}
-		yu() {
+		Kc() {
 			const e = [];
-			return this.pu.inorderTraversal(((t, n) => {
+			return this.Qc.inorderTraversal(((t, n) => {
 				e.push(n);
 			})), e;
 		}
@@ -24999,21 +27133,21 @@ Total Duration: ${a - u}ms`);
 	* tracked by EventManager.
 	*/ var __PRIVATE_QueryListenersInfo = class {
 		constructor() {
-			this.wu = void 0, this.bu = [];
+			this.$c = void 0, this.Wc = [];
 		}
-		Su() {
-			return this.bu.some(((e) => e.vu()));
+		Gc() {
+			return this.Wc.some(((e) => e.jc()));
 		}
 	};
 	var __PRIVATE_EventManagerImpl = class {
 		constructor() {
-			this.queries = __PRIVATE_newQueriesObjectMap(), this.onlineState = "Unknown", this.Du = /* @__PURE__ */ new Set();
+			this.queries = __PRIVATE_newQueriesObjectMap(), this.onlineState = "Unknown", this.zc = /* @__PURE__ */ new Set();
 		}
 		terminate() {
 			(function __PRIVATE_errorAllTargets(e, t) {
 				const n = __PRIVATE_debugCast(e), r = n.queries;
 				n.queries = __PRIVATE_newQueriesObjectMap(), r.forEach(((e, n) => {
-					for (const e of n.bu) e.onError(t);
+					for (const e of n.Wc) e.onError(t);
 				}));
 			})(this, new e(ta.ABORTED, "Firestore shutting down"));
 		}
@@ -25026,18 +27160,18 @@ Total Duration: ${a - u}ms`);
 		let r = 3;
 		const i = t.query;
 		let s = n.queries.get(i);
-		s ? !s.Su() && t.vu() && (r = 2) : (s = new __PRIVATE_QueryListenersInfo(), r = t.vu() ? 0 : 1);
+		s ? !s.Gc() && t.jc() && (r = 2) : (s = new __PRIVATE_QueryListenersInfo(), r = t.jc() ? 0 : 1);
 		try {
 			switch (r) {
 				case 0:
-					s.wu = await n.onListen(
+					s.$c = await n.onListen(
 						i,
 						/** enableRemoteListen= */
 						!0
 					);
 					break;
 				case 1:
-					s.wu = await n.onListen(
+					s.$c = await n.onListen(
 						i,
 						/** enableRemoteListen= */
 						!1
@@ -25050,15 +27184,15 @@ Total Duration: ${a - u}ms`);
 			t.onError(n);
 			return;
 		}
-		if (n.queries.set(i, s), s.bu.push(t), t.xu(n.onlineState), s.wu) t.Cu(s.wu) && __PRIVATE_raiseSnapshotsInSyncEvent(n);
+		if (n.queries.set(i, s), s.Wc.push(t), t.Hc(n.onlineState), s.$c) t.Jc(s.$c) && __PRIVATE_raiseSnapshotsInSyncEvent(n);
 	}
 	async function __PRIVATE_eventManagerUnlisten(e, t) {
 		const n = __PRIVATE_debugCast(e), r = t.query;
 		let i = 3;
 		const s = n.queries.get(r);
 		if (s) {
-			const e = s.bu.indexOf(t);
-			e >= 0 && (s.bu.splice(e, 1), 0 === s.bu.length ? i = t.vu() ? 0 : 1 : !s.Su() && t.vu() && (i = 2));
+			const e = s.Wc.indexOf(t);
+			e >= 0 && (s.Wc.splice(e, 1), 0 === s.Wc.length ? i = t.jc() ? 0 : 1 : !s.Gc() && t.jc() && (i = 2));
 		}
 		switch (i) {
 			case 0: return n.queries.delete(r), n.onUnlisten(
@@ -25081,27 +27215,27 @@ Total Duration: ${a - u}ms`);
 		for (const e of t) {
 			const t = e.query, i = n.queries.get(t);
 			if (i) {
-				for (const t of i.bu) t.Cu(e) && (r = true);
-				i.wu = e;
+				for (const t of i.Wc) t.Jc(e) && (r = true);
+				i.$c = e;
 			}
 		}
 		r && __PRIVATE_raiseSnapshotsInSyncEvent(n);
 	}
 	function __PRIVATE_eventManagerOnWatchError(e, t, n) {
 		const r = __PRIVATE_debugCast(e), i = r.queries.get(t);
-		if (i) for (const e of i.bu) e.onError(n);
+		if (i) for (const e of i.Wc) e.onError(n);
 		r.queries.delete(t);
 	}
 	function __PRIVATE_raiseSnapshotsInSyncEvent(e) {
-		e.Du.forEach(((e) => {
+		e.zc.forEach(((e) => {
 			e.next();
 		}));
 	}
-	var Vr;
+	var zr;
 	(function(e) {
 		/** Listen to both cache and server changes */
 		e.Default = "default", e.Cache = "cache";
-	})(Vr || (Vr = {}));
+	})(zr || (zr = {}));
 	/**
 	* QueryListener takes a series of internal view snapshots and determines
 	* when to raise the event.
@@ -25110,48 +27244,64 @@ Total Duration: ${a - u}ms`);
 	*/
 	var __PRIVATE_QueryListener = class {
 		constructor(e, t, n) {
-			this.query = e, this.Fu = t, this.Ou = false, this.Mu = null, this.onlineState = "Unknown", this.options = n || {};
+			this.query = e, this.Yc = t, this.Zc = false, this.Xc = null, this.onlineState = "Unknown", this.options = n || {};
 		}
 		/**
 		* Applies the new ViewSnapshot to this listener, raising a user-facing event
 		* if applicable (depending on what changed, whether the user has opted into
 		* metadata-only changes, etc.). Returns true if a user-facing event was
 		* indeed raised.
-		*/ Cu(e) {
+		*/ Jc(e) {
 			if (!this.options.includeMetadataChanges) {
 				const t = [];
 				for (const n of e.docChanges) 3 !== n.type && t.push(n);
 				e = new ViewSnapshot(e.query, e.docs, e.oldDocs, t, e.mutatedKeys, e.fromCache, e.syncStateChanged, true, e.hasCachedResults);
 			}
 			let t = false;
-			return this.Ou ? this.Nu(e) && (this.Fu.next(e), t = true) : this.Lu(e, this.onlineState) && (this.Bu(e), t = true), this.Mu = e, t;
+			return this.Zc ? this.el(e) && (this.Yc.next(e), t = true) : this.tl(e, this.onlineState) && (this.nl(e), t = true), this.Xc = e, t;
 		}
 		onError(e) {
-			this.Fu.error(e);
+			this.Yc.error(e);
 		}
-		/** Returns whether a snapshot was raised. */ xu(e) {
+		/** Returns whether a snapshot was raised. */ Hc(e) {
 			this.onlineState = e;
 			let t = false;
-			return this.Mu && !this.Ou && this.Lu(this.Mu, e) && (this.Bu(this.Mu), t = true), t;
+			return this.Xc && !this.Zc && this.tl(this.Xc, e) && (this.nl(this.Xc), t = true), t;
 		}
-		Lu(e, t) {
+		tl(e, t) {
 			if (!e.fromCache) return true;
-			if (!this.vu()) return true;
+			if (!this.jc()) return true;
 			const n = "Offline" !== t;
 			return (!this.options.waitForSyncWhenOnline || !n) && (!e.docs.isEmpty() || e.hasCachedResults || "Offline" === t);
 		}
-		Nu(e) {
+		el(e) {
 			if (e.docChanges.length > 0) return true;
-			const t = this.Mu && this.Mu.hasPendingWrites !== e.hasPendingWrites;
+			const t = this.Xc && this.Xc.hasPendingWrites !== e.hasPendingWrites;
 			return !(!e.syncStateChanged && !t) && true === this.options.includeMetadataChanges;
 		}
-		Bu(e) {
-			e = ViewSnapshot.fromInitialDocuments(e.query, e.docs, e.mutatedKeys, e.fromCache, e.hasCachedResults), this.Ou = true, this.Fu.next(e);
+		nl(e) {
+			e = ViewSnapshot.fromInitialDocuments(e.query, e.docs, e.mutatedKeys, e.fromCache, e.hasCachedResults), this.Zc = true, this.Yc.next(e);
 		}
-		vu() {
-			return this.options.source !== Vr.Cache;
+		jc() {
+			return this.options.source !== zr.Cache;
 		}
 	};
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* Returns a `LoadBundleTaskProgress` representing the progress that the loading
 	* has succeeded.
@@ -25188,13 +27338,13 @@ Total Duration: ${a - u}ms`);
 	* the query filters and limits to determine the most correct possible results.
 	*/ var __PRIVATE_View = class {
 		constructor(e, t) {
-			this.query = e, this.zu = t, this.ju = null, this.hasCachedResults = false, this.current = false, this.Hu = __PRIVATE_documentKeySet(), this.mutatedKeys = __PRIVATE_documentKeySet(), this.Ju = __PRIVATE_isPipeline(e) ? __PRIVATE_newPipelineComparator(e) : __PRIVATE_newQueryComparator(e), this.Yu = new DocumentSet(this.Ju);
+			this.query = e, this.ll = t, this.El = null, this.hasCachedResults = false, this.current = false, this.hl = __PRIVATE_documentKeySet(), this.mutatedKeys = __PRIVATE_documentKeySet(), this.Tl = __PRIVATE_isPipeline(e) ? __PRIVATE_newPipelineComparator(e) : __PRIVATE_newQueryComparator(e), this.Pl = new DocumentSet(this.Tl);
 		}
 		/**
 		* The set of remote documents that the server has told us belongs to the target associated with
 		* this view.
-		*/ get Zu() {
-			return this.zu;
+		*/ get Il() {
+			return this.ll;
 		}
 		/**
 		* Iterates over a set of doc changes, applies the query limit, and computes
@@ -25205,20 +27355,20 @@ Total Duration: ${a - u}ms`);
 		* @param previousChanges - If this is being called with a refill, then start
 		*        with this set of docs and changes instead of the current view.
 		* @returns a new set of docs, changes, and refill flag.
-		*/ Xu(e, t) {
-			const n = t ? t.ec : new __PRIVATE_DocumentChangeSet(), r = t ? t.Yu : this.Yu;
+		*/ Rl(e, t) {
+			const n = t ? t.Al : new __PRIVATE_DocumentChangeSet(), r = t ? t.Pl : this.Pl;
 			let i = t ? t.mutatedKeys : this.mutatedKeys, s = r, _ = false;
-			const [o, a] = this.tc(this.query, r);
+			const [o, a] = this.Vl(this.query, r);
 			e.inorderTraversal(((e, t) => {
 				const u = r.get(e), c = __PRIVATE_queryOrPipelineMatches(this.query, t) ? t : null, l = !!u && this.mutatedKeys.has(u.key), E = !!c && (c.hasLocalMutations || this.mutatedKeys.has(c.key) && c.hasCommittedMutations);
 				let h = false;
 				if (u && c) u.data.isEqual(c.data) ? l !== E && (n.track({
 					type: 3,
 					doc: c
-				}), h = true) : this.nc(u, c) || (n.track({
+				}), h = true) : this.fl(u, c) || (n.track({
 					type: 2,
 					doc: c
-				}), h = true, (o && this.Ju(c, o) > 0 || a && this.Ju(c, a) < 0) && (_ = true));
+				}), h = true, (o && this.Tl(c, o) > 0 || a && this.Tl(c, a) < 0) && (_ = true));
 				else !u && c ? (n.track({
 					type: 0,
 					doc: c
@@ -25228,7 +27378,7 @@ Total Duration: ${a - u}ms`);
 				}), h = true, (o || a) && (_ = true));
 				h && (c ? (s = s.add(c), i = E ? i.add(e) : i.delete(e)) : (s = s.delete(e), i = i.delete(e)));
 			}));
-			const u = this.rc(this.query);
+			const u = this.dl(this.query);
 			if (u) if (__PRIVATE_isPipeline(this.query)) {
 				const e = [];
 				s.forEach(((t) => e.push(t)));
@@ -25242,7 +27392,7 @@ Total Duration: ${a - u}ms`);
 					}));
 				})), s = r;
 			} else {
-				const e = this.sc(this.query);
+				const e = this.ml(this.query);
 				for (; s.size > u;) {
 					const t = "F" === e ? s.last() : s.first();
 					s = s.delete(t.key), i = i.delete(t.key), n.track({
@@ -25252,30 +27402,30 @@ Total Duration: ${a - u}ms`);
 				}
 			}
 			return {
-				Yu: s,
-				ec: n,
-				Oo: _,
+				Pl: s,
+				Al: n,
+				Ja: _,
 				mutatedKeys: i
 			};
 		}
-		rc(e) {
+		dl(e) {
 			return __PRIVATE_isPipeline(e) ? __PRIVATE_getLastEffectiveLimit(e)?.limit : e.limit || void 0;
 		}
-		sc(e) {
+		ml(e) {
 			if (__PRIVATE_isPipeline(e)) {
 				const t = __PRIVATE_getLastEffectiveLimit(e);
 				return t && t.limit < 0 ? "L" : "F";
 			}
 			return e.limitType;
 		}
-		tc(e, t) {
+		Vl(e, t) {
 			if (__PRIVATE_isPipeline(e)) {
 				const n = __PRIVATE_getLastEffectiveLimit(e)?.limit;
 				return [t.size === n ? t.last() : null, null];
 			}
-			return ["F" === e.limitType && t.size === this.rc(this.query) ? t.last() : null, "L" === e.limitType && t.size === this.rc(this.query) ? t.first() : null];
+			return ["F" === e.limitType && t.size === this.dl(this.query) ? t.last() : null, "L" === e.limitType && t.size === this.dl(this.query) ? t.first() : null];
 		}
-		nc(e, t) {
+		fl(e, t) {
 			return e.hasLocalMutations && t.hasCommittedMutations && !t.hasLocalMutations;
 		}
 		/**
@@ -25292,9 +27442,9 @@ Total Duration: ${a - u}ms`);
 		* @returns A new ViewChange with the given docs, changes, and sync state.
 		*/
 		applyChanges(e, t, n, r) {
-			const i = this.Yu;
-			this.Yu = e.Yu, this.mutatedKeys = e.mutatedKeys;
-			const s = e.ec.yu();
+			const i = this.Pl;
+			this.Pl = e.Pl, this.mutatedKeys = e.mutatedKeys;
+			const s = e.Al.Kc();
 			s.sort(((e, t) => function __PRIVATE_compareChangeType(e, t) {
 				const order = (e) => {
 					switch (e) {
@@ -25302,50 +27452,66 @@ Total Duration: ${a - u}ms`);
 						case 2:
 						case 3: return 2;
 						case 1: return 0;
-						default: return l(20277, { we: e });
+						default: return l(20277, { Nt: e });
 					}
 				};
 				return order(e) - order(t);
-			}(e.type, t.type) || this.Ju(e.doc, t.doc))), this._c(n), r = r ?? false;
-			const _ = t && !r ? this.oc() : [], o = 0 === this.Hu.size && this.current && !r ? 1 : 0, a = o !== this.ju;
-			if (this.ju = o, 0 !== s.length || a) return {
-				snapshot: new ViewSnapshot(this.query, e.Yu, i, s, e.mutatedKeys, 0 === o, a, false, !!n && n.resumeToken.approximateByteSize() > 0),
-				ac: _
+			}(e.type, t.type) || this.Tl(e.doc, t.doc))), this.pl(n), r = r ?? false;
+			/**
+			* @license
+			* Copyright 2020 Google LLC
+			*
+			* Licensed under the Apache License, Version 2.0 (the "License");
+			* you may not use this file except in compliance with the License.
+			* You may obtain a copy of the License at
+			*
+			*   http://www.apache.org/licenses/LICENSE-2.0
+			*
+			* Unless required by applicable law or agreed to in writing, software
+			* distributed under the License is distributed on an "AS IS" BASIS,
+			* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+			* See the License for the specific language governing permissions and
+			* limitations under the License.
+			*/
+			const _ = t && !r ? this.gl() : [], o = 0 === this.hl.size && this.current && !r ? 1 : 0, a = o !== this.El;
+			if (this.El = o, 0 !== s.length || a) return {
+				snapshot: new ViewSnapshot(this.query, e.Pl, i, s, e.mutatedKeys, 0 === o, a, false, !!n && n.resumeToken.approximateByteSize() > 0),
+				yl: _
 			};
-			return { ac: _ };
+			return { yl: _ };
 		}
 		/**
 		* Applies an OnlineState change to the view, potentially generating a
 		* ViewChange if the view's syncState changes as a result.
-		*/ xu(e) {
+		*/ Hc(e) {
 			return this.current && "Offline" === e ? (this.current = false, this.applyChanges({
-				Yu: this.Yu,
-				ec: new __PRIVATE_DocumentChangeSet(),
+				Pl: this.Pl,
+				Al: new __PRIVATE_DocumentChangeSet(),
 				mutatedKeys: this.mutatedKeys,
-				Oo: false
-			}, false)) : { ac: [] };
+				Ja: false
+			}, false)) : { yl: [] };
 		}
 		/**
 		* Returns whether the doc for the given key should be in limbo.
-		*/ uc(e) {
-			return !this.zu.has(e) && !!this.Yu.has(e) && !this.Yu.get(e).hasLocalMutations;
+		*/ wl(e) {
+			return !this.ll.has(e) && !!this.Pl.has(e) && !this.Pl.get(e).hasLocalMutations;
 		}
 		/**
 		* Updates syncedDocuments, current, and limbo docs based on the given change.
 		* Returns the list of changes to which docs are in limbo.
-		*/ _c(e) {
-			e && (e.addedDocuments.forEach(((e) => this.zu = this.zu.add(e))), e.modifiedDocuments.forEach(((e) => {})), e.removedDocuments.forEach(((e) => this.zu = this.zu.delete(e))), this.current = e.current);
+		*/ pl(e) {
+			e && (e.addedDocuments.forEach(((e) => this.ll = this.ll.add(e))), e.modifiedDocuments.forEach(((e) => {})), e.removedDocuments.forEach(((e) => this.ll = this.ll.delete(e))), this.current = e.current);
 		}
-		oc() {
+		gl() {
 			if (!this.current) return [];
-			const e = this.Hu;
-			this.Hu = __PRIVATE_documentKeySet(), this.Yu.forEach(((e) => {
-				this.uc(e.key) && (this.Hu = this.Hu.add(e.key));
+			const e = this.hl;
+			this.hl = __PRIVATE_documentKeySet(), this.Pl.forEach(((e) => {
+				this.wl(e.key) && (this.hl = this.hl.add(e.key));
 			}));
 			const t = [];
 			return e.forEach(((e) => {
-				this.Hu.has(e) || t.push(new __PRIVATE_RemovedLimboDocument(e));
-			})), this.Hu.forEach(((n) => {
+				this.hl.has(e) || t.push(new __PRIVATE_RemovedLimboDocument(e));
+			})), this.hl.forEach(((n) => {
 				e.has(n) || t.push(new __PRIVATE_AddedLimboDocument(n));
 			})), t;
 		}
@@ -25368,9 +27534,9 @@ Total Duration: ${a - u}ms`);
 		*
 		* @returns The ViewChange that resulted from this synchronization.
 		*/
-		cc(e) {
-			this.zu = e.Wo, this.Hu = __PRIVATE_documentKeySet();
-			const t = this.Xu(e.documents);
+		bl(e) {
+			this.ll = e.ou, this.hl = __PRIVATE_documentKeySet();
+			const t = this.Rl(e.documents);
 			return this.applyChanges(t, true);
 		}
 		/**
@@ -25378,11 +27544,11 @@ Total Duration: ${a - u}ms`);
 		* a document add for every existing document and the `fromCache` and
 		* `hasPendingWrites` status of the already established view.
 		*/
-		lc() {
-			return ViewSnapshot.fromInitialDocuments(this.query, this.Yu, this.mutatedKeys, 0 === this.ju, this.hasCachedResults);
+		Sl() {
+			return ViewSnapshot.fromInitialDocuments(this.query, this.Pl, this.mutatedKeys, 0 === this.El, this.hasCachedResults);
 		}
 	};
-	const dr = "SyncEngine";
+	const Hr = "SyncEngine";
 	/**
 	* QueryView contains all of the data that SyncEngine needs to keep track of for
 	* a particular query.
@@ -25393,7 +27559,7 @@ Total Duration: ${a - u}ms`);
 	};
 	/** Tracks a limbo resolution. */ var LimboResolution = class {
 		constructor(e) {
-			this.key = e, this.Ec = false;
+			this.key = e, this.xl = false;
 		}
 	};
 	/**
@@ -25410,10 +27576,10 @@ Total Duration: ${a - u}ms`);
 	* functions, such that they are tree-shakeable.
 	*/ var __PRIVATE_SyncEngineImpl = class {
 		constructor(e, t, n, r, i, s) {
-			this.localStore = e, this.remoteStore = t, this.eventManager = n, this.sharedClientState = r, this.currentUser = i, this.maxConcurrentLimboResolutions = s, this.hc = {}, this.Tc = new ObjectMap(((e) => __PRIVATE_canonifyQueryOrPipeline(e)), __PRIVATE_queryOrPipelineEqual), this.Pc = /* @__PURE__ */ new Map(), this.Ic = /* @__PURE__ */ new Set(), this.Rc = new SortedMap(DocumentKey.comparator), this.Ac = /* @__PURE__ */ new Map(), this.Vc = new __PRIVATE_ReferenceSet(), this.dc = {}, this.fc = /* @__PURE__ */ new Map(), this.mc = __PRIVATE_TargetIdGenerator.bs(), this.onlineState = "Unknown", this.gc = void 0;
+			this.localStore = e, this.remoteStore = t, this.eventManager = n, this.sharedClientState = r, this.currentUser = i, this.maxConcurrentLimboResolutions = s, this.vl = {}, this.Dl = new ObjectMap(((e) => __PRIVATE_canonifyQueryOrPipeline(e)), __PRIVATE_queryOrPipelineEqual), this.Cl = /* @__PURE__ */ new Map(), this.Fl = /* @__PURE__ */ new Set(), this.Ol = new SortedMap(DocumentKey.comparator), this.Ml = /* @__PURE__ */ new Map(), this.Nl = new __PRIVATE_ReferenceSet(), this.Bl = {}, this.Ll = /* @__PURE__ */ new Map(), this.Ul = __PRIVATE_TargetIdGenerator.K_(), this.onlineState = "Unknown", this.kl = void 0;
 		}
 		get isPrimaryClient() {
-			return true === this.gc;
+			return true === this.kl;
 		}
 	};
 	/**
@@ -25424,8 +27590,8 @@ Total Duration: ${a - u}ms`);
 	async function __PRIVATE_syncEngineListen(e, t, n = true) {
 		const r = __PRIVATE_ensureWatchCallbacks(e);
 		let i;
-		const s = r.Tc.get(t);
-		return s ? (r.sharedClientState.addLocalQueryTarget(s.targetId), i = s.view.lc()) : i = await __PRIVATE_allocateTargetAndMaybeListen(
+		const s = r.Dl.get(t);
+		return s ? (r.sharedClientState.addLocalQueryTarget(s.targetId), i = s.view.Sl()) : i = await __PRIVATE_allocateTargetAndMaybeListen(
 			r,
 			t,
 			n,
@@ -25452,20 +27618,20 @@ Total Duration: ${a - u}ms`);
 	* Registers a view for a previously unknown query and computes its initial
 	* snapshot.
 	*/ async function __PRIVATE_initializeViewAndComputeSnapshot(e, t, n, r, i) {
-		e.yc = (t, n, r) => async function __PRIVATE_applyDocChanges(e, t, n, r) {
-			let i = t.view.Xu(n);
-			i.Oo && (i = await __PRIVATE_localStoreExecuteQuery(e.localStore, t.query, false).then((({ documents: e }) => t.view.Xu(e, i))));
+		e.Ql = (t, n, r) => async function __PRIVATE_applyDocChanges(e, t, n, r) {
+			let i = t.view.Rl(n);
+			i.Ja && (i = await __PRIVATE_localStoreExecuteQuery(e.localStore, t.query, false).then((({ documents: e }) => t.view.Rl(e, i))));
 			const s = r && r.targetChanges.get(t.targetId), _ = r && null != r.targetMismatches.get(t.targetId), o = t.view.applyChanges(i, e.isPrimaryClient, s, _);
-			return __PRIVATE_updateTrackedLimbos(e, t.targetId, o.ac), o.snapshot;
+			return __PRIVATE_updateTrackedLimbos(e, t.targetId, o.yl), o.snapshot;
 		}(e, t, n, r);
-		const s = await __PRIVATE_localStoreExecuteQuery(e.localStore, t, true), _ = new __PRIVATE_View(t, s.Wo), o = _.Xu(s.documents), a = TargetChange.createSynthesizedTargetChangeForCurrentChange(n, r && "Offline" !== e.onlineState, i), u = _.applyChanges(o, e.isPrimaryClient, a);
-		__PRIVATE_updateTrackedLimbos(e, n, u.ac);
+		const s = await __PRIVATE_localStoreExecuteQuery(e.localStore, t, true), _ = new __PRIVATE_View(t, s.ou), o = _.Rl(s.documents), a = TargetChange.createSynthesizedTargetChangeForCurrentChange(n, r && "Offline" !== e.onlineState, i), u = _.applyChanges(o, e.isPrimaryClient, a);
+		__PRIVATE_updateTrackedLimbos(e, n, u.yl);
 		const c = new __PRIVATE_QueryView(t, n, _);
-		return e.Tc.set(t, c), e.Pc.has(n) ? e.Pc.get(n).push(t) : e.Pc.set(n, [t]), u.snapshot;
+		return e.Dl.set(t, c), e.Cl.has(n) ? e.Cl.get(n).push(t) : e.Cl.set(n, [t]), u.snapshot;
 	}
 	/** Stops listening to the query. */ async function __PRIVATE_syncEngineUnlisten(e, t, n) {
-		const r = __PRIVATE_debugCast(e), i = r.Tc.get(t), s = r.Pc.get(i.targetId);
-		if (s.length > 1) return r.Pc.set(i.targetId, s.filter(((e) => !__PRIVATE_queryOrPipelineEqual(e, t)))), void r.Tc.delete(t);
+		const r = __PRIVATE_debugCast(e), i = r.Dl.get(t), s = r.Cl.get(i.targetId);
+		if (s.length > 1) return r.Cl.set(i.targetId, s.filter(((e) => !__PRIVATE_queryOrPipelineEqual(e, t)))), void r.Dl.delete(t);
 		if (r.isPrimaryClient) {
 			r.sharedClientState.removeLocalQueryTarget(i.targetId);
 			r.sharedClientState.isActiveQueryTarget(i.targetId) || await __PRIVATE_localStoreReleaseTarget(r.localStore, i.targetId, false).then((() => {
@@ -25474,7 +27640,7 @@ Total Duration: ${a - u}ms`);
 		} else __PRIVATE_removeAndCleanupTarget(r, i.targetId), await __PRIVATE_localStoreReleaseTarget(r.localStore, i.targetId, true);
 	}
 	/** Unlistens to the remote store while still listening to the cache. */ async function __PRIVATE_triggerRemoteStoreUnlisten(e, t) {
-		const n = __PRIVATE_debugCast(e), r = n.Tc.get(t), i = n.Pc.get(r.targetId);
+		const n = __PRIVATE_debugCast(e), r = n.Dl.get(t), i = n.Cl.get(r.targetId);
 		n.isPrimaryClient && 1 === i.length && (n.sharedClientState.removeLocalQueryTarget(r.targetId), __PRIVATE_remoteStoreUnlisten(n.remoteStore, r.targetId));
 	}
 	/**
@@ -25486,8 +27652,8 @@ Total Duration: ${a - u}ms`);
 		try {
 			const e = await __PRIVATE_localStoreApplyRemoteEventToLocalCache(n.localStore, t);
 			t.targetChanges.forEach(((e, t) => {
-				const r = n.Ac.get(t);
-				r && (__PRIVATE_hardAssert(e.addedDocuments.size + e.modifiedDocuments.size + e.removedDocuments.size <= 1, 22616), e.addedDocuments.size > 0 ? r.Ec = !0 : e.modifiedDocuments.size > 0 ? __PRIVATE_hardAssert(r.Ec, 14607) : e.removedDocuments.size > 0 && (__PRIVATE_hardAssert(r.Ec, 42227), r.Ec = !1));
+				const r = n.Ml.get(t);
+				r && (__PRIVATE_hardAssert(e.addedDocuments.size + e.modifiedDocuments.size + e.removedDocuments.size <= 1, 22616), e.addedDocuments.size > 0 ? r.xl = !0 : e.modifiedDocuments.size > 0 ? __PRIVATE_hardAssert(r.xl, 14607) : e.removedDocuments.size > 0 && (__PRIVATE_hardAssert(r.xl, 42227), r.xl = !1));
 			})), await __PRIVATE_syncEngineEmitNewSnapsAndNotifyLocalStore(n, e, t);
 		} catch (e) {
 			await __PRIVATE_ignoreIfPrimaryLeaseLoss(e);
@@ -25500,17 +27666,17 @@ Total Duration: ${a - u}ms`);
 		const r = __PRIVATE_debugCast(e);
 		if (r.isPrimaryClient && 0 === n || !r.isPrimaryClient && 1 === n) {
 			const e = [];
-			r.Tc.forEach(((n, r) => {
-				const i = r.view.xu(t);
+			r.Dl.forEach(((n, r) => {
+				const i = r.view.Hc(t);
 				i.snapshot && e.push(i.snapshot);
 			})), function __PRIVATE_eventManagerOnOnlineStateChange(e, t) {
 				const n = __PRIVATE_debugCast(e);
 				n.onlineState = t;
 				let r = false;
 				n.queries.forEach(((e, n) => {
-					for (const e of n.bu) e.xu(t) && (r = true);
+					for (const e of n.Wc) e.Hc(t) && (r = true);
 				})), r && __PRIVATE_raiseSnapshotsInSyncEvent(n);
-			}(r.eventManager, t), e.length && r.hc.Tn(e), r.onlineState = t, r.isPrimaryClient && r.sharedClientState.setOnlineState(t);
+			}(r.eventManager, t), e.length && r.vl.gr(e), r.onlineState = t, r.isPrimaryClient && r.sharedClientState.setOnlineState(t);
 		}
 	}
 	/**
@@ -25526,36 +27692,36 @@ Total Duration: ${a - u}ms`);
 	*/ async function __PRIVATE_syncEngineRejectListen(e, t, n) {
 		const r = __PRIVATE_debugCast(e);
 		r.sharedClientState.updateQueryState(t, "rejected", n);
-		const i = r.Ac.get(t), s = i && i.key;
+		const i = r.Ml.get(t), s = i && i.key;
 		if (s) {
 			let e = new SortedMap(DocumentKey.comparator);
 			e = e.insert(s, MutableDocument.newNoDocument(s, SnapshotVersion.min()));
 			const n = __PRIVATE_documentKeySet().add(s);
-			await __PRIVATE_syncEngineApplyRemoteEvent(r, new RemoteEvent(SnapshotVersion.min(), /* @__PURE__ */ new Map(), new SortedMap(__PRIVATE_primitiveComparator), e, __PRIVATE_mutableDocumentMap(), n)), r.Rc = r.Rc.remove(s), r.Ac.delete(t), __PRIVATE_pumpEnqueuedLimboResolutions(r);
+			await __PRIVATE_syncEngineApplyRemoteEvent(r, new RemoteEvent(SnapshotVersion.min(), /* @__PURE__ */ new Map(), new SortedMap(__PRIVATE_primitiveComparator), e, __PRIVATE_mutableDocumentMap(), n)), r.Ol = r.Ol.remove(s), r.Ml.delete(t), __PRIVATE_pumpEnqueuedLimboResolutions(r);
 		} else await __PRIVATE_localStoreReleaseTarget(r.localStore, t, false).then((() => __PRIVATE_removeAndCleanupTarget(r, t, n))).catch(__PRIVATE_ignoreIfPrimaryLeaseLoss);
 	}
 	function __PRIVATE_removeAndCleanupTarget(e, t, n = null) {
 		e.sharedClientState.removeLocalQueryTarget(t);
-		for (const r of e.Pc.get(t)) e.Tc.delete(r), n && e.hc.wc(r, n);
-		if (e.Pc.delete(t), e.isPrimaryClient) e.Vc.e_(t).forEach(((t) => {
-			e.Vc.containsKey(t) || __PRIVATE_removeLimboTarget(e, t);
+		for (const r of e.Cl.get(t)) e.Dl.delete(r), n && e.vl.ql(r, n);
+		if (e.Cl.delete(t), e.isPrimaryClient) e.Nl.Ao(t).forEach(((t) => {
+			e.Nl.containsKey(t) || __PRIVATE_removeLimboTarget(e, t);
 		}));
 	}
 	function __PRIVATE_removeLimboTarget(e, t) {
-		e.Ic.delete(t.path.canonicalString());
-		const n = e.Rc.get(t);
-		null !== n && (__PRIVATE_remoteStoreUnlisten(e.remoteStore, n), e.Rc = e.Rc.remove(t), e.Ac.delete(n), __PRIVATE_pumpEnqueuedLimboResolutions(e));
+		e.Fl.delete(t.path.canonicalString());
+		const n = e.Ol.get(t);
+		null !== n && (__PRIVATE_remoteStoreUnlisten(e.remoteStore, n), e.Ol = e.Ol.remove(t), e.Ml.delete(n), __PRIVATE_pumpEnqueuedLimboResolutions(e));
 	}
 	function __PRIVATE_updateTrackedLimbos(e, t, n) {
-		for (const r of n) if (r instanceof __PRIVATE_AddedLimboDocument) e.Vc.addReference(r.key, t), __PRIVATE_trackLimboChange(e, r);
+		for (const r of n) if (r instanceof __PRIVATE_AddedLimboDocument) e.Nl.addReference(r.key, t), __PRIVATE_trackLimboChange(e, r);
 		else if (r instanceof __PRIVATE_RemovedLimboDocument) {
-			__PRIVATE_logDebug(dr, "Document no longer in limbo: " + r.key), e.Vc.removeReference(r.key, t);
-			e.Vc.containsKey(r.key) || __PRIVATE_removeLimboTarget(e, r.key);
-		} else l(19791, { bc: r });
+			__PRIVATE_logDebug(Hr, "Document no longer in limbo: " + r.key), e.Nl.removeReference(r.key, t);
+			e.Nl.containsKey(r.key) || __PRIVATE_removeLimboTarget(e, r.key);
+		} else l(19791, { Kl: r });
 	}
 	function __PRIVATE_trackLimboChange(e, t) {
 		const n = t.key, r = n.path.canonicalString();
-		e.Rc.get(n) || e.Ic.has(r) || (__PRIVATE_logDebug(dr, "New document in limbo: " + n), e.Ic.add(r), __PRIVATE_pumpEnqueuedLimboResolutions(e));
+		e.Ol.get(n) || e.Fl.has(r) || (__PRIVATE_logDebug(Hr, "New document in limbo: " + n), e.Fl.add(r), __PRIVATE_pumpEnqueuedLimboResolutions(e));
 	}
 	/**
 	* Starts listens for documents in limbo that are enqueued for resolution,
@@ -25565,40 +27731,40 @@ Total Duration: ${a - u}ms`);
 	* with "resource exhausted" errors which can lead to pathological client
 	* behavior as seen in https://github.com/firebase/firebase-js-sdk/issues/2683.
 	*/ function __PRIVATE_pumpEnqueuedLimboResolutions(e) {
-		for (; e.Ic.size > 0 && e.Rc.size < e.maxConcurrentLimboResolutions;) {
-			const t = e.Ic.values().next().value;
-			e.Ic.delete(t);
-			const n = new DocumentKey(ResourcePath.fromString(t)), r = e.mc.next();
-			e.Ac.set(r, new LimboResolution(n)), e.Rc = e.Rc.insert(n, r), __PRIVATE_remoteStoreListen(e.remoteStore, new TargetData(__PRIVATE_queryToTarget(__PRIVATE_newQueryForPath(n.path)), r, "TargetPurposeLimboResolution", __PRIVATE_ListenSequence.wn));
+		for (; e.Fl.size > 0 && e.Ol.size < e.maxConcurrentLimboResolutions;) {
+			const t = e.Fl.values().next().value;
+			e.Fl.delete(t);
+			const n = new DocumentKey(ResourcePath.fromString(t)), r = e.Ul.next();
+			e.Ml.set(r, new LimboResolution(n)), e.Ol = e.Ol.insert(n, r), __PRIVATE_remoteStoreListen(e.remoteStore, new TargetData(__PRIVATE_queryToTarget(__PRIVATE_newQueryForPath(n.path)), r, "TargetPurposeLimboResolution", __PRIVATE_ListenSequence.Br));
 		}
 	}
 	async function __PRIVATE_syncEngineEmitNewSnapsAndNotifyLocalStore(e, t, n) {
 		const r = __PRIVATE_debugCast(e), i = [], s = [], _ = [];
-		r.Tc.isEmpty() || (r.Tc.forEach(((e, o) => {
-			_.push(r.yc(o, t, n).then(((e) => {
+		r.Dl.isEmpty() || (r.Dl.forEach(((e, o) => {
+			_.push(r.Ql(o, t, n).then(((e) => {
 				if ((e || n) && r.isPrimaryClient) {
 					const t = e ? !e.fromCache : n?.targetChanges.get(o.targetId)?.current;
 					r.sharedClientState.updateQueryState(o.targetId, t ? "current" : "not-current");
 				}
 				if (e) {
 					i.push(e);
-					const t = __PRIVATE_LocalViewChanges.mo(o.targetId, e);
+					const t = __PRIVATE_LocalViewChanges.Ua(o.targetId, e);
 					s.push(t);
 				}
 			})));
-		})), await Promise.all(_), r.hc.Tn(i), await async function __PRIVATE_localStoreNotifyLocalViewChanges(e, t) {
+		})), await Promise.all(_), r.vl.gr(i), await async function __PRIVATE_localStoreNotifyLocalViewChanges(e, t) {
 			const n = __PRIVATE_debugCast(e);
 			try {
-				await n.persistence.runTransaction("notifyLocalViewChanges", "readwrite", ((e) => PersistencePromise.forEach(t, ((t) => PersistencePromise.forEach(t.Vo, ((r) => n.persistence.referenceDelegate.addReference(e, t.targetId, r))).next((() => PersistencePromise.forEach(t.fo, ((r) => n.persistence.referenceDelegate.removeReference(e, t.targetId, r)))))))));
+				await n.persistence.runTransaction("notifyLocalViewChanges", "readwrite", ((e) => PersistencePromise.forEach(t, ((t) => PersistencePromise.forEach(t.Ba, ((r) => n.persistence.referenceDelegate.addReference(e, t.targetId, r))).next((() => PersistencePromise.forEach(t.La, ((r) => n.persistence.referenceDelegate.removeReference(e, t.targetId, r)))))))));
 			} catch (e) {
 				if (!__PRIVATE_isIndexedDbTransactionError(e)) throw e;
-				__PRIVATE_logDebug(lr, "Failed to update sequence numbers: " + e);
+				__PRIVATE_logDebug(kr, "Failed to update sequence numbers: " + e);
 			}
 			for (const e of t) {
 				const t = e.targetId;
 				if (!e.fromCache) {
-					const e = n.Lo.get(t), r = e.snapshotVersion, i = e.withLastLimboFreeSnapshotVersion(r);
-					n.Lo = n.Lo.insert(t, i);
+					const e = n.Xa.get(t), r = e.snapshotVersion, i = e.withLastLimboFreeSnapshotVersion(r);
+					n.Xa = n.Xa.insert(t, i);
 				}
 			}
 		}(r.localStore, s));
@@ -25606,55 +27772,71 @@ Total Duration: ${a - u}ms`);
 	async function __PRIVATE_syncEngineHandleCredentialChange(t, n) {
 		const r = __PRIVATE_debugCast(t);
 		if (!r.currentUser.isEqual(n)) {
-			__PRIVATE_logDebug(dr, "User change. New user:", n.toKey());
+			__PRIVATE_logDebug(Hr, "User change. New user:", n.toKey());
 			const t = await __PRIVATE_localStoreHandleUserChange(r.localStore, n);
 			r.currentUser = n, function __PRIVATE_rejectOutstandingPendingWritesCallbacks(t, n) {
-				t.fc.forEach(((t) => {
+				t.Ll.forEach(((t) => {
 					t.forEach(((t) => {
 						t.reject(new e(ta.CANCELLED, n));
 					}));
-				})), t.fc.clear();
-			}(r, "'waitForPendingWrites' promise is rejected due to a user change."), r.sharedClientState.handleUserChange(n, t.removedBatchIds, t.addedBatchIds), await __PRIVATE_syncEngineEmitNewSnapsAndNotifyLocalStore(r, t.$o);
+				})), t.Ll.clear();
+			}(r, "'waitForPendingWrites' promise is rejected due to a user change."), r.sharedClientState.handleUserChange(n, t.removedBatchIds, t.addedBatchIds), await __PRIVATE_syncEngineEmitNewSnapsAndNotifyLocalStore(r, t.iu);
 		}
 	}
 	function __PRIVATE_syncEngineGetRemoteKeysForTarget(e, t) {
-		const n = __PRIVATE_debugCast(e), r = n.Ac.get(t);
-		if (r && r.Ec) return __PRIVATE_documentKeySet().add(r.key);
+		const n = __PRIVATE_debugCast(e), r = n.Ml.get(t);
+		if (r && r.xl) return __PRIVATE_documentKeySet().add(r.key);
 		{
 			let e = __PRIVATE_documentKeySet();
-			const r = n.Pc.get(t);
+			const r = n.Cl.get(t);
 			if (!r) return e;
 			for (const t of r ?? []) {
-				const r = n.Tc.get(t);
-				e = e.unionWith(r.view.Zu);
+				const r = n.Dl.get(t);
+				e = e.unionWith(r.view.Il);
 			}
 			return e;
 		}
 	}
 	function __PRIVATE_ensureWatchCallbacks(e) {
 		const t = __PRIVATE_debugCast(e);
-		return t.remoteStore.remoteSyncer.applyRemoteEvent = __PRIVATE_syncEngineApplyRemoteEvent.bind(null, t), t.remoteStore.remoteSyncer.getRemoteKeysForTarget = __PRIVATE_syncEngineGetRemoteKeysForTarget.bind(null, t), t.remoteStore.remoteSyncer.rejectListen = __PRIVATE_syncEngineRejectListen.bind(null, t), t.hc.Tn = __PRIVATE_eventManagerOnWatchChange.bind(null, t.eventManager), t.hc.wc = __PRIVATE_eventManagerOnWatchError.bind(null, t.eventManager), t;
+		return t.remoteStore.remoteSyncer.applyRemoteEvent = __PRIVATE_syncEngineApplyRemoteEvent.bind(null, t), t.remoteStore.remoteSyncer.getRemoteKeysForTarget = __PRIVATE_syncEngineGetRemoteKeysForTarget.bind(null, t), t.remoteStore.remoteSyncer.rejectListen = __PRIVATE_syncEngineRejectListen.bind(null, t), t.vl.gr = __PRIVATE_eventManagerOnWatchChange.bind(null, t.eventManager), t.vl.ql = __PRIVATE_eventManagerOnWatchError.bind(null, t.eventManager), t;
 	}
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	var __PRIVATE_MemoryOfflineComponentProvider = class {
 		constructor() {
 			this.kind = "memory", this.synchronizeTabs = false;
 		}
 		async initialize(e) {
-			this.serializer = __PRIVATE_newSerializer(e.databaseInfo.databaseId), this.sharedClientState = this.vc(e), this.persistence = this.Dc(e), await this.persistence.start(), this.localStore = this.xc(e), this.gcScheduler = this.Cc(e, this.localStore), this.indexBackfillerScheduler = this.Fc(e, this.localStore);
+			this.serializer = __PRIVATE_newSerializer(e.databaseInfo.databaseId), this.sharedClientState = this.Wl(e), this.persistence = this.Gl(e), await this.persistence.start(), this.localStore = this.jl(e), this.gcScheduler = this.zl(e, this.localStore), this.indexBackfillerScheduler = this.Hl(e, this.localStore);
 		}
-		Cc(e, t) {
+		zl(e, t) {
 			return null;
 		}
-		Fc(e, t) {
+		Hl(e, t) {
 			return null;
 		}
-		xc(e) {
+		jl(e) {
 			return __PRIVATE_newLocalStore(this.persistence, new __PRIVATE_QueryEngine(), e.initialUser, this.serializer);
 		}
-		Dc(e) {
-			return new __PRIVATE_MemoryPersistence(__PRIVATE_MemoryEagerDelegate.b_, this.serializer);
+		Gl(e) {
+			return new __PRIVATE_MemoryPersistence(__PRIVATE_MemoryEagerDelegate.jo, this.serializer);
 		}
-		vc(e) {
+		Wl(e) {
 			return new __PRIVATE_MemorySharedClientState();
 		}
 		async terminate() {
@@ -25666,14 +27848,14 @@ Total Duration: ${a - u}ms`);
 		constructor(e) {
 			super(), this.cacheSizeBytes = e;
 		}
-		Cc(e, t) {
+		zl(e, t) {
 			__PRIVATE_hardAssert(this.persistence.referenceDelegate instanceof __PRIVATE_MemoryLruDelegate, 46915);
 			const n = this.persistence.referenceDelegate.garbageCollector;
 			return new __PRIVATE_LruScheduler(n, e.asyncQueue, t);
 		}
-		Dc(e) {
+		Gl(e) {
 			const t = void 0 !== this.cacheSizeBytes ? LruParams.withCacheSize(this.cacheSizeBytes) : LruParams.DEFAULT;
-			return new __PRIVATE_MemoryPersistence(((e) => __PRIVATE_MemoryLruDelegate.b_(e, t)), this.serializer);
+			return new __PRIVATE_MemoryPersistence(((e) => __PRIVATE_MemoryLruDelegate.jo(e, t)), this.serializer);
 		}
 	};
 	/**
@@ -25696,19 +27878,35 @@ Total Duration: ${a - u}ms`);
 			return function __PRIVATE_newRemoteStore(e, t, n, r, i) {
 				return new __PRIVATE_RemoteStoreImpl(e, t, n, r, i);
 			}(this.localStore, this.datastore, e.asyncQueue, ((e) => __PRIVATE_syncEngineApplyOnlineStateChange(this.syncEngine, e, 0)), function __PRIVATE_newConnectivityMonitor() {
-				return __PRIVATE_BrowserConnectivityMonitor.Ye() ? new __PRIVATE_BrowserConnectivityMonitor() : new __PRIVATE_NoopConnectivityMonitor();
+				return __PRIVATE_BrowserConnectivityMonitor.cn() ? new __PRIVATE_BrowserConnectivityMonitor() : new __PRIVATE_NoopConnectivityMonitor();
 			}());
+			/**
+			* @license
+			* Copyright 2017 Google LLC
+			*
+			* Licensed under the Apache License, Version 2.0 (the "License");
+			* you may not use this file except in compliance with the License.
+			* You may obtain a copy of the License at
+			*
+			*   http://www.apache.org/licenses/LICENSE-2.0
+			*
+			* Unless required by applicable law or agreed to in writing, software
+			* distributed under the License is distributed on an "AS IS" BASIS,
+			* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+			* See the License for the specific language governing permissions and
+			* limitations under the License.
+			*/
 		}
 		createSyncEngine(e, t) {
 			return function __PRIVATE_newSyncEngine(e, t, n, r, i, s, _) {
 				const o = new __PRIVATE_SyncEngineImpl(e, t, n, r, i, s);
-				return _ && (o.gc = true), o;
+				return _ && (o.kl = true), o;
 			}(this.localStore, this.remoteStore, this.eventManager, this.sharedClientState, e.initialUser, e.maxConcurrentLimboResolutions, t);
 		}
 		async terminate() {
 			await async function __PRIVATE_remoteStoreShutdown(e) {
 				const t = __PRIVATE_debugCast(e);
-				__PRIVATE_logDebug(hr, "RemoteStore shutting down."), t.la.add(5), await __PRIVATE_disableNetworkInternal(t), t.ha.shutdown(), t.Ta.set("Unknown");
+				__PRIVATE_logDebug(qr, "RemoteStore shutting down."), t.bu.add(5), await __PRIVATE_disableNetworkInternal(t), t.xu.shutdown(), t.vu.set("Unknown");
 			}(this.remoteStore), this.datastore?.terminate(), this.eventManager?.terminate();
 		}
 	};
@@ -25728,7 +27926,39 @@ Total Duration: ${a - u}ms`);
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const fr = "FirestoreClient";
+	*/
+	/**
+	* @license
+	* Copyright 2019 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/ const Jr = "FirestoreClient";
 	/**
 	* FirestoreClient is a top-level class that constructs and owns all of the //
 	* pieces of the client SDK architecture. It is responsible for creating the //
@@ -25737,8 +27967,8 @@ Total Duration: ${a - u}ms`);
 	var FirestoreClient = class {
 		constructor(e, t, n, r, i) {
 			this.authCredentials = e, this.appCheckCredentials = t, this.asyncQueue = n, this._databaseInfo = r, this.user = User.UNAUTHENTICATED, this.clientId = __PRIVATE_AutoId.newId(), this.authCredentialListener = () => Promise.resolve(), this.appCheckCredentialListener = () => Promise.resolve(), this._uninitializedComponentsProvider = i, this.authCredentials.start(n, (async (e) => {
-				__PRIVATE_logDebug(fr, "Received user=", e.uid), await this.authCredentialListener(e), this.user = e;
-			})), this.appCheckCredentials.start(n, ((e) => (__PRIVATE_logDebug(fr, "Received new app check token=", e), this.appCheckCredentialListener(e, this.user))));
+				__PRIVATE_logDebug(Jr, "Received user=", e.uid), await this.authCredentialListener(e), this.user = e;
+			})), this.appCheckCredentials.start(n, ((e) => (__PRIVATE_logDebug(Jr, "Received new app check token=", e), this.appCheckCredentialListener(e, this.user))));
 		}
 		get configuration() {
 			return {
@@ -25771,7 +28001,7 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	async function __PRIVATE_setOfflineComponentProvider(e, t) {
-		e.asyncQueue.verifyOperationInProgress(), __PRIVATE_logDebug(fr, "Initializing OfflineComponentProvider");
+		e.asyncQueue.verifyOperationInProgress(), __PRIVATE_logDebug(Jr, "Initializing OfflineComponentProvider");
 		const n = e.configuration;
 		await t.initialize(n);
 		let r = n.initialUser;
@@ -25782,14 +28012,14 @@ Total Duration: ${a - u}ms`);
 	async function __PRIVATE_setOnlineComponentProvider(e, t) {
 		e.asyncQueue.verifyOperationInProgress();
 		const n = await __PRIVATE_ensureOfflineComponents(e);
-		__PRIVATE_logDebug(fr, "Initializing OnlineComponentProvider"), await t.initialize(n, e.configuration), e.setCredentialChangeListener(((e) => __PRIVATE_remoteStoreHandleCredentialChange(t.remoteStore, e))), e.setAppCheckTokenChangeListener(((e, n) => __PRIVATE_remoteStoreHandleCredentialChange(t.remoteStore, n))), e._onlineComponents = t;
+		__PRIVATE_logDebug(Jr, "Initializing OnlineComponentProvider"), await t.initialize(n, e.configuration), e.setCredentialChangeListener(((e) => __PRIVATE_remoteStoreHandleCredentialChange(t.remoteStore, e))), e.setAppCheckTokenChangeListener(((e, n) => __PRIVATE_remoteStoreHandleCredentialChange(t.remoteStore, n))), e._onlineComponents = t;
 	}
 	/**
 	* Decides whether the provided error allows us to gracefully disable
 	* persistence (as opposed to crashing the client).
 	*/ async function __PRIVATE_ensureOfflineComponents(e) {
 		if (!e._offlineComponents) if (e._uninitializedComponentsProvider) {
-			__PRIVATE_logDebug(fr, "Using user provided OfflineComponentProvider");
+			__PRIVATE_logDebug(Jr, "Using user provided OfflineComponentProvider");
 			try {
 				await __PRIVATE_setOfflineComponentProvider(e, e._uninitializedComponentsProvider._offline);
 			} catch (t) {
@@ -25799,11 +28029,11 @@ Total Duration: ${a - u}ms`);
 				}(n)) throw n;
 				__PRIVATE_logWarn("Error using user provided cache. Falling back to memory cache: " + n), await __PRIVATE_setOfflineComponentProvider(e, new __PRIVATE_MemoryOfflineComponentProvider());
 			}
-		} else __PRIVATE_logDebug(fr, "Using default OfflineComponentProvider"), await __PRIVATE_setOfflineComponentProvider(e, new __PRIVATE_LruGcMemoryOfflineComponentProvider(void 0));
+		} else __PRIVATE_logDebug(Jr, "Using default OfflineComponentProvider"), await __PRIVATE_setOfflineComponentProvider(e, new __PRIVATE_LruGcMemoryOfflineComponentProvider(void 0));
 		return e._offlineComponents;
 	}
 	async function __PRIVATE_ensureOnlineComponents(e) {
-		return e._onlineComponents || (e._uninitializedComponentsProvider ? (__PRIVATE_logDebug(fr, "Using user provided OnlineComponentProvider"), await __PRIVATE_setOnlineComponentProvider(e, e._uninitializedComponentsProvider._online)) : (__PRIVATE_logDebug(fr, "Using default OnlineComponentProvider"), await __PRIVATE_setOnlineComponentProvider(e, new OnlineComponentProvider()))), e._onlineComponents;
+		return e._onlineComponents || (e._uninitializedComponentsProvider ? (__PRIVATE_logDebug(Jr, "Using user provided OnlineComponentProvider"), await __PRIVATE_setOnlineComponentProvider(e, e._uninitializedComponentsProvider._online)) : (__PRIVATE_logDebug(Jr, "Using default OnlineComponentProvider"), await __PRIVATE_setOnlineComponentProvider(e, new OnlineComponentProvider()))), e._onlineComponents;
 	}
 	async function __PRIVATE_getEventManager(e) {
 		const t = await __PRIVATE_ensureOnlineComponents(e), n = t.eventManager;
@@ -25814,7 +28044,7 @@ Total Duration: ${a - u}ms`);
 		return t.asyncQueue.enqueueAndForget((async () => function __PRIVATE_executeQueryViaSnapshotListener(t, n, r, i, s) {
 			const _ = new __PRIVATE_AsyncObserver({
 				next: (r) => {
-					_.Va(), n.enqueueAndForget((() => __PRIVATE_eventManagerUnlisten(t, o))), r.fromCache && "server" === i.source ? s.reject(new e(ta.UNAVAILABLE, "Failed to get documents from server. (However, these documents may exist in the local cache. Run again without setting source to \"server\" to retrieve the cached documents.)")) : s.resolve(r);
+					_.Mu(), n.enqueueAndForget((() => __PRIVATE_eventManagerUnlisten(t, o))), r.fromCache && "server" === i.source ? s.reject(new e(ta.UNAVAILABLE, "Failed to get documents from server. (However, these documents may exist in the local cache. Run again without setting source to \"server\" to retrieve the cached documents.)")) : s.resolve(r);
 				},
 				error: (e) => s.reject(e)
 			}), o = new __PRIVATE_QueryListener(r instanceof __PRIVATE_RealtimePipeline ? __PRIVATE_toCorePipeline(r) : r, _, {
@@ -25824,6 +28054,22 @@ Total Duration: ${a - u}ms`);
 			return __PRIVATE_eventManagerListen(t, o);
 		}(await __PRIVATE_getEventManager(t), t.asyncQueue, n, r, i))), i.promise;
 	}
+	/**
+	* @license
+	* Copyright 2018 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2020 Google LLC
@@ -25848,7 +28094,7 @@ Total Duration: ${a - u}ms`);
 	* For a `DocumentSnapshot` that points to a non-existing document, any data
 	* access will return 'undefined'. You can use the `exists()` method to
 	* explicitly verify a document's existence.
-	*/ let mr = class DocumentSnapshot {
+	*/ let Yr = class DocumentSnapshot {
 		/** @hideconstructor protected */
 		constructor(e, t, n, r, i) {
 			this._firestore = e, this._userDataWriter = t, this._key = n, this._document = r, this._converter = i;
@@ -25877,7 +28123,7 @@ Total Duration: ${a - u}ms`);
 		*/ data() {
 			if (this._document) {
 				if (this._converter) {
-					const e = new pr$1(this._firestore, this._userDataWriter, this._key, this._document, null);
+					const e = new Zr(this._firestore, this._userDataWriter, this._key, this._document, null);
 					return this._converter.fromFirestore(e);
 				}
 				return this._userDataWriter.convertValue(this._document.data.value);
@@ -25910,7 +28156,8 @@ Total Duration: ${a - u}ms`);
 				if (null !== t) return this._userDataWriter.convertValue(t);
 			}
 		}
-	}, pr$1 = class QueryDocumentSnapshot extends mr {
+	};
+	let Zr = class QueryDocumentSnapshot extends Yr {
 		/**
 		* Retrieves all fields in the document as an `Object`.
 		*
@@ -25958,17 +28205,27 @@ Total Duration: ${a - u}ms`);
 		convertValue(e, t = "none") {
 			switch (__PRIVATE_typeOrder(e)) {
 				case 0: return null;
-				case 1: return e.booleanValue;
-				case 2: return __PRIVATE_normalizeNumber(e.integerValue || e.doubleValue);
-				case 3: return this.convertTimestamp(e.timestampValue);
-				case 4: return this.convertServerTimestamp(e, t);
-				case 5: return e.stringValue;
-				case 6: return this.convertBytes(__PRIVATE_normalizeByteString(e.bytesValue));
-				case 7: return this.convertReference(e.referenceValue);
-				case 8: return this.convertGeoPoint(e.geoPointValue);
-				case 9: return this.convertArray(e.arrayValue, t);
-				case 11: return this.convertObject(e.mapValue, t);
-				case 10: return this.convertVectorValue(e.mapValue);
+				case 2: return e.booleanValue;
+				case 3:
+					if ("mapValue" in e) {
+						if (__PRIVATE_isInt32Value(e)) return this.convertToInt32Value(e.mapValue);
+						if (__PRIVATE_isDecimal128Value(e)) return this.convertToDecimal128Value(e.mapValue);
+					}
+					return __PRIVATE_normalizeNumber(e.integerValue || e.doubleValue);
+				case 4: return this.convertTimestamp(e.timestampValue);
+				case 6: return this.convertServerTimestamp(e, t);
+				case 7: return e.stringValue;
+				case 8: return "bytesValue" in e ? this.convertBytes(__PRIVATE_normalizeByteString(e.bytesValue)) : this.convertToBytesWithSubtype(e.mapValue);
+				case 9: return this.convertReference(e.referenceValue);
+				case 11: return this.convertGeoPoint(e.geoPointValue);
+				case 13: return this.convertArray(e.arrayValue, t);
+				case 15: return this.convertObject(e.mapValue, t);
+				case 14: return this.convertVectorValue(e.mapValue);
+				case 12: return this.convertToRegexValue(e.mapValue);
+				case 10: return this.convertToBsonObjectId(e.mapValue);
+				case 5: return this.convertToBsonTimestamp(e.mapValue);
+				case 16: return MaxKey.instance();
+				case 1: return MinKey.instance();
 				default: throw l(62114, { value: e });
 			}
 		}
@@ -25986,8 +28243,32 @@ Total Duration: ${a - u}ms`);
 		/**
 		* @internal
 		*/ convertVectorValue(e) {
-			const t = e.fields?.[je].arrayValue?.values?.map(((e) => __PRIVATE_normalizeNumber(e.doubleValue)));
+			const t = e.fields?.[Xe].arrayValue?.values?.map(((e) => __PRIVATE_normalizeNumber(e.doubleValue)));
 			return new n(t);
+		}
+		convertToBsonObjectId(e) {
+			return new BsonObjectId(e.fields?.[_t]?.stringValue ?? "");
+		}
+		convertToBytesWithSubtype(e) {
+			const n = (e.fields?.[Et])?.bytesValue;
+			if (!n) throw new Error("Received incorrect bytesValue for Bytes with subtype");
+			const r = __PRIVATE_normalizeByteString(n).toUint8Array();
+			if (0 === r.length) throw new Error("Received empty bytesValue for Bytes with subtype");
+			const i = r[0], s = r.slice(1);
+			return new Bytes(ByteString.fromUint8Array(s), i);
+		}
+		convertToBsonTimestamp(e) {
+			const t = e.fields?.[ut];
+			return new BsonTimestamp(Number(t?.mapValue?.fields?.[ct]?.integerValue), Number(t?.mapValue?.fields?.[lt]?.integerValue));
+		}
+		convertToRegexValue(e) {
+			return new RegexValue(e.fields?.[rt]?.mapValue?.fields?.[it]?.stringValue ?? "", e.fields?.[rt]?.mapValue?.fields?.[st]?.stringValue ?? "");
+		}
+		convertToInt32Value(e) {
+			return new Int32Value(Number(e.fields?.[ot]?.integerValue));
+		}
+		convertToDecimal128Value(e) {
+			return new Decimal128Value(e.fields?.[at]?.stringValue ?? "");
 		}
 		convertGeoPoint(e) {
 			return new GeoPoint(__PRIVATE_normalizeNumber(e.latitude), __PRIVATE_normalizeNumber(e.longitude));
@@ -26030,18 +28311,34 @@ Total Duration: ${a - u}ms`);
 	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
-	*/ const gr = "AsyncQueue";
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/ const Xr = "AsyncQueue";
 	var __PRIVATE_AsyncQueueImpl = class {
 		constructor(e = Promise.resolve()) {
-			this.$c = [], this.Kc = false, this.Qc = [], this.Wc = null, this.Gc = false, this.zc = false, this.jc = [], this.Ht = new __PRIVATE_ExponentialBackoff(this, "async_queue_retry"), this.Hc = () => {
+			this.iE = [], this.sE = false, this._E = [], this.oE = null, this.aE = false, this.uE = false, this.cE = [], this._r = new __PRIVATE_ExponentialBackoff(this, "async_queue_retry"), this.lE = () => {
 				const e = getDocument();
-				e && __PRIVATE_logDebug(gr, "Visibility state changed to " + e.visibilityState), this.Ht.$t();
-			}, this.Jc = e;
+				e && __PRIVATE_logDebug(Xr, "Visibility state changed to " + e.visibilityState), this._r.Xn();
+			}, this.EE = e;
 			const t = getDocument();
-			t && "function" == typeof t.addEventListener && t.addEventListener("visibilitychange", this.Hc);
+			t && "function" == typeof t.addEventListener && t.addEventListener("visibilitychange", this.lE);
 		}
 		get isShuttingDown() {
-			return this.Kc;
+			return this.sE;
 		}
 		/**
 		* Adds a new operation to the queue without waiting for it to complete (i.e.
@@ -26050,67 +28347,67 @@ Total Duration: ${a - u}ms`);
 			this.enqueue(e);
 		}
 		enqueueAndForgetEvenWhileRestricted(e) {
-			this.Yc(), this.Zc(e);
+			this.hE(), this.TE(e);
 		}
 		enterRestrictedMode(e) {
-			if (!this.Kc) {
-				this.Kc = true, this.zc = e || false;
+			if (!this.sE) {
+				this.sE = true, this.uE = e || false;
 				const t = getDocument();
-				t && "function" == typeof t.removeEventListener && t.removeEventListener("visibilitychange", this.Hc);
+				t && "function" == typeof t.removeEventListener && t.removeEventListener("visibilitychange", this.lE);
 			}
 		}
 		enqueue(e) {
-			if (this.Yc(), this.Kc) return new Promise((() => {}));
+			if (this.hE(), this.sE) return new Promise((() => {}));
 			const t = new __PRIVATE_Deferred();
-			return this.Zc((() => this.Kc && this.zc ? Promise.resolve() : (e().then(t.resolve, t.reject), t.promise))).then((() => t.promise));
+			return this.TE((() => this.sE && this.uE ? Promise.resolve() : (e().then(t.resolve, t.reject), t.promise))).then((() => t.promise));
 		}
 		enqueueRetryable(e) {
-			this.enqueueAndForget((() => (this.$c.push(e), this.Xc())));
+			this.enqueueAndForget((() => (this.iE.push(e), this.PE())));
 		}
 		/**
 		* Runs the next operation from the retryable queue. If the operation fails,
 		* reschedules with backoff.
-		*/ async Xc() {
-			if (0 !== this.$c.length) {
+		*/ async PE() {
+			if (0 !== this.iE.length) {
 				try {
-					await this.$c[0](), this.$c.shift(), this.Ht.reset();
+					await this.iE[0](), this.iE.shift(), this._r.reset();
 				} catch (e) {
 					if (!__PRIVATE_isIndexedDbTransactionError(e)) throw e;
-					__PRIVATE_logDebug(gr, "Operation failed with retryable error: " + e);
+					__PRIVATE_logDebug(Xr, "Operation failed with retryable error: " + e);
 				}
-				this.$c.length > 0 && this.Ht.kt((() => this.Xc()));
+				this.iE.length > 0 && this._r.Yn((() => this.PE()));
 			}
 		}
-		Zc(e) {
-			const t = this.Jc.then((() => (this.Gc = true, e().catch(((e) => {
-				this.Wc = e, this.Gc = false;
+		TE(e) {
+			const t = this.EE.then((() => (this.aE = true, e().catch(((e) => {
+				this.oE = e, this.aE = false;
 				throw __PRIVATE_logError("INTERNAL UNHANDLED ERROR: ", __PRIVATE_getMessageOrStack(e)), e;
-			})).then(((e) => (this.Gc = false, e))))));
-			return this.Jc = t, t;
+			})).then(((e) => (this.aE = false, e))))));
+			return this.EE = t, t;
 		}
 		enqueueAfterDelay(e, t, n) {
-			this.Yc(), this.jc.indexOf(e) > -1 && (t = 0);
-			const r = DelayedOperation.createAndSchedule(this, e, t, n, ((e) => this.el(e)));
-			return this.Qc.push(r), r;
+			this.hE(), this.cE.indexOf(e) > -1 && (t = 0);
+			const r = DelayedOperation.createAndSchedule(this, e, t, n, ((e) => this.IE(e)));
+			return this._E.push(r), r;
 		}
-		Yc() {
-			this.Wc && l(47125, { tl: __PRIVATE_getMessageOrStack(this.Wc) });
+		hE() {
+			this.oE && l(47125, { RE: __PRIVATE_getMessageOrStack(this.oE) });
 		}
 		verifyOperationInProgress() {}
 		/**
 		* Waits until all currently queued tasks are finished executing. Delayed
 		* operations are not run.
-		*/ async nl() {
+		*/ async AE() {
 			let e;
 			do
-				e = this.Jc, await e;
-			while (e !== this.Jc);
+				e = this.EE, await e;
+			while (e !== this.EE);
 		}
 		/**
 		* For Tests: Determine if a delayed operation with a particular TimerId
 		* exists.
-		*/ rl(e) {
-			for (const t of this.Qc) if (t.timerId === e) return true;
+		*/ VE(e) {
+			for (const t of this._E) if (t.timerId === e) return true;
 			return false;
 		}
 		/**
@@ -26119,21 +28416,21 @@ Total Duration: ${a - u}ms`);
 		* @param lastTimerId - Delayed operations up to and including this TimerId
 		* will be drained. Pass TimerId.All to run all delayed operations.
 		* @returns a Promise that resolves once all operations have been run.
-		*/ il(e) {
-			return this.nl().then((() => {
-				this.Qc.sort(((e, t) => e.targetTimeMs - t.targetTimeMs));
-				for (const t of this.Qc) if (t.skipDelay(), "all" !== e && t.timerId === e) break;
-				return this.nl();
+		*/ fE(e) {
+			return this.AE().then((() => {
+				this._E.sort(((e, t) => e.targetTimeMs - t.targetTimeMs));
+				for (const t of this._E) if (t.skipDelay(), "all" !== e && t.timerId === e) break;
+				return this.AE();
 			}));
 		}
 		/**
 		* For Tests: Skip all subsequent delays for a timer id.
-		*/ sl(e) {
-			this.jc.push(e);
+		*/ dE(e) {
+			this.cE.push(e);
 		}
-		/** Called once a DelayedOperation is run or canceled. */ el(e) {
-			const t = this.Qc.indexOf(e);
-			this.Qc.splice(t, 1);
+		/** Called once a DelayedOperation is run or canceled. */ IE(e) {
+			const t = this._E.indexOf(e);
+			this._E.splice(t, 1);
 		}
 	};
 	/**
@@ -26145,10 +28442,42 @@ Total Duration: ${a - u}ms`);
 		return e.stack && (t = e.stack.includes(e.message) ? e.stack : e.message + "\n" + e.stack), t;
 	}
 	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
 	* The Cloud Firestore service interface.
 	*
 	* Do not call this constructor directly. Instead, use {@link (getFirestore:1)}.
-	*/ var da = class extends Dt {
+	*/ var da = class extends _n {
 		/** @hideconstructor */
 		constructor(e, t, n, r) {
 			super(e, t, n, r), this.type = "firestore", this._queue = new __PRIVATE_AsyncQueueImpl(), this._persistenceKey = r?.name || "[DEFAULT]";
@@ -26161,7 +28490,7 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	function getFirestore(e, t) {
-		const n = "object" == typeof e ? e : getApp(), r = "string" == typeof e ? e : t || $e, i = _getProvider(n, "firestore").getImmediate({ identifier: r });
+		const n = "object" == typeof e ? e : getApp(), r = "string" == typeof e ? e : t || Ke, i = _getProvider(n, "firestore").getImmediate({ identifier: r });
 		if (!i._initialized) {
 			const e = getDefaultEmulatorHostnameAndPort("firestore");
 			e && connectFirestoreEmulator(i, ...e);
@@ -26215,6 +28544,38 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	/**
+	* @license
+	* Copyright 2025 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
 	* Metadata about a snapshot, describing the state of the snapshot.
 	*/ var SnapshotMetadata = class {
 		/** @hideconstructor */
@@ -26238,7 +28599,7 @@ Total Duration: ${a - u}ms`);
 	* For a `DocumentSnapshot` that points to a non-existing document, any data
 	* access will return 'undefined'. You can use the `exists()` method to
 	* explicitly verify a document's existence.
-	*/ var DocumentSnapshot = class DocumentSnapshot extends mr {
+	*/ var DocumentSnapshot = class DocumentSnapshot extends Yr {
 		/** @hideconstructor protected */
 		constructor(e, t, n, r, i, s) {
 			super(e, t, n, r, s), this._firestore = e, this._firestoreImpl = e, this.metadata = i;
@@ -26386,7 +28747,7 @@ Total Duration: ${a - u}ms`);
 				if (e._snapshot.oldDocs.isEmpty()) {
 					let t = 0;
 					return e._snapshot.docChanges.map(((n) => {
-						__PRIVATE_isPipeline(e._snapshot.query) ? __PRIVATE_newPipelineComparator(e._snapshot.query) : __PRIVATE_newQueryComparator(e.query._query);
+						__PRIVATE_isPipeline(e._snapshot.query) ? __PRIVATE_newPipelineComparator(e._snapshot.query) : e.query._query;
 						const r = new QueryDocumentSnapshot(e._firestore, e._userDataWriter, n.doc.key, n.doc, new SnapshotMetadata(e._snapshot.mutatedKeys.has(n.doc.key), e._snapshot.fromCache), e.query.converter);
 						return n.doc, {
 							type: "added",
@@ -26456,8 +28817,40 @@ Total Duration: ${a - u}ms`);
 		bundleName: property("string"),
 		bundle: property("string")
 	};
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	//#endregion
 	//#region node_modules/@firebase/firestore/dist/index.esm.js
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	/**
 	* @license
 	* Copyright 2020 Google LLC
@@ -26494,6 +28887,22 @@ Total Duration: ${a - u}ms`);
 			const t = e$1.filter(((e) => e instanceof QueryCompositeFilterConstraint)).length, n = e$1.filter(((e) => e instanceof QueryFieldFilterConstraint)).length;
 			if (t > 1 || t > 0 && n > 0) throw new e(ta.INVALID_ARGUMENT, "InvalidQuery. When using composite filters, you cannot use more than one filter at the top level. Consider nesting the multiple filters within an `and(...)` statement. For example: change `query(query, where(...), or(...))` to `query(query, and(where(...), or(...)))`.");
 		}(r);
+		/**
+		* @license
+		* Copyright 2022 Google LLC
+		*
+		* Licensed under the Apache License, Version 2.0 (the "License");
+		* you may not use this file except in compliance with the License.
+		* You may obtain a copy of the License at
+		*
+		*   http://www.apache.org/licenses/LICENSE-2.0
+		*
+		* Unless required by applicable law or agreed to in writing, software
+		* distributed under the License is distributed on an "AS IS" BASIS,
+		* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+		* See the License for the specific language governing permissions and
+		* limitations under the License.
+		*/
 		for (const t of r) e$1 = t._apply(e$1);
 		return e$1;
 	}
@@ -26521,7 +28930,10 @@ Total Duration: ${a - u}ms`);
 			const t = la(e$1.firestore);
 			return function __PRIVATE_newQueryFilter(e$1, t, n, r, s, a, o) {
 				let i;
-				if (s.isKeyField()) {
+				if (function __PRIVATE_validateQueryOperator(e, t) {
+					if ("number" == typeof e && isNaN(e) && "==" !== t && "!=" !== t && "array-contains" !== t) throw new Error("Invalid query. You can only perform '==' and '!=' comparisons on NaN.");
+					if (null === e && "==" !== t && "!=" !== t && "array-contains" !== t) throw new Error("Invalid query. You can only perform '==' and '!=' comparisons on Null.");
+				}(o, a), s.isKeyField()) {
 					if ("array-contains" === a || "array-contains-any" === a) throw new e(ta.INVALID_ARGUMENT, `Invalid Query. You can't perform '${a}' queries on documentId().`);
 					if ("in" === a || "not-in" === a) {
 						__PRIVATE_validateDisjunctiveFilterElements(o, a);
@@ -26601,16 +29013,7 @@ Total Duration: ${a - u}ms`);
 	*/ function __PRIVATE_validateDisjunctiveFilterElements(e$1, t) {
 		if (!Array.isArray(e$1) || 0 === e$1.length) throw new e(ta.INVALID_ARGUMENT, `Invalid Query. A non-empty array is required for '${t.toString()}' filters.`);
 	}
-	/**
-	* Given an operator, returns the set of operators that cannot be used with it.
-	*
-	* This is not a comprehensive check, and this function should be removed in the
-	* long term. Validations should occur in the Firestore backend.
-	*
-	* Operators in a query must adhere to the following set of rules:
-	* 1. Only one inequality per query.
-	* 2. `NOT_IN` cannot be used with array, disjunctive, or `NOT_EQUAL` operators.
-	*/ function __PRIVATE_validateNewFieldFilter(e$1, t) {
+	function __PRIVATE_validateNewFieldFilter(e$1, t) {
 		const n = function __PRIVATE_findOpInsideFilters(e, t) {
 			for (const n of e) for (const e of n.getFlattenedFilters()) if (t.indexOf(e.op) >= 0) return e.op;
 			return null;
@@ -26630,25 +29033,234 @@ Total Duration: ${a - u}ms`);
 		}(t.op));
 		if (null !== n) throw n === t.op ? new e(ta.INVALID_ARGUMENT, `Invalid query. You cannot use more than one '${t.op.toString()}' filter.`) : new e(ta.INVALID_ARGUMENT, `Invalid query. You cannot use '${t.op.toString()}' filters with '${n.toString()}' filters.`);
 	}
+	/**
+	* @license
+	* Copyright 2017 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2023 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2022 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
 	function getDocs(e) {
 		e = ra(e, Query);
 		const t = ra(e.firestore, da), n = oa(t), r = new ua(t);
 		return __PRIVATE_validateHasExplicitOrderByForLimitToLast(e._query), __PRIVATE_firestoreClientGetDocumentsViaSnapshotListener(n, e._query).then(((n) => new QuerySnapshot(t, r, e, n)));
 	}
-	const Be = "@firebase/firestore", Me = "4.17.2";
+	/**
+	* @license
+	* Copyright 2020 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2021 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2023 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	/**
+	* @license
+	* Copyright 2023 Google LLC
+	*
+	* Licensed under the Apache License, Version 2.0 (the "License");
+	* you may not use this file except in compliance with the License.
+	* You may obtain a copy of the License at
+	*
+	*   http://www.apache.org/licenses/LICENSE-2.0
+	*
+	* Unless required by applicable law or agreed to in writing, software
+	* distributed under the License is distributed on an "AS IS" BASIS,
+	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	* See the License for the specific language governing permissions and
+	* limitations under the License.
+	*/
+	const Me = "@firebase/firestore";
+	const Le = "4.18.0";
 	/**
 	* Cloud Firestore
 	*
 	* @packageDocumentation
 	*/
 	(function __PRIVATE_registerFirestore(s, a = true) {
+		/**
+		* @license
+		* Copyright 2020 Google LLC
+		*
+		* Licensed under the Apache License, Version 2.0 (the "License");
+		* you may not use this file except in compliance with the License.
+		* You may obtain a copy of the License at
+		*
+		*   http://www.apache.org/licenses/LICENSE-2.0
+		*
+		* Unless required by applicable law or agreed to in writing, software
+		* distributed under the License is distributed on an "AS IS" BASIS,
+		* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+		* See the License for the specific language governing permissions and
+		* limitations under the License.
+		*/
 		__PRIVATE_setSDKVersion(SDK_VERSION), _registerComponent(new Component("firestore", ((e, { instanceIdentifier: t, options: n }) => {
 			const r = e.getProvider("app").getImmediate(), s = new da(new __PRIVATE_FirebaseAuthCredentialsProvider(e.getProvider("auth-internal")), new __PRIVATE_FirebaseAppCheckTokenProvider(r, e.getProvider("app-check-internal")), __PRIVATE_databaseIdFromApp(r, t), r);
 			return n = {
 				useFetchStreams: a,
 				...n
 			}, s._setSettings(n), s;
-		}), "PUBLIC").setMultipleInstances(true)), registerVersion(Be, Me, s), registerVersion(Be, Me, "esm2020");
+		}), "PUBLIC").setMultipleInstances(true)), registerVersion(Me, Le, s), registerVersion(Me, Le, "esm2020");
 	})();
 	//#endregion
 	//#region node_modules/idb/build/index.js
@@ -26657,19 +29269,19 @@ Total Duration: ${a - u}ms`);
 	let cursorAdvanceMethods;
 	function getIdbProxyableTypes() {
 		return idbProxyableTypes || (idbProxyableTypes = [
-			IDBDatabase,
-			IDBObjectStore,
 			IDBIndex,
+			IDBObjectStore,
 			IDBCursor,
+			IDBDatabase,
 			IDBTransaction
 		]);
 	}
 	function getCursorAdvanceMethods() {
 		return cursorAdvanceMethods || (cursorAdvanceMethods = [
-			IDBCursor.prototype.advance,
-			IDBCursor.prototype.continue,
-			IDBCursor.prototype.continuePrimaryKey
-		]);
+			"advance",
+			"continue",
+			"continuePrimaryKey"
+		].map((method) => IDBCursor.prototype[method]));
 	}
 	const transactionDoneMap = /* @__PURE__ */ new WeakMap();
 	const transformCache = /* @__PURE__ */ new WeakMap();
@@ -26755,7 +29367,7 @@ Total Duration: ${a - u}ms`);
 		if (value instanceof IDBRequest) return promisifyRequest(value);
 		if (transformCache.has(value)) return transformCache.get(value);
 		const newValue = transformCachableValue(value);
-		if (newValue !== value) {
+		if (!Object.is(newValue, value)) {
 			transformCache.set(value, newValue);
 			reverseTransformCache.set(newValue, value);
 		}
@@ -26795,10 +29407,10 @@ Total Duration: ${a - u}ms`);
 		"delete",
 		"clear"
 	];
-	const cachedMethods = /* @__PURE__ */ new Map();
+	const cachedMethods = {};
 	function getMethod(target, prop) {
 		if (!(target instanceof IDBDatabase && !(prop in target) && typeof prop === "string")) return;
-		if (cachedMethods.get(prop)) return cachedMethods.get(prop);
+		if (cachedMethods[prop]) return cachedMethods[prop];
 		const targetFuncName = prop.replace(/FromIndex$/, "");
 		const useIndex = prop !== targetFuncName;
 		const isWrite = writeMethods.includes(targetFuncName);
@@ -26809,8 +29421,7 @@ Total Duration: ${a - u}ms`);
 			if (useIndex) target = target.index(args.shift());
 			return (await Promise.all([target[targetFuncName](...args), isWrite && tx.done]))[0];
 		};
-		cachedMethods.set(prop, method);
-		return method;
+		return cachedMethods[prop] = method;
 	}
 	replaceTraps((oldTraps) => ({
 		...oldTraps,
@@ -26818,9 +29429,9 @@ Total Duration: ${a - u}ms`);
 		has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop)
 	}));
 	const advanceMethodProps = [
+		"advance",
 		"continue",
-		"continuePrimaryKey",
-		"advance"
+		"continuePrimaryKey"
 	];
 	const methodMap = {};
 	const advanceResults = /* @__PURE__ */ new WeakMap();
@@ -26867,6 +29478,8 @@ Total Duration: ${a - u}ms`);
 	//#endregion
 	//#region typescript/db/idb/repository.ts
 	var Repository = class {
+		db;
+		storeName;
 		constructor(db, storeName) {
 			this.db = db;
 			this.storeName = storeName;
@@ -26891,7 +29504,7 @@ Total Duration: ${a - u}ms`);
 	};
 	//#endregion
 	//#region typescript/db/idb/localDb.ts
-	const DB_VERSION = 1;
+	const DB_VERSION = 2;
 	const LOCAL_DB_PREFIX = "LocalGringoDb";
 	let cacheMap = /* @__PURE__ */ new Map();
 	async function getLocalCache(schoolId = "Berchem") {
@@ -26903,31 +29516,38 @@ Total Duration: ${a - u}ms`);
 		return cache;
 	}
 	var LocalCache = class LocalCache {
+		db;
 		get PrMetas() {
 			return this._PrMetas;
 		}
 		get KeyValues() {
 			return this._KeyValues;
 		}
+		get PrListData() {
+			return this._PrListData;
+		}
 		_KeyValues;
 		_PrMetas;
+		_PrListData;
 		constructor(db) {
 			this.db = db;
 			this._KeyValues = new Repository(this.db, "KeyValues");
 			this._PrMetas = new Repository(this.db, "PrMetas");
+			this._PrListData = new Repository(this.db, "PrListData");
 		}
 		static getDbName(schoolId) {
 			return `${LOCAL_DB_PREFIX}_${schoolId}`;
 		}
 		static async get(schoolId) {
-			return new LocalCache(await openDB(LocalCache.getDbName(schoolId), DB_VERSION, { upgrade(db) {
-				db.createObjectStore("KeyValues", { keyPath: "key" });
-				db.createObjectStore("PrMetas", { keyPath: "prId" });
+			return new LocalCache(await openDB(LocalCache.getDbName(schoolId), DB_VERSION, { upgrade(db, oldVersion, newVersion) {
+				if (oldVersion < 1) {
+					db.createObjectStore("KeyValues", { keyPath: "key" });
+					db.createObjectStore("PrMetas", { keyPath: "prId" });
+				}
+				if (oldVersion < 2) db.createObjectStore("PrListData", { keyPath: "prId" });
 			} }));
 		}
 	};
-	//#endregion
-	//#region typescript/db/fireStore.ts
 	const db = getFirestore(initializeApp({ projectId: "ebo-tain" }), "gringo-store");
 	const prMetaConverter = {
 		toFirestore(prMeta) {
@@ -27008,6 +29628,32 @@ Total Duration: ${a - u}ms`);
 		});
 	}
 	//#endregion
+	//#region typescript/sessionCache.ts
+	let sessionCache = {
+		getTarifDef: getTarifDefCached,
+		saveTarifDef: saveTarifDefCached
+	};
+	let globalBtwTarifs = null;
+	async function getBtwTarifsCachedInSession() {
+		if (globalBtwTarifs) return globalBtwTarifs;
+		globalBtwTarifs = /* @__PURE__ */ new Map();
+		let tarifs;
+		try {
+			tarifs = await fetchTarifDefs();
+		} catch {
+			tarifs = [];
+		}
+		tarifs.forEach((t) => globalBtwTarifs.set(t.commodityCode, t));
+		return globalBtwTarifs;
+	}
+	async function getTarifDefCached(commodityCode) {
+		return (await getBtwTarifsCachedInSession()).get(commodityCode) ?? null;
+	}
+	async function saveTarifDefCached(tarifDef) {
+		(await getBtwTarifsCachedInSession()).set(tarifDef.commodityCode, tarifDef);
+		await saveTarifDefToFireStore(tarifDef);
+	}
+	//#endregion
 	//#region typescript/aanvragen/requests.ts
 	async function fetchRequestListChunk(chain, userInfo, zSince) {
 		if (!zSince) zSince = (/* @__PURE__ */ new Date()).toISOString().replaceAll("T", " ").split(".")[0] + " GMT";
@@ -27067,7 +29713,7 @@ Total Duration: ${a - u}ms`);
 				};
 			});
 		}).flat();
-		await cloud.json.upload(KEY_ALL_PRS_FILENAME_NOEXT + "_2026.json", jsonList);
+		await cloud.json.upload("gringo/pr/allPrs_2026.json", jsonList);
 		return detailsList;
 	}
 	async function fetchChangedMetas() {
@@ -27078,7 +29724,7 @@ Total Duration: ${a - u}ms`);
 			changedMetas = [];
 		} else changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
 		let fetchedDate = /* @__PURE__ */ new Date();
-		fetchedDate = /* @__PURE__ */ new Date(fetchedDate.getTime() - 300 * 1e3);
+		fetchedDate = /* @__PURE__ */ new Date(fetchedDate.getTime() - 3e5);
 		let zFetchedDate = fetchedDate.toISOString();
 		localStorage.setItem(KEY_LAST_FETCHED_METAS, zFetchedDate);
 		return changedMetas;
@@ -27156,6 +29802,50 @@ Total Duration: ${a - u}ms`);
 			currencySymbel: "€",
 			currency: "EUR"
 		};
+	}
+	async function convertToBaseLineItem(item) {
+		let commodityCode = getPrItemCommodity(item)?.code ?? "";
+		let tarif = await getTarifDefCached(commodityCode);
+		return {
+			commodityCode,
+			price: item.price.value.amount,
+			quantity: item.quantity.value,
+			tarif
+		};
+	}
+	async function convertPrListItemData(item) {
+		return {
+			index: parseInt(item.lineNumber),
+			bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
+			commodityCode: getPrItemCommodity(item)?.code ?? "",
+			currency: item.price.currency ?? "",
+			supplier: item.supplier.name ?? ""
+		};
+	}
+	async function convertPrToListData(request, pr) {
+		let listItemDatas = [];
+		for (let item of pr.lineItems ?? []) listItemDatas.push(await convertPrListItemData(item));
+		return {
+			prId: pr.reqId,
+			items: listItemDatas,
+			changed_date: request.timeUpdated
+		};
+	}
+	async function getPrDataList() {
+		let requests = await fetchRequestList();
+		let prListDatas = [];
+		let cache = await getLocalCache();
+		for (let request of requests.requestList) {
+			let prListData = await cache.PrListData.get(request.reqUniqueName);
+			if (prListData && prListData.changed_date == request.timeUpdated) {
+				prListDatas.push(prListData);
+				continue;
+			}
+			let prData = await convertPrToListData(request, await fetchPr(request.reqUniqueName));
+			await cache.PrListData.put(prData);
+			prListDatas.push(prData);
+		}
+		return prListDatas;
 	}
 	//#endregion
 	//#region typescript/sap/SapUserInfo.ts
@@ -27467,7 +30157,8 @@ Total Duration: ${a - u}ms`);
 				this.resultDiv.classList.toggle("error", false);
 				return;
 			}
-			this.result = new Parser(this.input.value).parse();
+			let parser = new Parser(this.input.value);
+			this.result = parser.parse();
 			this.resultLabel.textContent = formatPrice(this.result.result);
 			this.resultDiv.classList.toggle("error", this.result.errors.length > 0);
 			this.resultErrorImage.title = this.result.errors.map((e) => e.message).join("\n");
@@ -27588,32 +30279,6 @@ Total Duration: ${a - u}ms`);
 			this.expandedPrItem.quantity = this._quantity;
 		}
 	};
-	//#endregion
-	//#region typescript/sessionCache.ts
-	let sessionCache = {
-		getTarifDef: getTarifDefCached,
-		saveTarifDef: saveTarifDefCached
-	};
-	let globalBtwTarifs = null;
-	async function getBtwTarifsCachedInSession() {
-		if (globalBtwTarifs) return globalBtwTarifs;
-		globalBtwTarifs = /* @__PURE__ */ new Map();
-		let tarifs;
-		try {
-			tarifs = await fetchTarifDefs();
-		} catch {
-			tarifs = [];
-		}
-		tarifs.forEach((t) => globalBtwTarifs.set(t.commodityCode, t));
-		return globalBtwTarifs;
-	}
-	async function getTarifDefCached(commodityCode) {
-		return (await getBtwTarifsCachedInSession()).get(commodityCode) ?? null;
-	}
-	async function saveTarifDefCached(tarifDef) {
-		(await getBtwTarifsCachedInSession()).set(tarifDef.commodityCode, tarifDef);
-		await saveTarifDefToFireStore(tarifDef);
-	}
 	//#endregion
 	//#region typescript/aanvraag/priceBlock.ts
 	var PriceBlock = class {
@@ -27858,7 +30523,8 @@ Total Duration: ${a - u}ms`);
 		input.addEventListener("paste", (ev) => {
 			let data = ev.clipboardData?.getData("text/plain");
 			if (data) {
-				input.value = formatPrice(new Parser(data).parse().result, "", "");
+				let res = new Parser(data).parse();
+				input.value = formatPrice(res.result, "", "");
 				triggerFieldChanged(input);
 				ev.preventDefault();
 			}
@@ -28549,6 +31215,7 @@ Total Duration: ${a - u}ms`);
 			_budgetMap = /* @__PURE__ */ new Map();
 			ledgerToBudgetCodes.forEach((budget) => {
 				_budgetMap.set(budget.ledger10, budget);
+				//! just created map.
 			});
 		}
 		return _budgetMap.get(ledger.substring(0, 10)) ?? null;
@@ -28559,6 +31226,7 @@ Total Duration: ${a - u}ms`);
 			_budgetDscrMap = /* @__PURE__ */ new Map();
 			budgetDscrs.forEach((budget) => {
 				_budgetDscrMap.set(budget[0], budget[1]);
+				//! just created map.
 			});
 		}
 		return _budgetDscrMap.get(budget) ?? null;
@@ -28576,9 +31244,11 @@ Total Duration: ${a - u}ms`);
 			let group = await groupFunc(item);
 			if (!groupMap.has(group)) groupMap.set(group, []);
 			groupMap.get(group).push(item);
+			//! just created group in map if it was missing.
 		}
 		return groupMap;
 	}
+	//! just created in map if it was missing.
 	async function exportPrItemsToExcel(infoBlock) {
 		let jsonPrData = await createJsonPrData(infoBlock);
 		let headers = [
@@ -28838,6 +31508,7 @@ Total Duration: ${a - u}ms`);
 	}
 	function updateTotalBrutoView(pr) {
 		let newTotal = document.querySelector("div.newTotalBruto");
+		//! should be present
 		let { total, currencySymbel, currency } = calcPrTotal(pr);
 		newTotal.textContent = formatPrice(total, currencySymbel, currency, true);
 	}
@@ -29007,7 +31678,7 @@ Total Duration: ${a - u}ms`);
 				};
 			})
 		};
-		await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
+		await cloud.json.upload("gringo/expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
 	}
 	async function onRefreshClicked(ev) {
 		sessionStorage.removeItem("jsonPrData");
@@ -29496,6 +32167,12 @@ Total Duration: ${a - u}ms`);
 		let btnTestRequestList = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch all}`).last;
 		btnTestRequestList.onclick = async (ev) => {
 			await fetchRequestList();
+		};
+		let btnTestListData = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch list data}`).last;
+		btnTestListData.onclick = async (ev) => {
+			let list = await getPrDataList();
+			gringo("lizst");
+			console.log(list);
 		};
 		let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last;
 		btnTestRequestListAndDetails.onclick = async (ev) => {

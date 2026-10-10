@@ -23,7 +23,7 @@ export async function getBtwTarifsCachedInSession(): Promise<Map<string, TarifDe
     return globalBtwTarifs;
 }
 
-async function getTarifDefCached(commodityCode: string) {
+export async function getTarifDefCached(commodityCode: string) {
     let tarifs = await getBtwTarifsCachedInSession();
     return tarifs.get(commodityCode) ?? null;
 }

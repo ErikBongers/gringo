@@ -1,6 +1,6 @@
 import {FetchChain} from "../fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
-import {RequestListResponse} from "../sap/RequestListResponse";
+import {RequestListItem, RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
 import {InfoBlock} from "../globals";
 import {KEY_ALL_PRS_FILENAME_NOEXT, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
@@ -12,6 +12,7 @@ import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {savePrMetaToFireStore} from "../db/fireStore";
 import {getLocalCache} from "../db/idb/localDb";
+import {getTarifDefCached} from "../sessionCache";
 
 export interface BaseLineItem {
     tarif: TarifDef | null;
@@ -63,6 +64,20 @@ export interface PrMeta {
 export interface ExpandedPr {
     pr: PurchaseRequisition,
     items: ExpandedPrItem[];
+}
+
+export interface PrListPrData {
+    prId: string;
+    changed_date: string;
+    items: PrListItemData[];
+}
+
+export interface PrListItemData {
+    index: number;
+    supplier: string;
+    commodityCode: string;
+    bruto: number;
+    currency: string;
 }
 
 export interface ExpandedCompactPr {
@@ -286,4 +301,55 @@ export function calcPrTotal(pr: ExpandedCompactPr) {
             total + calcBrutoLinePrice(item),
             0);
     return {total, currencySymbel, currency};
+}
+
+async function convertToBaseLineItem(item: SapLineItem): Promise<BaseLineItem> {
+    let commodityCode = getPrItemCommodity(item)?.code??"";
+    let tarif = await getTarifDefCached(commodityCode);
+    return {
+        commodityCode,
+        price: item.price.value.amount,
+        quantity: item.quantity.value,
+        tarif: tarif
+    };
+}
+
+async function convertPrListItemData(item: SapLineItem): Promise<PrListItemData> {
+    return {
+        index: parseInt(item.lineNumber),
+        bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
+        commodityCode: getPrItemCommodity(item)?.code??"",
+        currency: item.price.currency??"",
+        supplier: item.supplier.name??""
+    };
+}
+
+async function convertPrToListData(request: RequestListItem, pr: PurchaseRequisition): Promise<PrListPrData> {
+    let listItemDatas: PrListItemData[] = [];
+    for(let item of pr.lineItems??[]){
+        listItemDatas.push(await convertPrListItemData(item));
+    }
+    return {
+        prId: pr.reqId,
+        items: listItemDatas,
+        changed_date: request.timeUpdated
+    };
+}
+
+export async function getPrDataList(){
+    let requests = await fetchRequestList(); //todo: fetch first 200 only?
+    let prListDatas: PrListPrData[] = [];
+    let cache = await getLocalCache();
+    for(let request of requests.requestList){
+        let prListData: PrListPrData | undefined = await cache.PrListData.get(request.reqUniqueName);
+        if(prListData && prListData.changed_date == request.timeUpdated) {
+            prListDatas.push(prListData);
+            continue;
+        }
+        let pr = await fetchPr(request.reqUniqueName);
+        let prData = await convertPrToListData(request, pr);
+        await cache.PrListData.put(prData);
+        prListDatas.push(prData);
+    }
+    return prListDatas;
 }

@@ -36,7 +36,7 @@ chrome.runtime.onMessage.addListener( onMessage);
 async function getTabId(tabType: TabType) {
     let data = await chrome.storage.session.get(tabType);
     console.log(data);
-    let tabId = data[tabType];
+    let tabId = data[tabType] as string;
     return parseInt(tabId);
 }
 

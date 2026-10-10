@@ -1,27 +1,4 @@
 (function() {
-	//#region typescript/messaging.ts
-	let Actions = /* @__PURE__ */ function(Actions) {
-		Actions["OpenHtmlTab"] = "open_tab";
-		Actions["RequestTabData"] = "request_tab_data";
-		Actions["TabData"] = "tab_data";
-		Actions["GetParentTabId"] = "get_parent_tab_id";
-		Actions["OpenHoursSettings"] = "open_hours_settings";
-		Actions["OpenDiffSettings"] = "open_diff_settings";
-		Actions["HoursSettingsChanged"] = "open_hours_settings_changed";
-		Actions["DiffSettingsChanged"] = "diff_settings_changed";
-		Actions["GreetingsFromParent"] = "greetingsFromParent";
-		Actions["GreetingsFromChild"] = "greetingsFromChild";
-		return Actions;
-	}({});
-	let TabType = /* @__PURE__ */ function(TabType) {
-		TabType["Undefined"] = "Undefined";
-		TabType["Main"] = "Main";
-		TabType["HoursSettings"] = "HoursSettings";
-		TabType["DiffSettings"] = "diffSettings";
-		TabType["Html"] = "Html";
-		return TabType;
-	}({});
-	//#endregion
 	//#region typescript/serviceworker.ts
 	let defaultOptions = {
 		showDebug: true,
@@ -60,21 +37,21 @@
 	}
 	function onMessage(message, sender, sendResponse) {
 		switch (message.action) {
-			case Actions.OpenHtmlTab:
+			case "open_tab":
 				let url = chrome.runtime.getURL(`resources/blank.html?cacheId=${message.data.cacheId}`);
-				if (message.senderTabType === TabType.Main) setTabId(TabType.Main, sender.tab.id).then(() => {});
+				if (message.senderTabType === "Main") setTabId("Main", sender.tab.id).then(() => {});
 				chrome.tabs.create({ url }).then((_tab) => {
 					sendResponse({ tabId: _tab.id });
 				});
 				return true;
-			case Actions.OpenHoursSettings:
-				setTabId(TabType.Main, sender.tab.id).then(() => {});
+			case "open_hours_settings":
+				setTabId("Main", sender.tab.id).then(() => {});
 				chrome.tabs.create({ url: chrome.runtime.getURL(`resources/teacherHoursSetup.html?schoolyear=${message.data.schoolyear}`) }).then((tab) => {
 					sendResponse({ tabId: tab.id });
 				});
 				return true;
-			case Actions.OpenDiffSettings:
-				setTabId(TabType.Main, sender.tab.id).then(() => {});
+			case "open_diff_settings":
+				setTabId("Main", sender.tab.id).then(() => {});
 				let params = new URLSearchParams({
 					academie: message.data.academie,
 					schoolyear: message.data.schoolyear
@@ -83,22 +60,20 @@
 					sendResponse({ tabId: tab.id });
 				});
 				return true;
-			case Actions.RequestTabData:
-				getTabId(TabType.Main).then((tabId) => {
+			case "request_tab_data":
+				getTabId("Main").then((tabId) => {
 					chrome.tabs.sendMessage(tabId, message).then(() => {});
 				});
 				break;
-			case Actions.TabData: break;
-			case Actions.GetParentTabId:
-				sendResponse(getTabId(TabType.Main));
+			case "tab_data": break;
+			case "get_parent_tab_id":
+				sendResponse(getTabId("Main"));
 				break;
-			case Actions.GreetingsFromChild:
 			default:
 				console.log("service worker: received message: ", message);
 				getTabId(message.targetTabType).then((id) => {
 					chrome.tabs.sendMessage(id, message).then(() => {});
 				});
-				break;
 		}
 		return false;
 	}
