@@ -679,6 +679,12 @@
 		anchorPerEenheid.dispatchEvent(new Event("click", { bubbles: true }));
 		anchorPerEenheid.dispatchEvent(new Event("mouseup", { bubbles: true }));
 	}
+	function formatDate(changed_date) {
+		return new Date(changed_date).toLocaleDateString();
+	}
+	function acronym(preparer) {
+		return preparer.split(" ").map((name) => name[0]).join("");
+	}
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
@@ -31956,6 +31962,54 @@ Total Duration: ${a - u}ms`);
 		for (let popover of [...popovers].filter((p) => p.id.includes("popover" + prId))) await updatePopover(popover, meta);
 	}
 	//#endregion
+	//#region typescript/aanvragen/leanTable.ts
+	async function createLeanListTable(divLeanListPanel) {
+		let list = await getPrDataList();
+		let table = emmet.indent.appendChild(divLeanListPanel, `
+        table.leanPrList.bruto
+            thead
+                tr
+                    th{}
+                    th{}
+                    th{}
+                    th{}
+                    th{}
+                    th[colspan="2"]
+                        button#inclExcl.naked{Incl.}
+                    th{}
+                    th{}
+                    th{}
+                tr
+                    th{ID/BB}
+                    th{Omschrijving}
+                    th{Door}
+                    th{Datum}
+                    th{Status}
+                    th.netto{Netto}
+                    th.bruto{Bruto}
+                    th{Afdeling}
+                    th{Tags}
+                    th{Projects}
+            tbody
+    `).first;
+		let tbody = table.querySelector("tbody");
+		//! ok
+		for (let pr of list) emmet.indent.appendChild(tbody, `
+            tr
+                td{${pr.prListData.prId} ${pr.request.purchaseOrders?.join(", ") ?? ""}}
+                td{${pr.request.reqTitle ?? ""}}
+                td{${acronym(pr.request.preparer)}}
+                td{${formatDate(pr.prListData.changed_date)}}
+                td{${pr.request.status}}
+                td.netto{${formatPrice(pr.netto)}}
+                td.bruto{${formatPrice(pr.bruto)}}
+                td{${pr.meta.project ?? ""}}
+                td{${pr.meta.tags.join(", ")}}
+                td{reserved for project(s))}
+        `);
+		return table;
+	}
+	//#endregion
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -32226,57 +32280,6 @@ Total Duration: ${a - u}ms`);
 		});
 		await createLeanListTable(divLeanListPanel);
 		//! should be filled
-	}
-	function formatDate(changed_date) {
-		return new Date(changed_date).toLocaleDateString();
-	}
-	function acronym(preparer) {
-		return preparer.split(" ").map((name) => name[0]).join("");
-	}
-	async function createLeanListTable(divLeanListPanel) {
-		let list = await getPrDataList();
-		let table = emmet.indent.appendChild(divLeanListPanel, `
-        table.leanPrList
-            thead
-                tr
-                    th{}
-                    th{}
-                    th{}
-                    th{}
-                    th{}
-                    th[colspan="2"]{Incl/Excl}
-                    th{}
-                    th{}
-                    th{}
-                tr
-                    th{ID/BB}
-                    th{Omschrijving}
-                    th{Door}
-                    th{Datum}
-                    th{Status}
-                    th{Netto}
-                    th{Bruto}
-                    th{Afdeling}
-                    th{Tags}
-                    th{Projects}
-            tbody
-    `).first;
-		let tbody = table.querySelector("tbody");
-		//! ok
-		for (let pr of list) emmet.indent.appendChild(tbody, `
-            tr
-                td{${pr.prListData.prId} ${pr.request.purchaseOrders?.join(", ") ?? ""}}
-                td{${pr.request.reqTitle ?? ""}}
-                td{${acronym(pr.request.preparer)}}
-                td{${formatDate(pr.prListData.changed_date)}}
-                td{${pr.request.status}}
-                td{${formatPrice(pr.netto)}}
-                td{${formatPrice(pr.bruto)}}
-                td{${pr.meta.project ?? ""}}
-                td{${pr.meta.tags.join(", ")}}
-                td{reserved for project(s))}
-        `);
-		return table;
 	}
 	function scrapePRs() {
 		gringo("Scraping...");

@@ -480,4 +480,14 @@ section.view-requisition .input-wrap-container .gringo .input-wrap .form-group i
     td, th {
         padding: .3ch;
     }
+    &.netto {
+        & .bruto {
+            display: none;
+        }
+    }
+    &.bruto {
+        & .netto {
+            display: none;
+        }
+    }
 }

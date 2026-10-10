@@ -223,3 +223,11 @@ export function fakeAnchorClick(anchorPerEenheid: any) {
     anchorPerEenheid.dispatchEvent(new Event("click", {bubbles: true}));
     anchorPerEenheid.dispatchEvent(new Event("mouseup", {bubbles: true}));
 }
+
+export function formatDate(changed_date: string) {
+    return new Date(changed_date).toLocaleDateString();
+}
+
+export function acronym(preparer: string) {
+    return preparer.split(" ").map((name) => name[0]).join("");
+}
