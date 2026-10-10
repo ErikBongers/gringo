@@ -1,7 +1,18 @@
-* Make new ExpandedPrListData
-  Cached locally in IndexedDb.
-  > When update
-    > based on lastModifiedDate!
+* Use PrListData to build a lean list.
+  > Give user option to view org or lean.
+  > Fields;
+    - PrId
+    - OrderId (BBnr)
+    - Dscr
+    - Date created/modified >> try to compact this?
+    - Netto/Bruto >> switch between 2 like in some sites? (checkbox: Incl BTW)
+    - Creator
+    - Status
+    - Meta:
+        - Tags
+        - Category (project)
+        - Project tags (todo!)
+
 
 * Before expanding filters, make the full list
   > Include the line item data that is missing from the PR list.
