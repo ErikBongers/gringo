@@ -477,6 +477,9 @@ section.view-requisition .input-wrap-container .gringo .input-wrap .form-group i
 }
 
 .leanPrList {
+    tr:hover {
+        background-color: rgba(0,0,0,.02);
+    }
     td, th {
         padding: .3ch;
     }
@@ -490,4 +493,12 @@ section.view-requisition .input-wrap-container .gringo .input-wrap .form-group i
             display: none;
         }
     }
+}
+
+.op05 {
+    opacity: .5;
+}
+
+.op07 {
+    opacity: .7;
 }

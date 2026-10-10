@@ -1,4 +1,4 @@
-import {getPrDataList} from "./requests";
+import {ExpandedPrListData, getPrDataList} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatDate, formatPrice} from "../globals";
 
@@ -34,10 +34,15 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
 
     let tbody = table.querySelector("tbody")!; //! ok
     for (let pr of list) {
-        emmet.indent.appendChild(tbody, `
+        let poAnchorList = pr.request.gbPurchaseOrderList
+            ?.map(po => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
+        let tr = emmet.indent.appendChild(tbody, `
             tr
-                td{${pr.prListData.prId} ${pr.request.purchaseOrders?.join(", ") ?? ""}}
-                td{${pr.request.reqTitle ?? ""}}
+                td
+                    a.prId.op07[href="${createPrUrl(pr.prListData.prId)}"]{${pr.prListData.prId}}
+                    ${poAnchorList?.join("+")}
+                td
+                    a{${pr.request.reqTitle ?? ""}}
                 td{${acronym(pr.request.preparer)}}
                 td{${formatDate(pr.prListData.changed_date)}}
                 td{${pr.request.status}}
@@ -46,7 +51,18 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                 td{${pr.meta.project ?? ""}}
                 td{${pr.meta.tags.join(", ")}}
                 td{reserved for project(s))}
-        `);
+        `).first as HTMLTableRowElement;
     }
     return table;
+}
+
+function createPrUrl(prId: string) {
+    //https://s1-eu.ariba.com/gb/viewRequisition/PR79874?realm=744379882-C1,744379882-C1
+    return `/gb/viewRequisition/${prId}`;
+}
+
+function createPoUrl(uniqueName: string) {
+    //note this is not the poId (BB no).
+    //https://s1-eu.ariba.com/gb/purchase-order/EP52156?realm=744379882-C1,744379882-C1
+    return `/gb/purchase-order/${uniqueName}`;
 }

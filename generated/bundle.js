@@ -31994,10 +31994,15 @@ Total Duration: ${a - u}ms`);
     `).first;
 		let tbody = table.querySelector("tbody");
 		//! ok
-		for (let pr of list) emmet.indent.appendChild(tbody, `
+		for (let pr of list) {
+			let poAnchorList = pr.request.gbPurchaseOrderList?.map((po) => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
+			emmet.indent.appendChild(tbody, `
             tr
-                td{${pr.prListData.prId} ${pr.request.purchaseOrders?.join(", ") ?? ""}}
-                td{${pr.request.reqTitle ?? ""}}
+                td
+                    a.prId.op07[href="${createPrUrl(pr.prListData.prId)}"]{${pr.prListData.prId}}
+                    ${poAnchorList?.join("+")}
+                td
+                    a{${pr.request.reqTitle ?? ""}}
                 td{${acronym(pr.request.preparer)}}
                 td{${formatDate(pr.prListData.changed_date)}}
                 td{${pr.request.status}}
@@ -32006,8 +32011,15 @@ Total Duration: ${a - u}ms`);
                 td{${pr.meta.project ?? ""}}
                 td{${pr.meta.tags.join(", ")}}
                 td{reserved for project(s))}
-        `);
+        `).first;
+		}
 		return table;
+	}
+	function createPrUrl(prId) {
+		return `/gb/viewRequisition/${prId}`;
+	}
+	function createPoUrl(uniqueName) {
+		return `/gb/purchase-order/${uniqueName}`;
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts
