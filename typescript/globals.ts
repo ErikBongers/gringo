@@ -256,3 +256,9 @@ export function showPopover(createWithId: string, anchorTo: HTMLElement) {
     popover.togglePopover({source: anchorTo});
     return popover;
 }
+
+export type ElementOrSelector = string | HTMLElement;
+
+export function getElement(container: ElementOrSelector): HTMLElement {
+    return typeof container == "string" ? document.querySelector(container) as HTMLElement : container;
+}

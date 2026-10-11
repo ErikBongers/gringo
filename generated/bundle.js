@@ -706,6 +706,9 @@
 		popover.togglePopover({ source: anchorTo });
 		return popover;
 	}
+	function getElement(container) {
+		return typeof container == "string" ? document.querySelector(container) : container;
+	}
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
@@ -31970,66 +31973,6 @@ Total Duration: ${a - u}ms`);
 		};
 	}
 	//#endregion
-	//#region typescript/aanvragen/leanTable.ts
-	async function createLeanListTable(divLeanListPanel) {
-		let list = await getPrDataList();
-		let table = emmet.indent.appendChild(divLeanListPanel, `
-        table.leanPrList.bruto
-            thead
-                tr
-                    th{}
-                    th{}
-                    th{}
-                    th{}
-                    th{}
-                    th[colspan="2"]
-                        button#inclExcl.naked{Incl.}
-                    th{}
-                    th{}
-                    th{}
-                tr
-                    th{ID/BB}
-                    th{Omschrijving}
-                    th{Door}
-                    th{Datum}
-                    th{Status}
-                    th.netto{Netto}
-                    th.bruto{Bruto}
-                    th{Afdeling}
-                    th{Tags}
-                    th{Projects}
-            tbody
-    `).first;
-		let tbody = table.querySelector("tbody");
-		//! ok
-		for (let pr of list) {
-			let poAnchorList = pr.request.gbPurchaseOrderList?.map((po) => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
-			emmet.indent.appendChild(tbody, `
-            tr
-                td
-                    a.prId.op07[href="${createPrUrl(pr.prListData.prId)}"]{${pr.prListData.prId}}
-                    ${poAnchorList?.join("+")}
-                td
-                    a{${pr.request.reqTitle ?? ""}}
-                td{${acronym(pr.request.preparer)}}
-                td{${formatDate(pr.prListData.changed_date)}}
-                td{${pr.request.status}}
-                td.netto{${formatPrice(pr.netto)}}
-                td.bruto{${formatPrice(pr.bruto)}}
-                td{${pr.meta.project ?? ""}}
-                td{${pr.meta.tags.join(", ")}}
-                td{reserved for project(s))}
-        `).first;
-		}
-		return table;
-	}
-	function createPrUrl(prId) {
-		return `/gb/viewRequisition/${prId}`;
-	}
-	function createPoUrl(uniqueName) {
-		return `/gb/purchase-order/${uniqueName}`;
-	}
-	//#endregion
 	//#region typescript/aanvragen/metaBlock.ts
 	async function onTagsPopupButtonClick(meta, button, afterMetaChange) {
 		let popover = showPopover("gringo-tags-popover", button);
@@ -32061,6 +32004,7 @@ Total Duration: ${a - u}ms`);
 		});
 	}
 	async function addTagsBlock(container, meta) {
+		container = getElement(container);
 		emmet.indent.appendChild(container, `
         div.tagsWrapper.flexRow
             button.naked.tagsPopupButton
@@ -32076,6 +32020,7 @@ Total Duration: ${a - u}ms`);
 		await updateTagsBlock(container, meta);
 	}
 	async function addProjectBlock(container, meta) {
+		container = getElement(container);
 		emmet.indent.appendChild(container, `
         div.projectWrapper.flexRow
             select
@@ -32117,6 +32062,68 @@ Total Duration: ${a - u}ms`);
 	}
 	async function updateTagsBlock(metaWrapper, meta) {
 		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
+	}
+	//#endregion
+	//#region typescript/aanvragen/leanTable.ts
+	async function createLeanListTable(divLeanListPanel) {
+		let list = await getPrDataList();
+		let table = emmet.indent.appendChild(divLeanListPanel, `
+        table.leanPrList.bruto
+            thead
+                tr
+                    th{}
+                    th{}
+                    th{}
+                    th{}
+                    th{}
+                    th[colspan="2"]
+                        button#inclExcl.naked{Incl.}
+                    th{}
+                    th{}
+                    th{}
+                tr
+                    th{ID/BB}
+                    th{Omschrijving}
+                    th{Door}
+                    th{Datum}
+                    th{Status}
+                    th.netto{Netto}
+                    th.bruto{Bruto}
+                    th{Afdeling}
+                    th{Tags}
+                    th{Projects}
+            tbody
+    `).first;
+		let tbody = table.querySelector("tbody");
+		//! ok
+		for (let pr of list) {
+			let poAnchorList = pr.request.gbPurchaseOrderList?.map((po) => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
+			let tr = emmet.indent.appendChild(tbody, `
+            tr
+                td
+                    a.prId.op07[href="${createPrUrl(pr.prListData.prId)}"]{${pr.prListData.prId}}
+                    ${poAnchorList?.join("+")}
+                td
+                    a{${pr.request.reqTitle ?? ""}}
+                td{${acronym(pr.request.preparer)}}
+                td{${formatDate(pr.prListData.changed_date)}}
+                td{${pr.request.status}}
+                td.netto{${formatPrice(pr.netto)}}
+                td.bruto{${formatPrice(pr.bruto)}}
+                td.departmentBlock
+                td.tagsBlock
+                td{reserved for project(s))}
+        `).first;
+			await addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta);
+			await addProjectBlock(tr.querySelector("td.departmentBlock"), pr.meta);
+		}
+		return table;
+	}
+	function createPrUrl(prId) {
+		return `/gb/viewRequisition/${prId}`;
+	}
+	function createPoUrl(uniqueName) {
+		return `/gb/purchase-order/${uniqueName}`;
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts

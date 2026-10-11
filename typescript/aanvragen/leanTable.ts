@@ -1,6 +1,7 @@
 import {getPrDataList} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatDate, formatPrice} from "../globals";
+import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
 
 export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
     let list = await getPrDataList();
@@ -48,10 +49,12 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                 td{${pr.request.status}}
                 td.netto{${formatPrice(pr.netto)}}
                 td.bruto{${formatPrice(pr.bruto)}}
-                td{${pr.meta.project ?? ""}}
-                td{${pr.meta.tags.join(", ")}}
+                td.departmentBlock
+                td.tagsBlock
                 td{reserved for project(s))}
         `).first as HTMLTableRowElement;
+        await addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta);
+        await addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta);
     }
     return table;
 }

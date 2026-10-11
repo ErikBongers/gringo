@@ -2,7 +2,7 @@ import {getGlobalTags, PrMeta, saveMeta} from "./requests";
 import {paintTag} from "./observer";
 import {emmet} from "../../libs/Emmeter";
 import {getGlobalSettingsCached} from "../plugin_options/options";
-import {addButtonClickNoPropagation, showPopover} from "../globals";
+import {addButtonClickNoPropagation, ElementOrSelector, getElement, showPopover} from "../globals";
 
 async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, afterMetaChange: (meta: PrMeta) => Promise<any>) {
     let popover = showPopover("gringo-tags-popover", button);
@@ -46,7 +46,8 @@ async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, a
 
 }
 
-export async function addTagsBlock(container: HTMLDivElement, meta: PrMeta) {
+export async function addTagsBlock(container: ElementOrSelector, meta: PrMeta) {
+    container = getElement(container);
     emmet.indent.appendChild(container, `
         div.tagsWrapper.flexRow
             button.naked.tagsPopupButton
@@ -62,9 +63,10 @@ export async function addTagsBlock(container: HTMLDivElement, meta: PrMeta) {
     await updateTagsBlock(container, meta);
 }
 
-export async function addProjectBlock(container: HTMLDivElement, meta: PrMeta) {
+export async function addDepartmentBlock(container: ElementOrSelector, meta: PrMeta) {
+    container = getElement(container);
     emmet.indent.appendChild(container, `
-        div.projectWrapper.flexRow
+        div.deptWrapper.flexRow
             select
     `);
     let select = container.querySelector("select")!;
@@ -77,18 +79,18 @@ export async function addProjectBlock(container: HTMLDivElement, meta: PrMeta) {
     }
 
     select.onchange = async () => {
-        await onSelectProjectClick(meta, select);
+        await onSelectDepartmentClick(meta, select);
     }
-    updateProjectBlock(container, meta);
+    updateDepartmentBlock(container, meta);
 }
 
-function updateProjectBlock(metaWrapper: HTMLElement, meta: PrMeta) {
-    let select = metaWrapper.querySelector("div.projectWrapper select")! as HTMLSelectElement;
+function updateDepartmentBlock(metaWrapper: HTMLElement, meta: PrMeta) {
+    let select = metaWrapper.querySelector("div.deptWrapper select")! as HTMLSelectElement;
     if (meta.project)
         select.value = meta.project;
 }
 
-async function onSelectProjectClick(meta: PrMeta, select: HTMLSelectElement) {
+async function onSelectDepartmentClick(meta: PrMeta, select: HTMLSelectElement) {
     meta.project = select.value;
     await saveMeta(meta.prId, meta, "localStorage and cloud");
 }

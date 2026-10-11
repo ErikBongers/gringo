@@ -21,7 +21,7 @@ import {fillTotalsTab} from "./totalsTab";
 import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
 import {createLeanListTable} from "./leanTable";
-import {addProjectBlock, addTagsBlock} from "./metaBlock";
+import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -474,7 +474,7 @@ let globalLastRequestTagsClicked: RequestBasicInfo | null = null;
 export async function displayMetaFields(container: HTMLDivElement, meta: PrMeta) {
     let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first as HTMLDivElement;
     await addTagsBlock(metaWrapper, meta);
-    await addProjectBlock(metaWrapper, meta);
+    await addDepartmentBlock(metaWrapper, meta);
     return metaWrapper;
 }
 
