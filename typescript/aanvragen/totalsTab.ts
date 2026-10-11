@@ -1,10 +1,10 @@
 import {emmet} from "../../libs/Emmeter";
-import {createInfoBlock, formatPrice} from "../globals";
+import {createInfoBlock, formatPrice, showPopover} from "../globals";
 import {getBudgetDscr, getExpenses, getItemsPerGroup, JsonPrItem} from "./aggregate";
 import {displayMetaFields, hideFloatingHelp, paintTag} from "./observer";
 import {Tabs} from "../tabs";
 import {getGlobalSettingsCached} from "../plugin_options/options";
-import {fetchMetaCached, getGlobalTags, PrMeta, TagDef} from "./requests";
+import {fetchMetaCached, getGlobalTags, TagDef} from "./requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
 import {BudgetGrouping, storage} from "../db/localStorage";
@@ -31,7 +31,6 @@ export async function fillTotalsTab() {
         div.tabsContainer+
         div.popoversContainer
     `);
-    let popoversContainer = totalsTab.querySelector("div.popoversContainer") as HTMLDivElement;
     let button = totalsTab.querySelector("button.refresh") as HTMLButtonElement;
     button.onclick = (ev) => onRefreshClicked(ev);
     button = totalsTab.querySelector("button.copyToClipboard") as HTMLButtonElement;
@@ -80,7 +79,6 @@ export async function fillTotalsTab() {
 
     let budgetItemGroups = await displayPerBudget(tabPerBudget, tabDataBudget);
 
-    await createPopovers(popoversContainer, expenses);
     let cloudBudgets: CloudBudgets = {
         timestamp: (new Date()).toISOString(),
         perBudget: budgetItemGroups.groups.map(group => {
@@ -193,24 +191,23 @@ async function createBudgetSubGroupings(items: PrItemGroup, groupSettings: Budge
     items.items = items.items.filter(i => !groupedIds.has(i.item.prId));
 }
 
-async function createPopovers(popoversContainer: HTMLDivElement, expenses: JsonPrItem[]) {
-    for(let item of expenses) {
-        let meta = await fetchMetaCached(item.prId);
-        let itemId = item.prId + "_" + item.itemNo;
-        let popover = emmet.indent.appendChild(popoversContainer, `
-            div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]
-                div.content
-                    button.naked.goto{${item.prId}}
-                    div{budget:${item.budget}}
-                    div.metaFieldsContainer
-        `).first as HTMLDivElement;
-        let button = popover.querySelector("button.goto") as HTMLButtonElement;
-        button.onclick = () => {
-            window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
-        };
-        let metaFieldsContainer = popover.querySelector(".metaFieldsContainer") as HTMLDivElement;
-        await displayMetaFields(metaFieldsContainer, meta);
-    }
+async function createAndShowPopover(item: JsonPrItem, anchorTo: HTMLElement) {
+    let popover = showPopover("totalsPrPopover", anchorTo);
+    popover.innerHTML = "";
+    popover.classList.add("gringoPopover", "popoverPosBottomLeft");
+    let meta = await fetchMetaCached(item.prId);
+    emmet.indent.appendChild(popover, `
+            div.content
+                button.naked.goto{${item.prId}}
+                div{budget:${item.budget}}
+                div.metaFieldsContainer
+    `);
+    let button = popover.querySelector("button.goto") as HTMLButtonElement;
+    button.onclick = () => {
+        window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
+    };
+    let metaFieldsContainer = popover.querySelector(".metaFieldsContainer") as HTMLDivElement;
+    await displayMetaFields(metaFieldsContainer, meta);
 }
 
 async function displayPerProject(wrapper: HTMLElement, tabData: TotalsTabDef) {
@@ -391,7 +388,7 @@ function displayItem(details: HTMLDetailsElement, item: GroupItem) {
             (
                 span>(
                     (
-                        button.naked.midBlueText[popovertarget="popover${itemId}" style="anchor-name: --anchor${itemId};"]{${item.item.prId}}
+                        button.naked.midBlueText[style="anchor-name: --anchor${itemId};"]{${item.item.prId}}
                     )+
                     span.descr{${item.item.title}}
                 )
@@ -399,18 +396,10 @@ function displayItem(details: HTMLDetailsElement, item: GroupItem) {
             span.price{${formatSplitItemPrice(item)}}
         )
     `).first as HTMLDivElement;
-}
-
-async function updatePopover(popover: any, meta: PrMeta) {
-    let tagsContainer = popover.querySelector(".tagsContainer") as HTMLDivElement;
-    // await displayTags(tagsContainer, meta);
-}
-
-async function updateRelatedItemPopover(prId: string, meta: PrMeta) {
-    let popovers = document.querySelectorAll("div.totalsTab div.item div.gringoPopover") as NodeListOf<HTMLDivElement>;
-    for (let popover of [...popovers].filter(p => p.id.includes("popover" + prId))) {
-        await updatePopover(popover, meta);
-    }
+    let button = row.querySelector("button.midBlueText") as HTMLButtonElement;
+    button.onclick = async () => {
+        await createAndShowPopover(item.item, button);
+    };
 }
 
 /*

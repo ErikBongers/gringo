@@ -700,6 +700,12 @@
 			ev.preventDefault();
 		};
 	}
+	function showPopover(createWithId, anchorTo) {
+		let popover = document.getElementById(createWithId);
+		if (!popover) popover = emmet.appendChild(document.body, `div#${createWithId}[popover=""]`).first;
+		popover.togglePopover({ source: anchorTo });
+		return popover;
+	}
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
@@ -31671,7 +31677,6 @@ Total Duration: ${a - u}ms`);
         div.tabsContainer+
         div.popoversContainer
     `);
-		let popoversContainer = totalsTab.querySelector("div.popoversContainer");
 		let button = totalsTab.querySelector("button.refresh");
 		button.onclick = (ev) => onRefreshClicked(ev);
 		button = totalsTab.querySelector("button.copyToClipboard");
@@ -31717,7 +31722,6 @@ Total Duration: ${a - u}ms`);
 			return await addHtmlBelowTabTitleForBudget(tabPerBudget, tabDataBudget);
 		};
 		let budgetItemGroups = await displayPerBudget(tabPerBudget, tabDataBudget);
-		await createPopovers(popoversContainer, expenses);
 		let cloudBudgets = {
 			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
 			perBudget: budgetItemGroups.groups.map((group) => {
@@ -31814,23 +31818,22 @@ Total Duration: ${a - u}ms`);
 		let groupedIds = new Set(items.children.map((g) => g.items.map((i) => i.item.prId)).flat());
 		items.items = items.items.filter((i) => !groupedIds.has(i.item.prId));
 	}
-	async function createPopovers(popoversContainer, expenses) {
-		for (let item of expenses) {
-			let meta = await fetchMetaCached(item.prId);
-			let itemId = item.prId + "_" + item.itemNo;
-			let popover = emmet.indent.appendChild(popoversContainer, `
-            div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]
-                div.content
-                    button.naked.goto{${item.prId}}
-                    div{budget:${item.budget}}
-                    div.metaFieldsContainer
-        `).first;
-			let button = popover.querySelector("button.goto");
-			button.onclick = () => {
-				window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
-			};
-			await displayMetaFields(popover.querySelector(".metaFieldsContainer"), meta);
-		}
+	async function createAndShowPopover(item, anchorTo) {
+		let popover = showPopover("totalsPrPopover", anchorTo);
+		popover.innerHTML = "";
+		popover.classList.add("gringoPopover", "popoverPosBottomLeft");
+		let meta = await fetchMetaCached(item.prId);
+		emmet.indent.appendChild(popover, `
+            div.content
+                button.naked.goto{${item.prId}}
+                div{budget:${item.budget}}
+                div.metaFieldsContainer
+    `);
+		let button = popover.querySelector("button.goto");
+		button.onclick = () => {
+			window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
+		};
+		await displayMetaFields(popover.querySelector(".metaFieldsContainer"), meta);
 	}
 	async function displayPerProject(wrapper, tabData) {
 		emmet.appendChild(wrapper, `h2{${tabData.title}}`);
@@ -31949,19 +31952,22 @@ Total Duration: ${a - u}ms`);
 	}
 	function displayItem(details, item) {
 		let itemId = item.item.prId + "_" + item.item.itemNo;
-		emmet.appendChild(details, `
+		let button = emmet.appendChild(details, `
         div.item.flexRow.w100>(
             (
                 span>(
                     (
-                        button.naked.midBlueText[popovertarget="popover${itemId}" style="anchor-name: --anchor${itemId};"]{${item.item.prId}}
+                        button.naked.midBlueText[style="anchor-name: --anchor${itemId};"]{${item.item.prId}}
                     )+
                     span.descr{${item.item.title}}
                 )
             )+
             span.price{${formatSplitItemPrice(item)}}
         )
-    `).first;
+    `).first.querySelector("button.midBlueText");
+		button.onclick = async () => {
+			await createAndShowPopover(item.item, button);
+		};
 	}
 	//#endregion
 	//#region typescript/aanvragen/leanTable.ts
@@ -32025,12 +32031,6 @@ Total Duration: ${a - u}ms`);
 	}
 	//#endregion
 	//#region typescript/aanvragen/metaBlock.ts
-	function showPopover(id, source) {
-		let popover = document.getElementById(id);
-		if (!popover) popover = emmet.appendChild(document.body, `div#${id}[popover=""]`).first;
-		popover.togglePopover({ source });
-		return popover;
-	}
 	async function onTagsPopupButtonClick(meta, button, afterMetaChange) {
 		let popover = showPopover("gringo-tags-popover", button);
 		popover.innerHTML = "";

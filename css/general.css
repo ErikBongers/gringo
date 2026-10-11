@@ -403,6 +403,10 @@ request-info-item.hidden {
     }
 }
 
+.popoverPosBottomLeft {
+    position-area: bottom span-right;
+}
+
 .hidePlusMinButtons,
 .input-wrap-container .input-wrap .form-group .field-quantity .hidePlusMinButtons input {
     & span.input-group-btn {
