@@ -8,7 +8,6 @@ import {fetchMetaCached, getGlobalTags, PrMeta, TagDef} from "./requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
 import {BudgetGrouping, storage} from "../db/localStorage";
-import {displayTags, updateMetaFields} from "./metaBlock";
 
 export interface BudgetLine {
     budget: string,
@@ -198,25 +197,19 @@ async function createPopovers(popoversContainer: HTMLDivElement, expenses: JsonP
     for(let item of expenses) {
         let meta = await fetchMetaCached(item.prId);
         let itemId = item.prId + "_" + item.itemNo;
-        let popover = emmet.appendChild(popoversContainer, `
-            div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]>(
-                div.content>(
-                    button.naked.goto{${item.prId}}+
-                    div{budget:${item.budget}}+
-                    div.tagsContainer+
+        let popover = emmet.indent.appendChild(popoversContainer, `
+            div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]
+                div.content
+                    button.naked.goto{${item.prId}}
+                    div{budget:${item.budget}}
                     div.metaFieldsContainer
-                )
-            )
         `).first as HTMLDivElement;
         let button = popover.querySelector("button.goto") as HTMLButtonElement;
         button.onclick = () => {
             window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
         };
         let metaFieldsContainer = popover.querySelector(".metaFieldsContainer") as HTMLDivElement;
-        await displayMetaFields(metaFieldsContainer, meta, async (meta) => {
-            await updateRelatedItemPopover(item.prId, meta);
-        });
-        await updateMetaFields(popover, meta);
+        await displayMetaFields(metaFieldsContainer, meta);
     }
 }
 
@@ -410,7 +403,7 @@ function displayItem(details: HTMLDetailsElement, item: GroupItem) {
 
 async function updatePopover(popover: any, meta: PrMeta) {
     let tagsContainer = popover.querySelector(".tagsContainer") as HTMLDivElement;
-    await displayTags(tagsContainer, meta);
+    // await displayTags(tagsContainer, meta);
 }
 
 async function updateRelatedItemPopover(prId: string, meta: PrMeta) {

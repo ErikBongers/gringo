@@ -1,6 +1,6 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter";
-import {createInfoBlock, formatPrice, gringo} from "../globals";
+import {addButtonClickNoPropagation, createInfoBlock, formatPrice, gringo} from "../globals";
 import {fetchPr} from "../sap/api";
 import {createCompactPr} from "../aanvraag/observer";
 import {
@@ -93,12 +93,6 @@ function checkDecorations() {
 }
 
 function decorateBody() {
-    emmet.appendChild(document.body, `
-        div#gringo-tags-popover[popover=""]> (
-            (div.flexRow>button.closePopup.naked{x})+
-            div.popoverContainer{Container...}
-        )        
-    `);
 }
 function checkRecentRequestsDecorations() {
     checkAndSetDecoration(document.querySelector("body"), decorateBody);
@@ -190,16 +184,6 @@ function decorateRequestList() {
         await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map(f => f.data));
         requests.forEach(decoratePr);
         await applyFilters(requests);
-    });
-
-    let popover = document.getElementById("gringo-tags-popover") as HTMLDivElement;
-    let button = popover.querySelector("button.closePopup") as HTMLButtonElement;
-    addButtonClickNoPropagation(button as HTMLButtonElement, (ev) => {
-        let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
-        if(!popover)
-            return;
-        // @ts-ignore
-        popover.togglePopover({source:button});
     });
 
     // let requestInfoListPanel = document.querySelector(".request-info-list-panel") as HTMLElement | null;
@@ -428,22 +412,6 @@ function addOrderCopyButton(request: RequestBasicInfo) {
     });
 }
 
-function addButtonClickNoPropagation(button: HTMLButtonElement, onClick: (ev: any) => any) {
-    button.onmousedown = async (ev) => {
-        ev.stopPropagation();
-        ev.preventDefault();
-    };
-    button.onmouseup = (ev) => {
-        onClick(ev);
-        ev.stopPropagation();
-        ev.preventDefault();
-    };
-    button.onclick = (ev) => {
-        ev.stopPropagation();
-        ev.preventDefault();
-    };
-}
-
 async function decoratePr(request: RequestBasicInfo) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
@@ -503,7 +471,7 @@ export function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: bool
 
 let globalLastRequestTagsClicked: RequestBasicInfo | null = null;
 
-export async function displayMetaFields(container: HTMLDivElement, meta: PrMeta, afterMetaChange: (meta: PrMeta) => Promise<any>) {
+export async function displayMetaFields(container: HTMLDivElement, meta: PrMeta) {
     let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first as HTMLDivElement;
     await addTagsBlock(metaWrapper, meta);
     await addProjectBlock(metaWrapper, meta);
@@ -518,9 +486,7 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     if(!divStatusContainer)
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
-    let metaWrapper = await displayMetaFields(divStatusContainer, meta, async (meta) => {
-        await updatePrLine(request, meta);
-    });
+    let metaWrapper = await displayMetaFields(divStatusContainer, meta);
 
     metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev: Event) => {
         ev.stopPropagation();

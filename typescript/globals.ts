@@ -231,3 +231,28 @@ export function formatDate(changed_date: string) {
 export function acronym(preparer: string) {
     return preparer.split(" ").map((name) => name[0]).join("");
 }
+
+export function addButtonClickNoPropagation(button: HTMLButtonElement, onClick: (ev: any) => any) {
+    button.onmousedown = async (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+    };
+    button.onmouseup = (ev) => {
+        onClick(ev);
+        ev.stopPropagation();
+        ev.preventDefault();
+    };
+    button.onclick = (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+    };
+}
+
+//Use a unique id in case of nested popovers.
+export function showPopover(createWithId: string, anchorTo: HTMLElement) {
+    let popover = document.getElementById(createWithId) as HTMLElement;
+    if (!popover)
+        popover = emmet.appendChild(document.body, `div#${createWithId}[popover=""]`).first as HTMLElement;
+    popover.togglePopover({source: anchorTo});
+    return popover;
+}

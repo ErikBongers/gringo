@@ -2,21 +2,28 @@ import {getGlobalTags, PrMeta, saveMeta} from "./requests";
 import {paintTag} from "./observer";
 import {emmet} from "../../libs/Emmeter";
 import {getGlobalSettingsCached} from "../plugin_options/options";
+import {addButtonClickNoPropagation, showPopover} from "../globals";
 
-export async function updateMetaFields(metaWrapper: HTMLElement, meta: PrMeta) {
-    await updateTagsBlock(metaWrapper, meta);
-    updateProjectBlock(metaWrapper, meta);
-}
+async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, afterMetaChange: (meta: PrMeta) => Promise<any>) {
+    let popover = showPopover("gringo-tags-popover", button);
+    popover.innerHTML = "";
+    emmet.indent.appendChild(popover, `
+            div.flexRow
+                button.closePopup.naked{x}
+            div.popoverContainer
+    `);
+    let closeButton = popover.querySelector("button.closePopup") as HTMLButtonElement;
+    addButtonClickNoPropagation(closeButton as HTMLButtonElement, (ev) => {
+        let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
+        if(!popover)
+            return;
+        // @ts-ignore
+        popover.togglePopover({source:button});
+    });
 
-export async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, afterMetaChange: (meta: PrMeta) => Promise<any>) {
-    let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
-    if (!popover)
-        return;
-    // @ts-ignore
-    popover.togglePopover({source: button});
+
     let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
     container.classList.add("tagList");
-    container.innerHTML = "";
     let globalTags = await getGlobalTags();
     [...globalTags.values()]
         .sort((a, b) => a.order - b.order)
@@ -86,7 +93,7 @@ async function onSelectProjectClick(meta: PrMeta, select: HTMLSelectElement) {
     await saveMeta(meta.prId, meta, "localStorage and cloud");
 }
 
-export async function displayTags(tagsContainer: HTMLElement, meta: PrMeta) {
+async function displayTags(tagsContainer: HTMLElement, meta: PrMeta) {
     tagsContainer.innerHTML = "";
     let globalTagsMap = await getGlobalTags();
     meta.tags

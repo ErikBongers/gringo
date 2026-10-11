@@ -1,3 +1,6 @@
+* totalsTab: create popover on the fly like for tagsBlock.
+
+
 * Use PrListData to build a lean list.
   > Give user option to view org or lean.
   > Fields;

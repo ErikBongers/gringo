@@ -685,6 +685,21 @@
 	function acronym(preparer) {
 		return preparer.split(" ").map((name) => name[0]).join("");
 	}
+	function addButtonClickNoPropagation(button, onClick) {
+		button.onmousedown = async (ev) => {
+			ev.stopPropagation();
+			ev.preventDefault();
+		};
+		button.onmouseup = (ev) => {
+			onClick(ev);
+			ev.stopPropagation();
+			ev.preventDefault();
+		};
+		button.onclick = (ev) => {
+			ev.stopPropagation();
+			ev.preventDefault();
+		};
+	}
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
@@ -31644,91 +31659,6 @@ Total Duration: ${a - u}ms`);
 		saveBudgetSubGroupings
 	} };
 	//#endregion
-	//#region typescript/aanvragen/metaBlock.ts
-	async function updateMetaFields(metaWrapper, meta) {
-		await updateTagsBlock(metaWrapper, meta);
-		updateProjectBlock(metaWrapper, meta);
-	}
-	async function onTagsPopupButtonClick(meta, button, afterMetaChange) {
-		let popover = document.getElementById("gringo-tags-popover");
-		if (!popover) return;
-		popover.togglePopover({ source: button });
-		let container = popover.querySelector(".popoverContainer");
-		container.classList.add("tagList");
-		container.innerHTML = "";
-		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			let tagButton = emmet.appendChild(container, `
-                    button.naked.gringoTag{${tagDef.name}}
-                `).first;
-			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
-			tagButton.onclick = async () => {
-				tagButton.classList.toggle("selected");
-				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
-				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
-				await saveMeta(meta.prId, meta, "localStorage and cloud");
-				await afterMetaChange(meta);
-			};
-		});
-	}
-	async function addTagBlock(container, meta) {
-		emmet.indent.appendChild(container, `
-        div.tagsWrapper.flexRow
-            button.naked.tagsPopupButton
-                li.far.fa-circle-down
-            div.tagsContainer
-    `);
-		let button = container.querySelector("button.tagsPopupButton");
-		button.onclick = async () => {
-			await onTagsPopupButtonClick(meta, button, async () => {
-				await updateTagsBlock(container, meta);
-			});
-		};
-		await updateTagsBlock(container, meta);
-	}
-	async function addProjectBlock(container, meta) {
-		emmet.indent.appendChild(container, `
-        div.projectWrapper.flexRow
-            select
-    `);
-		let select = container.querySelector("select");
-		let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
-		for (let option of options) {
-			let optionEl = document.createElement("option");
-			optionEl.textContent = option;
-			optionEl.value = option;
-			select.appendChild(optionEl);
-		}
-		select.onchange = async () => {
-			await onSelectProjectClick(meta, select);
-		};
-		updateProjectBlock(container, meta);
-	}
-	function updateProjectBlock(metaWrapper, meta) {
-		let select = metaWrapper.querySelector("div.projectWrapper select");
-		if (meta.project) select.value = meta.project;
-	}
-	async function onSelectProjectClick(meta, select) {
-		meta.project = select.value;
-		await saveMeta(meta.prId, meta, "localStorage and cloud");
-	}
-	async function displayTags(tagsContainer, meta) {
-		tagsContainer.innerHTML = "";
-		let globalTagsMap = await getGlobalTags();
-		meta.tags.map((tag) => {
-			return globalTagsMap.get(tag);
-		}).filter((t) => !!t).sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			let tagSpan = emmet.appendChild(tagsContainer, `
-                span    
-            `).first;
-			paintTag(tagSpan, tagDef, true);
-		});
-		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
-		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
-	}
-	async function updateTagsBlock(metaWrapper, meta) {
-		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
-	}
-	//#endregion
 	//#region typescript/aanvragen/totalsTab.ts
 	async function fillTotalsTab() {
 		hideFloatingHelp();
@@ -31888,24 +31818,18 @@ Total Duration: ${a - u}ms`);
 		for (let item of expenses) {
 			let meta = await fetchMetaCached(item.prId);
 			let itemId = item.prId + "_" + item.itemNo;
-			let popover = emmet.appendChild(popoversContainer, `
-            div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]>(
-                div.content>(
-                    button.naked.goto{${item.prId}}+
-                    div{budget:${item.budget}}+
-                    div.tagsContainer+
+			let popover = emmet.indent.appendChild(popoversContainer, `
+            div#popover${itemId}.gringoPopover[popover="" style="position-anchor: --anchor${itemId};"]
+                div.content
+                    button.naked.goto{${item.prId}}
+                    div{budget:${item.budget}}
                     div.metaFieldsContainer
-                )
-            )
         `).first;
 			let button = popover.querySelector("button.goto");
 			button.onclick = () => {
 				window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
 			};
-			await displayMetaFields(popover.querySelector(".metaFieldsContainer"), meta, async (meta) => {
-				await updateRelatedItemPopover(item.prId, meta);
-			});
-			await updateMetaFields(popover, meta);
+			await displayMetaFields(popover.querySelector(".metaFieldsContainer"), meta);
 		}
 	}
 	async function displayPerProject(wrapper, tabData) {
@@ -32039,13 +31963,6 @@ Total Duration: ${a - u}ms`);
         )
     `).first;
 	}
-	async function updatePopover(popover, meta) {
-		await displayTags(popover.querySelector(".tagsContainer"), meta);
-	}
-	async function updateRelatedItemPopover(prId, meta) {
-		let popovers = document.querySelectorAll("div.totalsTab div.item div.gringoPopover");
-		for (let popover of [...popovers].filter((p) => p.id.includes("popover" + prId))) await updatePopover(popover, meta);
-	}
 	//#endregion
 	//#region typescript/aanvragen/leanTable.ts
 	async function createLeanListTable(divLeanListPanel) {
@@ -32107,6 +32024,101 @@ Total Duration: ${a - u}ms`);
 		return `/gb/purchase-order/${uniqueName}`;
 	}
 	//#endregion
+	//#region typescript/aanvragen/metaBlock.ts
+	function showPopover(id, source) {
+		let popover = document.getElementById(id);
+		if (!popover) popover = emmet.appendChild(document.body, `div#${id}[popover=""]`).first;
+		popover.togglePopover({ source });
+		return popover;
+	}
+	async function onTagsPopupButtonClick(meta, button, afterMetaChange) {
+		let popover = showPopover("gringo-tags-popover", button);
+		popover.innerHTML = "";
+		emmet.indent.appendChild(popover, `
+            div.flexRow
+                button.closePopup.naked{x}
+            div.popoverContainer
+    `);
+		addButtonClickNoPropagation(popover.querySelector("button.closePopup"), (ev) => {
+			let popover = document.getElementById("gringo-tags-popover");
+			if (!popover) return;
+			popover.togglePopover({ source: button });
+		});
+		let container = popover.querySelector(".popoverContainer");
+		container.classList.add("tagList");
+		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			let tagButton = emmet.appendChild(container, `
+                    button.naked.gringoTag{${tagDef.name}}
+                `).first;
+			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
+			tagButton.onclick = async () => {
+				tagButton.classList.toggle("selected");
+				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
+				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
+				await saveMeta(meta.prId, meta, "localStorage and cloud");
+				await afterMetaChange(meta);
+			};
+		});
+	}
+	async function addTagsBlock(container, meta) {
+		emmet.indent.appendChild(container, `
+        div.tagsWrapper.flexRow
+            button.naked.tagsPopupButton
+                li.far.fa-circle-down
+            div.tagsContainer
+    `);
+		let button = container.querySelector("button.tagsPopupButton");
+		button.onclick = async () => {
+			await onTagsPopupButtonClick(meta, button, async () => {
+				await updateTagsBlock(container, meta);
+			});
+		};
+		await updateTagsBlock(container, meta);
+	}
+	async function addProjectBlock(container, meta) {
+		emmet.indent.appendChild(container, `
+        div.projectWrapper.flexRow
+            select
+    `);
+		let select = container.querySelector("select");
+		let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
+		for (let option of options) {
+			let optionEl = document.createElement("option");
+			optionEl.textContent = option;
+			optionEl.value = option;
+			select.appendChild(optionEl);
+		}
+		select.onchange = async () => {
+			await onSelectProjectClick(meta, select);
+		};
+		updateProjectBlock(container, meta);
+	}
+	function updateProjectBlock(metaWrapper, meta) {
+		let select = metaWrapper.querySelector("div.projectWrapper select");
+		if (meta.project) select.value = meta.project;
+	}
+	async function onSelectProjectClick(meta, select) {
+		meta.project = select.value;
+		await saveMeta(meta.prId, meta, "localStorage and cloud");
+	}
+	async function displayTags(tagsContainer, meta) {
+		tagsContainer.innerHTML = "";
+		let globalTagsMap = await getGlobalTags();
+		meta.tags.map((tag) => {
+			return globalTagsMap.get(tag);
+		}).filter((t) => !!t).sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			let tagSpan = emmet.appendChild(tagsContainer, `
+                span    
+            `).first;
+			paintTag(tagSpan, tagDef, true);
+		});
+		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
+		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
+	}
+	async function updateTagsBlock(metaWrapper, meta) {
+		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
+	}
+	//#endregion
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -32164,14 +32176,7 @@ Total Duration: ${a - u}ms`);
 		checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
 		checkAndSetDecoration(getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
 	}
-	function decorateBody() {
-		emmet.appendChild(document.body, `
-        div#gringo-tags-popover[popover=""]> (
-            (div.flexRow>button.closePopup.naked{x})+
-            div.popoverContainer{Container...}
-        )        
-    `);
-	}
+	function decorateBody() {}
 	function checkRecentRequestsDecorations() {
 		checkAndSetDecoration(document.querySelector("body"), decorateBody);
 		checkAndSetDecoration(document.querySelector("main"), decorateMain);
@@ -32225,12 +32230,6 @@ Total Duration: ${a - u}ms`);
 			await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map((f) => f.data));
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
-		});
-		let button = document.getElementById("gringo-tags-popover").querySelector("button.closePopup");
-		addButtonClickNoPropagation(button, (ev) => {
-			let popover = document.getElementById("gringo-tags-popover");
-			if (!popover) return;
-			popover.togglePopover({ source: button });
 		});
 	}
 	function updateTagsFilters(filters) {
@@ -32407,21 +32406,6 @@ Total Duration: ${a - u}ms`);
 			});
 		});
 	}
-	function addButtonClickNoPropagation(button, onClick) {
-		button.onmousedown = async (ev) => {
-			ev.stopPropagation();
-			ev.preventDefault();
-		};
-		button.onmouseup = (ev) => {
-			onClick(ev);
-			ev.stopPropagation();
-			ev.preventDefault();
-		};
-		button.onclick = (ev) => {
-			ev.stopPropagation();
-			ev.preventDefault();
-		};
-	}
 	async function decoratePr(request) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
@@ -32464,9 +32448,9 @@ Total Duration: ${a - u}ms`);
 		tagElement.classList.toggle("selected", selected);
 	}
 	let globalLastRequestTagsClicked = null;
-	async function displayMetaFields(container, meta, afterMetaChange) {
+	async function displayMetaFields(container, meta) {
 		let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first;
-		await addTagBlock(metaWrapper, meta);
+		await addTagsBlock(metaWrapper, meta);
 		await addProjectBlock(metaWrapper, meta);
 		return metaWrapper;
 	}
@@ -32476,9 +32460,7 @@ Total Duration: ${a - u}ms`);
 		let divStatusContainer = reqDiv.querySelector("div.item-status-container");
 		if (!divStatusContainer) return;
 		divStatusContainer = divStatusContainer.parentElement;
-		let metaWrapper = await displayMetaFields(divStatusContainer, meta, async (meta) => {
-			await updatePrLine(request, meta);
-		});
+		let metaWrapper = await displayMetaFields(divStatusContainer, meta);
 		metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
 			ev.stopPropagation();
 		};
