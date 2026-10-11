@@ -32019,14 +32019,14 @@ Total Duration: ${a - u}ms`);
 		};
 		await updateTagsBlock(container, meta);
 	}
-	async function addProjectBlock(container, meta) {
-		container = getElement(container);
-		emmet.indent.appendChild(container, `
-        div.projectWrapper.flexRow
+	async function addDepartmentBlock(container, meta) {
+		let wrapper = emmet.indent.appendChild(getElement(container), `
+        div.deptWrapper.flexRow
             select
-    `);
-		let select = container.querySelector("select");
-		let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
+            span
+    `).first;
+		let select = wrapper.querySelector("select");
+		let options = [SELECT_PROJECT, ...(await getGlobalSettingsCached()).projects];
 		for (let option of options) {
 			let optionEl = document.createElement("option");
 			optionEl.textContent = option;
@@ -32034,17 +32034,22 @@ Total Duration: ${a - u}ms`);
 			select.appendChild(optionEl);
 		}
 		select.onchange = async () => {
-			await onSelectProjectClick(meta, select);
+			await onSelectDepartmentClick(meta, select);
 		};
-		updateProjectBlock(container, meta);
+		updateDepartmentBlock(wrapper, meta);
 	}
-	function updateProjectBlock(metaWrapper, meta) {
-		let select = metaWrapper.querySelector("div.projectWrapper select");
-		if (meta.project) select.value = meta.project;
+	const SELECT_PROJECT = "--selecteer--";
+	function updateDepartmentBlock(container, meta) {
+		let select = container.querySelector("select");
+		let span = container.querySelector("span");
+		select.value = meta.project ?? SELECT_PROJECT;
+		span.textContent = meta.project ?? SELECT_PROJECT;
+		container.classList.toggle("hasProject", (meta.project ?? SELECT_PROJECT) != SELECT_PROJECT);
 	}
-	async function onSelectProjectClick(meta, select) {
+	async function onSelectDepartmentClick(meta, select) {
 		meta.project = select.value;
 		await saveMeta(meta.prId, meta, "localStorage and cloud");
+		updateDepartmentBlock(select.closest(".deptWrapper"), meta);
 	}
 	async function displayTags(tagsContainer, meta) {
 		tagsContainer.innerHTML = "";
@@ -32115,7 +32120,7 @@ Total Duration: ${a - u}ms`);
                 td{reserved for project(s))}
         `).first;
 			await addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta);
-			await addProjectBlock(tr.querySelector("td.departmentBlock"), pr.meta);
+			await addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta);
 		}
 		return table;
 	}
@@ -32458,7 +32463,7 @@ Total Duration: ${a - u}ms`);
 	async function displayMetaFields(container, meta) {
 		let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first;
 		await addTagsBlock(metaWrapper, meta);
-		await addProjectBlock(metaWrapper, meta);
+		await addDepartmentBlock(metaWrapper, meta);
 		return metaWrapper;
 	}
 	async function decoratePrWithMeta(request, meta) {

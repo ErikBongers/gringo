@@ -64,13 +64,13 @@ export async function addTagsBlock(container: ElementOrSelector, meta: PrMeta) {
 }
 
 export async function addDepartmentBlock(container: ElementOrSelector, meta: PrMeta) {
-    container = getElement(container);
-    emmet.indent.appendChild(container, `
+    let wrapper = emmet.indent.appendChild(getElement(container), `
         div.deptWrapper.flexRow
             select
-    `);
-    let select = container.querySelector("select")!;
-    let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
+            span
+    `).first as HTMLDivElement;
+    let select = wrapper.querySelector("select")!;
+    let options = [SELECT_PROJECT, ...(await getGlobalSettingsCached()).projects];
     for (let option of options) {
         let optionEl = document.createElement("option");
         optionEl.textContent = option;
@@ -81,18 +81,23 @@ export async function addDepartmentBlock(container: ElementOrSelector, meta: PrM
     select.onchange = async () => {
         await onSelectDepartmentClick(meta, select);
     }
-    updateDepartmentBlock(container, meta);
+    updateDepartmentBlock(wrapper, meta);
 }
 
-function updateDepartmentBlock(metaWrapper: HTMLElement, meta: PrMeta) {
-    let select = metaWrapper.querySelector("div.deptWrapper select")! as HTMLSelectElement;
-    if (meta.project)
-        select.value = meta.project;
+const SELECT_PROJECT = "--selecteer--";
+
+function updateDepartmentBlock(container: HTMLElement, meta: PrMeta) {
+    let select = container.querySelector("select")! as HTMLSelectElement;
+    let span = container.querySelector("span") as HTMLSpanElement;
+    select.value = meta.project??SELECT_PROJECT;
+    span.textContent = meta.project??SELECT_PROJECT;
+    container.classList.toggle("hasProject", (meta.project??SELECT_PROJECT) != SELECT_PROJECT);
 }
 
 async function onSelectDepartmentClick(meta: PrMeta, select: HTMLSelectElement) {
     meta.project = select.value;
     await saveMeta(meta.prId, meta, "localStorage and cloud");
+    updateDepartmentBlock(select.closest(".deptWrapper")!, meta);
 }
 
 async function displayTags(tagsContainer: HTMLElement, meta: PrMeta) {

@@ -506,3 +506,16 @@ section.view-requisition .input-wrap-container .gringo .input-wrap .form-group i
 .op07 {
     opacity: .7;
 }
+
+.deptWrapper {
+    &.hasProject {
+        & select {
+            display: none;
+        }
+    }
+    &:not(.hasProject) {
+        & span {
+            display: none;
+        }
+    }
+}
