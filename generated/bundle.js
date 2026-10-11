@@ -32069,6 +32069,90 @@ Total Duration: ${a - u}ms`);
 		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
 	}
 	//#endregion
+	//#region typescript/filterTable.ts
+	async function filterTable(table, rowFilter) {
+		table = getElement(table);
+		for (let tr of table.tBodies[0].rows) tr.classList.toggle("hidden", !await rowFilter.rowFilter(tr, rowFilter.context));
+	}
+	//#endregion
+	//#region typescript/aanvragen/searchPanel.ts
+	async function createSearchPanel(divSearchPanel, applyFilters) {
+		divSearchPanel.innerHTML = "";
+		let tagsCollapse = emmet.appendChild(divSearchPanel, `
+        details>(
+            summary{Tags}+
+            table#tagsFilterTable>tbody
+        )    
+    `).first;
+		let tbody = tagsCollapse.querySelector("tbody");
+		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			createTagFilterRow(tbody, tagDef, applyFilters);
+		});
+		updateTagsFilters(getTagsFilters());
+		return tagsCollapse;
+	}
+	function updateTagsFilters(filters) {
+		let table = document.getElementById("tagsFilterTable");
+		for (let tr of table.tBodies[0].rows) {
+			let tagName = tr.dataset.tagName;
+			let filter = filters.find((f) => f.name == tagName);
+			let btnFilter = tr.querySelector("button.filter");
+			if (!filter) {
+				btnFilter.classList.toggle("equal", false);
+				btnFilter.classList.toggle("notEqual", false);
+				btnFilter.classList.toggle("empty", true);
+				continue;
+			}
+			btnFilter.classList.toggle("empty", false);
+			btnFilter.classList.toggle("equal", filter.filterType == "==");
+			btnFilter.classList.toggle("notEqual", filter.filterType == "!=");
+		}
+	}
+	function createTagFilterRow(tbody, tagDef, applyFilters) {
+		let tr = emmet.appendChild(tbody, `tr`).first;
+		tr.dataset.tagName = tagDef.name;
+		emmet.appendChild(tr, `
+                (td>span.naked.gringoTag{${tagDef.name}})+
+                (td>button.naked.filter>(
+                    span.equal{✔}+
+                    span.notEqual{❌}+
+                    span.empty{▢}
+                    )
+                )
+            `);
+		paintTag(tr.querySelector("span"), tagDef, true);
+		let filterButton = tr.querySelector("button.filter");
+		filterButton.onclick = async () => {
+			let filters = getTagsFilters();
+			let filter = filters.find((t) => t.name == tagDef.name);
+			if (!filter) {
+				let filter = {
+					name: tagDef.name,
+					filterType: "=="
+				};
+				filters.push(filter);
+			} else if (filter.filterType == "==") filter.filterType = "!=";
+			else filters = filters.filter((f) => f.name != tagDef.name);
+			saveTagsFilters(filters);
+			updateTagsFilters(filters);
+			await applyFilters();
+		};
+	}
+	function getTagsFilters() {
+		let json = localStorage.getItem("gringo.tagsFilters");
+		if (!json) return [];
+		return JSON.parse(json);
+	}
+	function saveTagsFilters(tagsFilters) {
+		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
+	}
+	async function matchTags(prId, selectedTags, excludedTags) {
+		let meta = await fetchMetaCached(prId);
+		let hasAllSelectedTags = selectedTags.every((t) => meta.tags.includes(t.name));
+		let hasNoExcludedTags = excludedTags.every((t) => !meta.tags.includes(t.name));
+		return hasAllSelectedTags && hasNoExcludedTags;
+	}
+	//#endregion
 	//#region typescript/aanvragen/leanTable.ts
 	async function createLeanListTable(divLeanListPanel) {
 		let list = await getPrDataList();
@@ -32119,6 +32203,7 @@ Total Duration: ${a - u}ms`);
                 td.tagsBlock
                 td{reserved for project(s))}
         `).first;
+			tr.dataset.prId = pr.prListData.prId;
 			await addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta);
 			await addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta);
 		}
@@ -32130,77 +32215,20 @@ Total Duration: ${a - u}ms`);
 	function createPoUrl(uniqueName) {
 		return `/gb/purchase-order/${uniqueName}`;
 	}
-	//#endregion
-	//#region typescript/aanvragen/searchPanel.ts
-	async function createSearchPanel(divSearchPanel, applyFilters) {
-		divSearchPanel.innerHTML = "";
-		let tagsCollapse = emmet.appendChild(divSearchPanel, `
-        details>(
-            summary{Tags}+
-            table#tagsFilterTable>tbody
-        )    
-    `).first;
-		let tbody = tagsCollapse.querySelector("tbody");
-		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			createTagFilterRow(tbody, tagDef, applyFilters);
+	async function applyFiltersForLeanTable() {
+		let table = document.querySelector("table.leanPrList");
+		let filters = getTagsFilters();
+		let selectedTags = filters.filter((t) => t.filterType == "==");
+		let excludedTags = filters.filter((t) => t.filterType == "!=");
+		await filterTable(table, {
+			context: {},
+			rowFilter: (tr) => leanRowFilter(tr, selectedTags, excludedTags)
 		});
-		updateTagsFilters(getTagsFilters());
-		return tagsCollapse;
 	}
-	function updateTagsFilters(filters) {
-		let table = document.getElementById("tagsFilterTable");
-		for (let tr of table.tBodies[0].rows) {
-			let tagName = tr.dataset.tagName;
-			let filter = filters.find((f) => f.name == tagName);
-			let btnFilter = tr.querySelector("button.filter");
-			if (!filter) {
-				btnFilter.classList.toggle("equal", false);
-				btnFilter.classList.toggle("notEqual", false);
-				btnFilter.classList.toggle("empty", true);
-				continue;
-			}
-			btnFilter.classList.toggle("empty", false);
-			btnFilter.classList.toggle("equal", filter.filterType == "==");
-			btnFilter.classList.toggle("notEqual", filter.filterType == "!=");
-		}
-	}
-	function createTagFilterRow(tbody, tagDef, applyFilters) {
-		let tr = emmet.appendChild(tbody, `tr`).first;
-		tr.dataset.tagName = tagDef.name;
-		emmet.appendChild(tr, `
-                (td>span.naked.gringoTag{${tagDef.name}})+
-                (td>button.naked.filter>(
-                    span.equal{✔}+
-                    span.notEqual{❌}+
-                    span.empty{▢}
-                    )
-                )
-            `);
-		paintTag(tr.querySelector("span"), tagDef, true);
-		let filterButton = tr.querySelector("button.filter");
-		filterButton.onclick = async (ev) => {
-			let filters = getTagsFilters();
-			let filter = filters.find((t) => t.name == tagDef.name);
-			if (!filter) {
-				let filter = {
-					name: tagDef.name,
-					filterType: "=="
-				};
-				filters.push(filter);
-			} else if (filter.filterType == "==") filter.filterType = "!=";
-			else filters = filters.filter((f) => f.name != tagDef.name);
-			saveTagsFilters(filters);
-			updateTagsFilters(filters);
-			await applyFilters();
-		};
-	}
-	function getTagsFilters() {
-		let json = localStorage.getItem("gringo.tagsFilters");
-		if (!json) return [];
-		return JSON.parse(json);
-	}
-	function saveTagsFilters(tagsFilters) {
-		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
+	async function leanRowFilter(tr, selectedTags, excludedTags) {
+		let prId = tr.dataset.prId;
+		//! must be set
+		return matchTags(prId, selectedTags, excludedTags);
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts
@@ -32480,6 +32508,10 @@ Total Duration: ${a - u}ms`);
 		helpPopup.style.display = "none";
 	}
 	async function applyFilters(requests) {
+		await applyFiltersForAribaTable(requests);
+		await applyFiltersForLeanTable();
+	}
+	async function applyFiltersForAribaTable(requests) {
 		gringo("Applying filters...");
 		if (!requests) requests = scrapePRs();
 		let filters = getTagsFilters();
@@ -32488,10 +32520,7 @@ Total Duration: ${a - u}ms`);
 		for (let request of requests) {
 			let reqDiv = document.getElementById("request-" + request.id);
 			if (!reqDiv) continue;
-			let meta = await fetchMetaCached(request.id);
-			let hasAllSelectedTags = selectedTags.every((t) => meta.tags.includes(t.name));
-			let hasNoExcludedTags = excludedTags.every((t) => !meta.tags.includes(t.name));
-			reqDiv.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
+			reqDiv.classList.toggle("hidden", !await matchTags(request.id, selectedTags, excludedTags));
 		}
 	}
 	//#endregion

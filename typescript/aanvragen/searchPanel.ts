@@ -1,7 +1,6 @@
 import {emmet} from "../../libs/Emmeter";
 import {fetchMetaCached, getGlobalTags, TagDef} from "./requests";
-import {paintTag, RequestBasicInfo} from "./observer";
-import {gringo} from "../globals";
+import {paintTag} from "./observer";
 
 export type FilterType = "==" | "!=";
 
@@ -10,7 +9,7 @@ export interface TagsFilter {
     filterType: FilterType,
 }
 
-export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFilters: () => void) {
+export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFilters: () => Promise<void>) {
     divSearchPanel.innerHTML = "";
     let tagsCollapse = emmet.appendChild(divSearchPanel, `
         details>(
@@ -47,7 +46,7 @@ export function updateTagsFilters(filters: TagsFilter[]) {
     }
 }
 
-function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef, applyFilters: () => void) {
+function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef, applyFilters: () => Promise<void>) {
     let tr = emmet.appendChild(tbody, `tr`).first as HTMLTableRowElement;
     tr.dataset.tagName = tagDef.name;
     emmet.appendChild(tr, `
@@ -62,7 +61,7 @@ function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef, appl
     let tagSpan = tr.querySelector("span")!;
     paintTag(tagSpan, tagDef, true);
     let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
-    filterButton.onclick = async (ev) => {
+    filterButton.onclick = async () => {
         let filters = getTagsFilters();
         let filter = filters.find(t => t.name == tagDef.name);
         if (!filter) {
@@ -92,4 +91,11 @@ export function getTagsFilters() {
 
 function saveTagsFilters(tagsFilters: TagsFilter[]) {
     localStorage.setItem('gringo.tagsFilters', JSON.stringify(tagsFilters));
+}
+
+export async function matchTags(prId: string, selectedTags: TagsFilter[], excludedTags: TagsFilter[]) {
+    let meta = await fetchMetaCached(prId);
+    let hasAllSelectedTags = selectedTags.every(t => meta.tags.includes(t.name));
+    let hasNoExcludedTags = excludedTags.every(t => !meta.tags.includes(t.name));
+    return hasAllSelectedTags && hasNoExcludedTags;
 }

@@ -1,7 +1,10 @@
-import {getPrDataList} from "./requests";
+import {fetchMetaCached, getPrDataList} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatDate, formatPrice} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
+import {applyFiltersForAribaTable, RequestBasicInfo} from "./observer";
+import {filterTable, RowFilter} from "../filterTable";
+import {getTagsFilters, matchTags, TagsFilter} from "./searchPanel";
 
 export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
     let list = await getPrDataList();
@@ -53,6 +56,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                 td.tagsBlock
                 td{reserved for project(s))}
         `).first as HTMLTableRowElement;
+        tr.dataset.prId = pr.prListData.prId;
         await addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta);
         await addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta);
     }
@@ -68,4 +72,23 @@ function createPoUrl(uniqueName: string) {
     //note this is not the poId (BB no).
     //https://s1-eu.ariba.com/gb/purchase-order/EP52156?realm=744379882-C1,744379882-C1
     return `/gb/purchase-order/${uniqueName}`;
+}
+
+export async function applyFiltersForLeanTable() {
+    let table = document.querySelector("table.leanPrList") as HTMLTableElement;
+    //todo: next 3 lines are duplicate with ariba filter function.
+    let filters = getTagsFilters();
+    let selectedTags = filters.filter(t => t.filterType == "==");
+    let excludedTags = filters.filter(t => t.filterType == "!=");
+    let rowFilter: RowFilter = {
+        context: {},
+        rowFilter: (tr: HTMLTableRowElement)=>
+            leanRowFilter(tr, selectedTags, excludedTags)
+    }
+    await filterTable(table, rowFilter);
+}
+
+async function leanRowFilter(tr: HTMLTableRowElement, selectedTags: TagsFilter[], excludedTags: TagsFilter[]) {
+    let prId = tr.dataset.prId!; //! must be set
+    return matchTags(prId, selectedTags, excludedTags)
 }

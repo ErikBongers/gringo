@@ -19,9 +19,9 @@ import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
 import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
-import {createLeanListTable} from "./leanTable";
+import {applyFiltersForLeanTable, createLeanListTable} from "./leanTable";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
-import {createSearchPanel, getTagsFilters} from "./searchPanel";
+import {createSearchPanel, getTagsFilters, matchTags} from "./searchPanel";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -393,6 +393,11 @@ export function hideFloatingHelp() {
 }
 
 export async function applyFilters(requests?: RequestBasicInfo[]) {
+    await applyFiltersForAribaTable(requests);
+    await applyFiltersForLeanTable();
+}
+
+export async function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
     gringo("Applying filters...");
     if(!requests)
         requests = scrapePRs();
@@ -403,9 +408,6 @@ export async function applyFilters(requests?: RequestBasicInfo[]) {
         let reqDiv = document.getElementById("request-" + request.id);
         if (!reqDiv)
             continue;
-        let meta = await fetchMetaCached(request.id);
-        let hasAllSelectedTags = selectedTags.every(t => meta.tags.includes(t.name));
-        let hasNoExcludedTags = excludedTags.every(t => !meta.tags.includes(t.name));
-        reqDiv.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
+        reqDiv.classList.toggle("hidden", !(await matchTags(request.id, selectedTags, excludedTags)));
     }
 }
