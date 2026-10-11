@@ -46,7 +46,7 @@ async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, a
 
 }
 
-export async function addTagsBlock(container: ElementOrSelector, meta: PrMeta) {
+export async function addTagsBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta) {
     container = getElement(container);
     emmet.indent.appendChild(container, `
         div.tagsWrapper.flexRow
@@ -63,7 +63,7 @@ export async function addTagsBlock(container: ElementOrSelector, meta: PrMeta) {
     await updateTagsBlock(container, meta);
 }
 
-export async function addDepartmentBlock(container: ElementOrSelector, meta: PrMeta) {
+export async function addDepartmentBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta) {
     let wrapper = emmet.indent.appendChild(getElement(container), `
         div.deptWrapper.flexRow
             select

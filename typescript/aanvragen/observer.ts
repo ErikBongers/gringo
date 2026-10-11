@@ -11,7 +11,6 @@ import {
     fetchMetaCached,
     fetchRequestList,
     fetchRequestListAndDetails,
-    getGlobalTags,
     getPrDataList,
     PrMeta,
     TagDef
@@ -22,6 +21,7 @@ import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
 import {createLeanListTable} from "./leanTable";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
+import {createSearchPanel, getTagsFilters} from "./searchPanel";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -137,7 +137,7 @@ function getListTabDecoratedElement() {
     return getPagination()?.currentPageElement??null;
 }
 
-let globalPrs: RequestBasicInfo[] = [];
+// let globalPrs: RequestBasicInfo[] = [];
 
 function gotoNextPage(pagination: HTMLElement) {
     let activeButton = pagination.querySelector("button.is-active") as HTMLButtonElement | null;
@@ -146,27 +146,8 @@ function gotoNextPage(pagination: HTMLElement) {
     if(!nextButton)
         return;
     scrapePRs();
-    if(nextButton.classList.contains("is-disabled")) {
-        gringo("THE END");
-        gringo(globalPrs);
-    }
-    else
+    if (!nextButton.classList.contains("is-disabled")) {
         nextButton.click();
-}
-
-async function applyFilters(requests: RequestBasicInfo[]) {
-    gringo("Applying filters...");
-    let filters = getTagsFilters();
-    let selectedTags = filters.filter(t => t.filterType == "==");
-    let excludedTags = filters.filter(t => t.filterType == "!=");
-    for(let request of requests) {
-        let reqDiv = document.getElementById("request-" + request.id);
-        if(!reqDiv)
-            continue;
-        let meta = await fetchMetaCached(request.id);
-        let hasAllSelectedTags = selectedTags.every(t => meta.tags.includes(t.name));
-        let hasNoExcludedTags = excludedTags.every(t => !meta.tags.includes(t.name));
-        reqDiv.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
     }
 }
 
@@ -185,70 +166,6 @@ function decorateRequestList() {
         requests.forEach(decoratePr);
         await applyFilters(requests);
     });
-
-    // let requestInfoListPanel = document.querySelector(".request-info-list-panel") as HTMLElement | null;
-    // if(requestInfoListPanel) {
-    //     if (!requestInfoListPanel.dataset.hasOverlay) {
-    //         requestInfoListPanel.dataset.hasOverlay = "true";
-    //         emmet.appendChild(requestInfoListPanel, `
-    //         div.gringoOverlay
-    //     `);
-    //     }
-    // }
-}
-
-function updateTagsFilters(filters: TagsFilter[]) {
-    let table = document.getElementById("tagsFilterTable") as HTMLTableElement;
-    for(let tr of table.tBodies[0].rows) {
-        let tagName = tr.dataset.tagName!;
-        let filter = filters.find(f => f.name == tagName);
-        let btnFilter = tr.querySelector("button.filter") as HTMLButtonElement;
-        if(!filter) {
-            btnFilter.classList.toggle("equal", false);
-            btnFilter.classList.toggle("notEqual", false);
-            btnFilter.classList.toggle("empty", true);
-            continue;
-        }
-        btnFilter.classList.toggle("empty", false);
-        btnFilter.classList.toggle("equal", filter.filterType=="==");
-        btnFilter.classList.toggle("notEqual", filter.filterType=="!=");
-    }
-}
-
-function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef) {
-    let tr = emmet.appendChild(tbody, `tr`).first as HTMLTableRowElement;
-    tr.dataset.tagName = tagDef.name;
-    emmet.appendChild(tr, `
-                (td>span.naked.gringoTag{${tagDef.name}})+
-                (td>button.naked.filter>(
-                    span.equal{✔}+
-                    span.notEqual{❌}+
-                    span.empty{▢}
-                    )
-                )
-            `);
-    let tagSpan = tr.querySelector("span")!;
-    paintTag(tagSpan, tagDef, true);
-    let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
-    filterButton.onclick = async (ev) => {
-        let filters = getTagsFilters();
-        let filter = filters.find(t => t.name == tagDef.name);
-        if (!filter) {
-            let filter: TagsFilter = {
-                name: tagDef.name,
-                filterType: "=="
-            }
-            filters.push(filter);
-        } else {
-            if (filter.filterType == "==")
-                filter.filterType = "!=";
-            else
-                filters = filters.filter(f => f.name != tagDef.name);
-        }
-        saveTagsFilters(filters);
-        updateTagsFilters(filters);
-        await applyFilters(globalPrs);
-    };
 }
 
 function decorateTabs(el: HTMLElement) {
@@ -308,21 +225,7 @@ async function decorateSearchPanel() {
         divSearchPanel = result.first as HTMLDivElement;
         divLeanListPanel = result.last as HTMLDivElement;
     }
-    divSearchPanel.innerHTML = "";
-    let tagsCollapse = emmet.appendChild(divSearchPanel, `
-        details>(
-            summary{Tags}+
-            table#tagsFilterTable>tbody
-        )    
-    `).first as HTMLDetailsElement;
-    let tbody = tagsCollapse.querySelector("tbody") as HTMLTableSectionElement
-    let globalTags = await getGlobalTags();
-    [...globalTags.values()]
-        .sort((a, b) => a.order - b.order)
-        .forEach(tagDef => {
-            createTagFilterRow(tbody, tagDef);
-        });
-    updateTagsFilters(getTagsFilters());
+    let tagsCollapse = await createSearchPanel(divSearchPanel, applyFilters);
     let infoBlock = createInfoBlock(divSearchPanel);
     let btnTestFetch = emmet.appendChild(tagsCollapse,`div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
     let ctx: FetchListContext = {
@@ -373,14 +276,13 @@ function scrapePRs() {
     gringo(`Found ${infos.length} items.`);
     if(infos.length > 0)
         document.body.dataset.gringoPageScraped = "true";
-    globalPrs = infos;
-    return globalPrs;
+    // globalPrs = infos;
+    return infos;
 }
 
 export type RequestBasicInfo = {
     id: string,
     orderAnchors: HTMLAnchorElement[],
-
 }
 
 function scrapeInfoItem(requestDiv: HTMLElement): RequestBasicInfo {
@@ -391,13 +293,6 @@ function scrapeInfoItem(requestDiv: HTMLElement): RequestBasicInfo {
          orderAnchors = [...divOrders.querySelectorAll(".request-po-list-container ul > li a") as NodeListOf<HTMLAnchorElement>];
     }
     return {id, orderAnchors};
-}
-
-type FilterType = "==" | "!=";
-
-interface TagsFilter {
-    name: string,
-    filterType: FilterType,
 }
 
 function addOrderCopyButton(request: RequestBasicInfo) {
@@ -423,17 +318,6 @@ async function decoratePr(request: RequestBasicInfo) {
     let meta = await fetchMetaCached(request.id);
     await decoratePrWithMeta(request, meta);
     await updatePrLine(request, meta);
-}
-
-function getTagsFilters() {
-    let json = localStorage.getItem('gringo.tagsFilters');
-    if(!json)
-        return [];
-    return JSON.parse(json) as TagsFilter[];
-}
-
-function saveTagsFilters(tagsFilters: TagsFilter[]) {
-    localStorage.setItem('gringo.tagsFilters', JSON.stringify(tagsFilters));
 }
 
 async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
@@ -506,4 +390,22 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
 export function hideFloatingHelp() {
     let helpPopup = document.querySelector("div.helplinkContainer") as HTMLElement;
     helpPopup.style.display = "none";
+}
+
+export async function applyFilters(requests?: RequestBasicInfo[]) {
+    gringo("Applying filters...");
+    if(!requests)
+        requests = scrapePRs();
+    let filters = getTagsFilters();
+    let selectedTags = filters.filter(t => t.filterType == "==");
+    let excludedTags = filters.filter(t => t.filterType == "!=");
+    for (let request of requests) {
+        let reqDiv = document.getElementById("request-" + request.id);
+        if (!reqDiv)
+            continue;
+        let meta = await fetchMetaCached(request.id);
+        let hasAllSelectedTags = selectedTags.every(t => meta.tags.includes(t.name));
+        let hasNoExcludedTags = excludedTags.every(t => !meta.tags.includes(t.name));
+        reqDiv.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
+    }
 }

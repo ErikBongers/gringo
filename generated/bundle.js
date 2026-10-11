@@ -32131,6 +32131,78 @@ Total Duration: ${a - u}ms`);
 		return `/gb/purchase-order/${uniqueName}`;
 	}
 	//#endregion
+	//#region typescript/aanvragen/searchPanel.ts
+	async function createSearchPanel(divSearchPanel, applyFilters) {
+		divSearchPanel.innerHTML = "";
+		let tagsCollapse = emmet.appendChild(divSearchPanel, `
+        details>(
+            summary{Tags}+
+            table#tagsFilterTable>tbody
+        )    
+    `).first;
+		let tbody = tagsCollapse.querySelector("tbody");
+		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			createTagFilterRow(tbody, tagDef, applyFilters);
+		});
+		updateTagsFilters(getTagsFilters());
+		return tagsCollapse;
+	}
+	function updateTagsFilters(filters) {
+		let table = document.getElementById("tagsFilterTable");
+		for (let tr of table.tBodies[0].rows) {
+			let tagName = tr.dataset.tagName;
+			let filter = filters.find((f) => f.name == tagName);
+			let btnFilter = tr.querySelector("button.filter");
+			if (!filter) {
+				btnFilter.classList.toggle("equal", false);
+				btnFilter.classList.toggle("notEqual", false);
+				btnFilter.classList.toggle("empty", true);
+				continue;
+			}
+			btnFilter.classList.toggle("empty", false);
+			btnFilter.classList.toggle("equal", filter.filterType == "==");
+			btnFilter.classList.toggle("notEqual", filter.filterType == "!=");
+		}
+	}
+	function createTagFilterRow(tbody, tagDef, applyFilters) {
+		let tr = emmet.appendChild(tbody, `tr`).first;
+		tr.dataset.tagName = tagDef.name;
+		emmet.appendChild(tr, `
+                (td>span.naked.gringoTag{${tagDef.name}})+
+                (td>button.naked.filter>(
+                    span.equal{✔}+
+                    span.notEqual{❌}+
+                    span.empty{▢}
+                    )
+                )
+            `);
+		paintTag(tr.querySelector("span"), tagDef, true);
+		let filterButton = tr.querySelector("button.filter");
+		filterButton.onclick = async (ev) => {
+			let filters = getTagsFilters();
+			let filter = filters.find((t) => t.name == tagDef.name);
+			if (!filter) {
+				let filter = {
+					name: tagDef.name,
+					filterType: "=="
+				};
+				filters.push(filter);
+			} else if (filter.filterType == "==") filter.filterType = "!=";
+			else filters = filters.filter((f) => f.name != tagDef.name);
+			saveTagsFilters(filters);
+			updateTagsFilters(filters);
+			await applyFilters();
+		};
+	}
+	function getTagsFilters() {
+		let json = localStorage.getItem("gringo.tagsFilters");
+		if (!json) return [];
+		return JSON.parse(json);
+	}
+	function saveTagsFilters(tagsFilters) {
+		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
+	}
+	//#endregion
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -32216,21 +32288,6 @@ Total Duration: ${a - u}ms`);
 		if (!document.querySelector("request-info-requisitions")) return null;
 		return getPagination()?.currentPageElement ?? null;
 	}
-	let globalPrs = [];
-	async function applyFilters(requests) {
-		gringo("Applying filters...");
-		let filters = getTagsFilters();
-		let selectedTags = filters.filter((t) => t.filterType == "==");
-		let excludedTags = filters.filter((t) => t.filterType == "!=");
-		for (let request of requests) {
-			let reqDiv = document.getElementById("request-" + request.id);
-			if (!reqDiv) continue;
-			let meta = await fetchMetaCached(request.id);
-			let hasAllSelectedTags = selectedTags.every((t) => meta.tags.includes(t.name));
-			let hasNoExcludedTags = excludedTags.every((t) => !meta.tags.includes(t.name));
-			reqDiv.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
-		}
-	}
 	function decorateRequestList() {
 		let main = document.querySelector("main");
 		if (!main) return;
@@ -32243,53 +32300,6 @@ Total Duration: ${a - u}ms`);
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
 		});
-	}
-	function updateTagsFilters(filters) {
-		let table = document.getElementById("tagsFilterTable");
-		for (let tr of table.tBodies[0].rows) {
-			let tagName = tr.dataset.tagName;
-			let filter = filters.find((f) => f.name == tagName);
-			let btnFilter = tr.querySelector("button.filter");
-			if (!filter) {
-				btnFilter.classList.toggle("equal", false);
-				btnFilter.classList.toggle("notEqual", false);
-				btnFilter.classList.toggle("empty", true);
-				continue;
-			}
-			btnFilter.classList.toggle("empty", false);
-			btnFilter.classList.toggle("equal", filter.filterType == "==");
-			btnFilter.classList.toggle("notEqual", filter.filterType == "!=");
-		}
-	}
-	function createTagFilterRow(tbody, tagDef) {
-		let tr = emmet.appendChild(tbody, `tr`).first;
-		tr.dataset.tagName = tagDef.name;
-		emmet.appendChild(tr, `
-                (td>span.naked.gringoTag{${tagDef.name}})+
-                (td>button.naked.filter>(
-                    span.equal{✔}+
-                    span.notEqual{❌}+
-                    span.empty{▢}
-                    )
-                )
-            `);
-		paintTag(tr.querySelector("span"), tagDef, true);
-		let filterButton = tr.querySelector("button.filter");
-		filterButton.onclick = async (ev) => {
-			let filters = getTagsFilters();
-			let filter = filters.find((t) => t.name == tagDef.name);
-			if (!filter) {
-				let filter = {
-					name: tagDef.name,
-					filterType: "=="
-				};
-				filters.push(filter);
-			} else if (filter.filterType == "==") filter.filterType = "!=";
-			else filters = filters.filter((f) => f.name != tagDef.name);
-			saveTagsFilters(filters);
-			updateTagsFilters(filters);
-			await applyFilters(globalPrs);
-		};
 	}
 	function decorateTabs(el) {
 		[...el.querySelectorAll("div:not(.gringo).fd-tabs__item")].forEach((tab) => {
@@ -32339,18 +32349,7 @@ Total Duration: ${a - u}ms`);
 			divSearchPanel = result.first;
 			divLeanListPanel = result.last;
 		}
-		divSearchPanel.innerHTML = "";
-		let tagsCollapse = emmet.appendChild(divSearchPanel, `
-        details>(
-            summary{Tags}+
-            table#tagsFilterTable>tbody
-        )    
-    `).first;
-		let tbody = tagsCollapse.querySelector("tbody");
-		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			createTagFilterRow(tbody, tagDef);
-		});
-		updateTagsFilters(getTagsFilters());
+		let tagsCollapse = await createSearchPanel(divSearchPanel, applyFilters);
 		let infoBlock = createInfoBlock(divSearchPanel);
 		let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last;
 		let ctx = {
@@ -32394,8 +32393,7 @@ Total Duration: ${a - u}ms`);
 		let infos = [...document.querySelectorAll("request-info-item")].map(scrapeInfoItem);
 		gringo(`Found ${infos.length} items.`);
 		if (infos.length > 0) document.body.dataset.gringoPageScraped = "true";
-		globalPrs = infos;
-		return globalPrs;
+		return infos;
 	}
 	function scrapeInfoItem(requestDiv) {
 		let id = requestDiv.id.substring(8);
@@ -32427,14 +32425,6 @@ Total Duration: ${a - u}ms`);
 		let meta = await fetchMetaCached(request.id);
 		await decoratePrWithMeta(request, meta);
 		await updatePrLine(request, meta);
-	}
-	function getTagsFilters() {
-		let json = localStorage.getItem("gringo.tagsFilters");
-		if (!json) return [];
-		return JSON.parse(json);
-	}
-	function saveTagsFilters(tagsFilters) {
-		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
 	}
 	async function updatePrLine(request, meta) {
 		let reqDiv = document.getElementById("request-" + request.id);
@@ -32488,6 +32478,21 @@ Total Duration: ${a - u}ms`);
 	function hideFloatingHelp() {
 		let helpPopup = document.querySelector("div.helplinkContainer");
 		helpPopup.style.display = "none";
+	}
+	async function applyFilters(requests) {
+		gringo("Applying filters...");
+		if (!requests) requests = scrapePRs();
+		let filters = getTagsFilters();
+		let selectedTags = filters.filter((t) => t.filterType == "==");
+		let excludedTags = filters.filter((t) => t.filterType == "!=");
+		for (let request of requests) {
+			let reqDiv = document.getElementById("request-" + request.id);
+			if (!reqDiv) continue;
+			let meta = await fetchMetaCached(request.id);
+			let hasAllSelectedTags = selectedTags.every((t) => meta.tags.includes(t.name));
+			let hasNoExcludedTags = excludedTags.every((t) => !meta.tags.includes(t.name));
+			reqDiv.classList.toggle("hidden", !(hasAllSelectedTags && hasNoExcludedTags));
+		}
 	}
 	//#endregion
 	//#region typescript/main.ts

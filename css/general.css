@@ -519,3 +519,8 @@ section.view-requisition .input-wrap-container .gringo .input-wrap .form-group i
         }
     }
 }
+
+tr.hidden {
+    visibility: collapse;
+    border-color: transparent; /*get rid of some risidual border lines*/
+}

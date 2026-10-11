@@ -257,8 +257,8 @@ export function showPopover(createWithId: string, anchorTo: HTMLElement) {
     return popover;
 }
 
-export type ElementOrSelector = string | HTMLElement;
+export type ElementOrSelector<T extends HTMLElement> = string | T;
 
-export function getElement(container: ElementOrSelector): HTMLElement {
-    return typeof container == "string" ? document.querySelector(container) as HTMLElement : container;
+export function getElement<T extends HTMLElement>(container: ElementOrSelector<T>): T {
+    return typeof container == "string" ? document.querySelector(container) as T : container;
 }
