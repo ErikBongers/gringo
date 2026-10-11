@@ -11,11 +11,16 @@ export interface TagsFilter {
 
 export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFilters: () => Promise<void>) {
     divSearchPanel.innerHTML = "";
-    let tagsCollapse = emmet.appendChild(divSearchPanel, `
-        details>(
-            summary{Tags}+
-            table#tagsFilterTable>tbody
-        )    
+    let tagsCollapse = emmet.indent.appendChild(divSearchPanel, `
+        details
+            summary
+                div.flexRow
+                    span{Tags}
+                    div.flexRight
+                        label{Search:}
+                        input#searchText
+            table#tagsFilterTable
+                tbody
     `).first as HTMLDetailsElement;
     let tbody = tagsCollapse.querySelector("tbody") as HTMLTableSectionElement
     let globalTags = await getGlobalTags();

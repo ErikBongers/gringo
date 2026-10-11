@@ -32078,11 +32078,16 @@ Total Duration: ${a - u}ms`);
 	//#region typescript/aanvragen/searchPanel.ts
 	async function createSearchPanel(divSearchPanel, applyFilters) {
 		divSearchPanel.innerHTML = "";
-		let tagsCollapse = emmet.appendChild(divSearchPanel, `
-        details>(
-            summary{Tags}+
-            table#tagsFilterTable>tbody
-        )    
+		let tagsCollapse = emmet.indent.appendChild(divSearchPanel, `
+        details
+            summary
+                div.flexRow
+                    span{Tags}
+                    div.flexRight
+                        label{Search:}
+                        input#searchText
+            table#tagsFilterTable
+                tbody
     `).first;
 		let tbody = tagsCollapse.querySelector("tbody");
 		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {

@@ -524,3 +524,7 @@ tr.hidden {
     visibility: collapse;
     border-color: transparent; /*get rid of some risidual border lines*/
 }
+
+.flexRight {
+    margin-left: auto;
+}
