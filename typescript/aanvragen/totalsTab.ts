@@ -1,13 +1,14 @@
 import {emmet} from "../../libs/Emmeter";
 import {createInfoBlock, formatPrice} from "../globals";
 import {getBudgetDscr, getExpenses, getItemsPerGroup, JsonPrItem} from "./aggregate";
-import {displayMetaFields, displayTags, hideFloatingHelp, paintTag, updateMetaFields} from "./observer";
+import {displayMetaFields, displayTags, hideFloatingHelp, paintTag} from "./observer";
 import {Tabs} from "../tabs";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchMetaCached, getGlobalTags, PrMeta, TagDef} from "./requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
 import {BudgetGrouping, storage} from "../db/localStorage";
+import {updateMetaFields} from "./metaBlock";
 
 export interface BudgetLine {
     budget: string,

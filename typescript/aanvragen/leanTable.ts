@@ -1,4 +1,4 @@
-import {ExpandedPrListData, getPrDataList} from "./requests";
+import {getPrDataList} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatDate, formatPrice} from "../globals";
 

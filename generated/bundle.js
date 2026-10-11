@@ -31644,6 +31644,69 @@ Total Duration: ${a - u}ms`);
 		saveBudgetSubGroupings
 	} };
 	//#endregion
+	//#region typescript/aanvragen/metaBlock.ts
+	async function updateMetaFields(metaWrapper, meta) {
+		await updateTags(metaWrapper, meta);
+		let select = metaWrapper.querySelector("div.projectWrapper select");
+		if (meta.project) select.value = meta.project;
+	}
+	async function onSelectProjectClick(meta, select) {
+		meta.project = select.value;
+		await saveMeta(meta.prId, meta, "localStorage and cloud");
+	}
+	async function onTagButtonClick(meta, button, afterMetaChange) {
+		let popover = document.getElementById("gringo-tags-popover");
+		if (!popover) return;
+		popover.togglePopover({ source: button });
+		let container = popover.querySelector(".popoverContainer");
+		container.classList.add("tagList");
+		container.innerHTML = "";
+		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			let tagButton = emmet.appendChild(container, `
+                    button.naked.gringoTag{${tagDef.name}}
+                `).first;
+			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
+			tagButton.onclick = async (ev) => {
+				tagButton.classList.toggle("selected");
+				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
+				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
+				await saveMeta(meta.prId, meta, "localStorage and cloud");
+				await afterMetaChange(meta);
+			};
+		});
+	}
+	function addTagBlock(container, meta) {
+		emmet.indent.appendChild(container, `
+        div.tagsWrapper.flexRow
+            button.naked.tagButton
+                li.far.fa-circle-down
+            div.tagsContainer
+    `);
+		let button = container.querySelector("button.tagButton");
+		button.onclick = async () => {
+			await onTagButtonClick(meta, button, async () => {
+				await updateMetaFields(container, meta);
+			});
+		};
+	}
+	async function addProjectBlock(container, meta) {
+		emmet.indent.appendChild(container, `
+        div.projectWrapper.flexRow
+            select
+    `);
+		let select = container.querySelector("select");
+		let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
+		for (let option of options) {
+			let optionEl = document.createElement("option");
+			optionEl.textContent = option;
+			optionEl.value = option;
+			select.appendChild(optionEl);
+		}
+		select.onchange = async (ev) => {
+			await onSelectProjectClick(meta, select);
+		};
+	}
+	//#endregion
 	//#region typescript/aanvragen/totalsTab.ts
 	async function fillTotalsTab() {
 		hideFloatingHelp();
@@ -32369,10 +32432,8 @@ Total Duration: ${a - u}ms`);
 		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
 		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
 	}
-	async function updateMetaFields(metaWrapper, meta) {
+	async function updateTags(metaWrapper, meta) {
 		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
-		let select = metaWrapper.querySelector("div.projectWrapper select");
-		if (meta.project) select.value = meta.project;
 	}
 	async function updatePrLine(request, meta) {
 		let reqDiv = document.getElementById("request-" + request.id);
@@ -32401,37 +32462,9 @@ Total Duration: ${a - u}ms`);
 	}
 	let globalLastRequestTagsClicked = null;
 	async function displayMetaFields(container, meta, afterMetaChange) {
-		let metaWrapper = emmet.appendChild(container, `
-        div.metaWrapper>(
-            (
-                div.tagsWrapper.flexRow>(
-                    (button.naked.tagButton
-                        >li.far.fa-circle-down)+
-                    div.tagsContainer
-                )
-            )+
-            (
-                div.projectWrapper.flexRow>(
-                    select
-                )
-            )    
-        )
-    `).first;
-		let button = metaWrapper.querySelector("button.tagButton");
-		button.onclick = (ev) => {
-			onTagButtonClick(meta, button, afterMetaChange);
-		};
-		let select = container.querySelector("select");
-		let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
-		for (let option of options) {
-			let optionEl = document.createElement("option");
-			optionEl.textContent = option;
-			optionEl.value = option;
-			select.appendChild(optionEl);
-		}
-		select.onchange = async (ev) => {
-			await onSelectProjectClick(meta, select);
-		};
+		let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first;
+		addTagBlock(metaWrapper, meta);
+		await addProjectBlock(metaWrapper, meta);
 		return metaWrapper;
 	}
 	async function decoratePrWithMeta(request, meta) {
@@ -32454,31 +32487,6 @@ Total Duration: ${a - u}ms`);
 		emmet.insertAfter(moneyAmount, `
         div.gringo.blueBlock.listRowTotal{€-.---,--}    
     `);
-	}
-	async function onSelectProjectClick(meta, select) {
-		meta.project = select.value;
-		await saveMeta(meta.prId, meta, "localStorage and cloud");
-	}
-	async function onTagButtonClick(meta, button, afterMetaChange) {
-		let popover = document.getElementById("gringo-tags-popover");
-		if (!popover) return;
-		popover.togglePopover({ source: button });
-		let container = popover.querySelector(".popoverContainer");
-		container.classList.add("tagList");
-		container.innerHTML = "";
-		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			let tagButton = emmet.appendChild(container, `
-                    button.naked.gringoTag{${tagDef.name}}
-                `).first;
-			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
-			tagButton.onclick = async (ev) => {
-				tagButton.classList.toggle("selected");
-				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
-				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
-				await saveMeta(meta.prId, meta, "localStorage and cloud");
-				await afterMetaChange(meta);
-			};
-		});
 	}
 	function hideFloatingHelp() {
 		let helpPopup = document.querySelector("div.helplinkContainer");

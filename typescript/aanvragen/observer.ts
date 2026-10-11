@@ -1,7 +1,6 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter";
 import {createInfoBlock, formatPrice, gringo} from "../globals";
-import {getGlobalSettingsCached} from "../plugin_options/options";
 import {fetchPr} from "../sap/api";
 import {createCompactPr} from "../aanvraag/observer";
 import {
@@ -15,7 +14,6 @@ import {
     getGlobalTags,
     getPrDataList,
     PrMeta,
-    saveMeta,
     TagDef
 } from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
@@ -23,6 +21,7 @@ import {fillTotalsTab} from "./totalsTab";
 import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
 import {createLeanListTable} from "./leanTable";
+import {addProjectBlock, addTagBlock, updateMetaFields} from "./metaBlock";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -490,12 +489,9 @@ export async function displayTags(tagsContainer: HTMLElement , meta: PrMeta) {
     }
 }
 
-export async function updateMetaFields(metaWrapper: HTMLElement, meta: PrMeta) {
+export async function updateTags(metaWrapper: HTMLElement, meta: PrMeta) {
     let tagsContainer = metaWrapper.querySelector(".tagsContainer") as HTMLElement;
     await displayTags(tagsContainer, meta);
-    let select = metaWrapper.querySelector("div.projectWrapper select")! as HTMLSelectElement;
-    if (meta.project)
-        select.value = meta.project;
 }
 
 async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
@@ -535,41 +531,9 @@ export function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: bool
 let globalLastRequestTagsClicked: RequestBasicInfo | null = null;
 
 export async function displayMetaFields(container: HTMLDivElement, meta: PrMeta, afterMetaChange: (meta: PrMeta) => Promise<any>) {
-    let metaWrapper = emmet.appendChild(container, `
-        div.metaWrapper>(
-            (
-                div.tagsWrapper.flexRow>(
-                    (button.naked.tagButton
-                        >li.far.fa-circle-down)+
-                    div.tagsContainer
-                )
-            )+
-            (
-                div.projectWrapper.flexRow>(
-                    select
-                )
-            )    
-        )
-    `).first as HTMLDivElement;
-
-    let button = metaWrapper.querySelector("button.tagButton") as HTMLButtonElement;
-
-    button.onclick = (ev) => {
-        onTagButtonClick(meta, button, afterMetaChange);
-    };
-
-    let select = container.querySelector("select")!;
-    let options = ["--selecteer--", ...(await getGlobalSettingsCached()).projects];
-    for (let option of options) {
-        let optionEl = document.createElement("option");
-        optionEl.textContent = option;
-        optionEl.value = option;
-        select.appendChild(optionEl);
-    }
-
-    select.onchange = async (ev) => {
-        await onSelectProjectClick(meta, select);
-    }
+    let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first as HTMLDivElement;
+    addTagBlock(metaWrapper, meta);
+    await addProjectBlock(metaWrapper, meta);
     return metaWrapper;
 }
 
@@ -598,42 +562,6 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     emmet.insertAfter(moneyAmount, `
         div.gringo.blueBlock.listRowTotal{€-.---,--}    
     `);
-}
-
-async function onSelectProjectClick(meta: PrMeta, select: HTMLSelectElement) {
-    meta.project = select.value;
-    await saveMeta(meta.prId, meta, "localStorage and cloud");
-}
-
-async function onTagButtonClick(meta: PrMeta, button: HTMLButtonElement, afterMetaChange: (meta: PrMeta) => Promise<any>) {
-    let popover = document.getElementById("gringo-tags-popover") as HTMLElement;
-    if(!popover)
-        return;
-    // @ts-ignore
-    popover.togglePopover({source:button});
-    let container = popover.querySelector(".popoverContainer") as HTMLUListElement;
-    container.classList.add("tagList");
-    container.innerHTML = "";
-    let globalTags = await getGlobalTags();
-    [...globalTags.values()]
-        .sort((a, b) => a.order - b.order)
-        .forEach(tagDef => {
-            let tagButton = emmet.appendChild(container, `
-                    button.naked.gringoTag{${tagDef.name}}
-                `).first as HTMLButtonElement;
-            paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
-            tagButton.onclick = async (ev) => {
-                tagButton.classList.toggle("selected");
-                let selected = tagButton.classList.contains("selected");
-                if(selected)
-                    meta.tags.push(tagDef.name);
-                else
-                    meta.tags = meta.tags.filter(t => t != tagDef.name);
-                await saveMeta(meta.prId, meta, "localStorage and cloud");
-                await afterMetaChange(meta);
-            };
-        });
-
 }
 
 export function hideFloatingHelp() {
