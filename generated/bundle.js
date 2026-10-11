@@ -31646,15 +31646,10 @@ Total Duration: ${a - u}ms`);
 	//#endregion
 	//#region typescript/aanvragen/metaBlock.ts
 	async function updateMetaFields(metaWrapper, meta) {
-		await updateTags(metaWrapper, meta);
-		let select = metaWrapper.querySelector("div.projectWrapper select");
-		if (meta.project) select.value = meta.project;
+		await updateTagsBlock(metaWrapper, meta);
+		updateProjectBlock(metaWrapper, meta);
 	}
-	async function onSelectProjectClick(meta, select) {
-		meta.project = select.value;
-		await saveMeta(meta.prId, meta, "localStorage and cloud");
-	}
-	async function onTagButtonClick(meta, button, afterMetaChange) {
+	async function onTagsPopupButtonClick(meta, button, afterMetaChange) {
 		let popover = document.getElementById("gringo-tags-popover");
 		if (!popover) return;
 		popover.togglePopover({ source: button });
@@ -31666,7 +31661,7 @@ Total Duration: ${a - u}ms`);
                     button.naked.gringoTag{${tagDef.name}}
                 `).first;
 			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
-			tagButton.onclick = async (ev) => {
+			tagButton.onclick = async () => {
 				tagButton.classList.toggle("selected");
 				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
 				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
@@ -31675,19 +31670,20 @@ Total Duration: ${a - u}ms`);
 			};
 		});
 	}
-	function addTagBlock(container, meta) {
+	async function addTagBlock(container, meta) {
 		emmet.indent.appendChild(container, `
         div.tagsWrapper.flexRow
-            button.naked.tagButton
+            button.naked.tagsPopupButton
                 li.far.fa-circle-down
             div.tagsContainer
     `);
-		let button = container.querySelector("button.tagButton");
+		let button = container.querySelector("button.tagsPopupButton");
 		button.onclick = async () => {
-			await onTagButtonClick(meta, button, async () => {
-				await updateMetaFields(container, meta);
+			await onTagsPopupButtonClick(meta, button, async () => {
+				await updateTagsBlock(container, meta);
 			});
 		};
+		await updateTagsBlock(container, meta);
 	}
 	async function addProjectBlock(container, meta) {
 		emmet.indent.appendChild(container, `
@@ -31702,9 +31698,35 @@ Total Duration: ${a - u}ms`);
 			optionEl.value = option;
 			select.appendChild(optionEl);
 		}
-		select.onchange = async (ev) => {
+		select.onchange = async () => {
 			await onSelectProjectClick(meta, select);
 		};
+		updateProjectBlock(container, meta);
+	}
+	function updateProjectBlock(metaWrapper, meta) {
+		let select = metaWrapper.querySelector("div.projectWrapper select");
+		if (meta.project) select.value = meta.project;
+	}
+	async function onSelectProjectClick(meta, select) {
+		meta.project = select.value;
+		await saveMeta(meta.prId, meta, "localStorage and cloud");
+	}
+	async function displayTags(tagsContainer, meta) {
+		tagsContainer.innerHTML = "";
+		let globalTagsMap = await getGlobalTags();
+		meta.tags.map((tag) => {
+			return globalTagsMap.get(tag);
+		}).filter((t) => !!t).sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			let tagSpan = emmet.appendChild(tagsContainer, `
+                span    
+            `).first;
+			paintTag(tagSpan, tagDef, true);
+		});
+		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
+		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
+	}
+	async function updateTagsBlock(metaWrapper, meta) {
+		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
 	}
 	//#endregion
 	//#region typescript/aanvragen/totalsTab.ts
@@ -32418,29 +32440,10 @@ Total Duration: ${a - u}ms`);
 	function saveTagsFilters(tagsFilters) {
 		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
 	}
-	async function displayTags(tagsContainer, meta) {
-		tagsContainer.innerHTML = "";
-		let globalTagsMap = await getGlobalTags();
-		meta.tags.map((tag) => {
-			return globalTagsMap.get(tag);
-		}).filter((t) => !!t).sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			let tagSpan = emmet.appendChild(tagsContainer, `
-                span    
-            `).first;
-			paintTag(tagSpan, tagDef, true);
-		});
-		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
-		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
-	}
-	async function updateTags(metaWrapper, meta) {
-		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
-	}
 	async function updatePrLine(request, meta) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
-		let metaWrapper = reqDiv.querySelector(".metaWrapper");
-		if (!metaWrapper) return;
-		await updateMetaFields(metaWrapper, meta);
+		if (!reqDiv.querySelector(".metaWrapper")) return;
 		let newTotal = reqDiv.querySelector("div.gringo.listRowTotal");
 		let pr = await fetchPr(request.id);
 		let { total, currencySymbel, currency } = calcPrTotal(await createExpandedCompactPr(createCompactPr(pr)));
@@ -32463,7 +32466,7 @@ Total Duration: ${a - u}ms`);
 	let globalLastRequestTagsClicked = null;
 	async function displayMetaFields(container, meta, afterMetaChange) {
 		let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first;
-		addTagBlock(metaWrapper, meta);
+		await addTagBlock(metaWrapper, meta);
 		await addProjectBlock(metaWrapper, meta);
 		return metaWrapper;
 	}

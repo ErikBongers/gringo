@@ -21,7 +21,7 @@ import {fillTotalsTab} from "./totalsTab";
 import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
 import {createLeanListTable} from "./leanTable";
-import {addProjectBlock, addTagBlock, updateMetaFields} from "./metaBlock";
+import {addProjectBlock, addTagsBlock} from "./metaBlock";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -468,32 +468,6 @@ function saveTagsFilters(tagsFilters: TagsFilter[]) {
     localStorage.setItem('gringo.tagsFilters', JSON.stringify(tagsFilters));
 }
 
-export async function displayTags(tagsContainer: HTMLElement , meta: PrMeta) {
-    tagsContainer.innerHTML = "";
-    let globalTagsMap = await getGlobalTags();
-    meta.tags
-        .map(tag => {
-            return globalTagsMap.get(tag);
-        })
-        .filter(t => !!t)
-        .sort((a, b) => a.order - b.order)
-        .forEach(tagDef => {
-            let tagSpan = emmet.appendChild(tagsContainer, `
-                span    
-            `).first as HTMLSpanElement;
-            paintTag(tagSpan, tagDef, true);
-        });
-    let orphans = meta.tags.filter(tag => ![...globalTagsMap.values()].find(tagDef => tagDef.name == tag));
-    if (orphans.length > 0) {
-        emmet.appendChild(tagsContainer, orphans.map(tag => `span.gringoTag{${tag}}`).join("+"));
-    }
-}
-
-export async function updateTags(metaWrapper: HTMLElement, meta: PrMeta) {
-    let tagsContainer = metaWrapper.querySelector(".tagsContainer") as HTMLElement;
-    await displayTags(tagsContainer, meta);
-}
-
 async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
@@ -501,7 +475,6 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     let metaWrapper = reqDiv.querySelector(".metaWrapper") as HTMLElement | null;
     if(!metaWrapper)
         return;
-    await updateMetaFields(metaWrapper, meta);
     let newTotal = reqDiv.querySelector("div.gringo.listRowTotal") as HTMLDivElement;
     let pr = await fetchPr(request.id);
     let compactPr = createCompactPr(pr);
@@ -532,7 +505,7 @@ let globalLastRequestTagsClicked: RequestBasicInfo | null = null;
 
 export async function displayMetaFields(container: HTMLDivElement, meta: PrMeta, afterMetaChange: (meta: PrMeta) => Promise<any>) {
     let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first as HTMLDivElement;
-    addTagBlock(metaWrapper, meta);
+    await addTagsBlock(metaWrapper, meta);
     await addProjectBlock(metaWrapper, meta);
     return metaWrapper;
 }
