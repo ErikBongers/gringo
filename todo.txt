@@ -1,6 +1,6 @@
 * Lean lists refills on every pagination.
-  > detect a full page or tab refresh vs a pagination.
-    > do this generally, so these 'events' can be used througout observer.ts
+  > decoratePagination should only decorate the ariba list.
+  > create a decorateLeanList with a checkAnd... call.
 
 PR Overview filters
 ====================

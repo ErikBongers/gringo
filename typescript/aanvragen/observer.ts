@@ -89,7 +89,7 @@ function checkDecorations() {
     checkAndSetDecoration(document.querySelector("main"), decorateMain);
     checkAndSetDecoration(checkandGetTabsFilled(), decorateTabs);
     checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
-    checkAndSetDecoration(getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
+    checkAndSetDecoration(getListTabDecoratedElement(), decoratePagination, checkAndSetListPageDecorated);
 }
 
 function decorateBody() {
@@ -151,8 +151,7 @@ function gotoNextPage(pagination: HTMLElement) {
     }
 }
 
-function decorateRequestList() {
-
+function decoratePagination() {
     let main = document.querySelector("main");
     if(!main)
         return;
