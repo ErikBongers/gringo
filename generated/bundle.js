@@ -32110,7 +32110,10 @@ Total Duration: ${a - u}ms`);
 		let span = document.createElement("span");
 		span.classList.add("searchButton");
 		span.appendChild(input);
-		let { first: clearButton } = emmet.appendChild(span, `button>img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"`);
+		let { first: clearButton } = emmet.indent.appendChild(span, `
+        button.w2ch.naked
+            img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"]
+    `);
 		clearButton.onclick = () => {
 			input.value = "";
 			input.dispatchEvent(new Event("input"));

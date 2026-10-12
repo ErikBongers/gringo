@@ -528,3 +528,7 @@ tr.hidden {
 .flexRight {
     margin-left: auto;
 }
+
+.w2ch {
+    width: 2ch;
+}
