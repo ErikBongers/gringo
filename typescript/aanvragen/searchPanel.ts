@@ -1,6 +1,7 @@
 import {emmet} from "../../libs/Emmeter";
 import {fetchMetaCached, getGlobalTags, TagDef} from "./requests";
-import {paintTag} from "./observer";
+
+import {paintTag} from "../globals";
 
 export type FilterType = "==" | "!=";
 

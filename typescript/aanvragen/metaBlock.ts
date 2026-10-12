@@ -1,8 +1,7 @@
 import {getGlobalTags, PrMeta, saveMeta} from "./requests";
-import {paintTag} from "./observer";
 import {emmet} from "../../libs/Emmeter";
 import {getGlobalSettingsCached} from "../plugin_options/options";
-import {addButtonClickNoPropagation, ElementOrSelector, getElement, showPopover} from "../globals";
+import {addButtonClickNoPropagation, ElementOrSelector, getElement, paintTag, showPopover} from "../globals";
 
 async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, afterMetaChange: (meta: PrMeta) => Promise<any>) {
     let popover = showPopover("gringo-tags-popover", button);
@@ -126,3 +125,9 @@ async function updateTagsBlock(metaWrapper: HTMLElement, meta: PrMeta) {
     await displayTags(tagsContainer, meta);
 }
 
+export async function displayMetaFields(container: HTMLDivElement, meta: PrMeta) {
+    let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first as HTMLDivElement;
+    await addTagsBlock(metaWrapper, meta);
+    await addDepartmentBlock(metaWrapper, meta);
+    return metaWrapper;
+}

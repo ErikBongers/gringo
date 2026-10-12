@@ -709,6 +709,14 @@
 	function getElement(container) {
 		return typeof container == "string" ? document.querySelector(container) : container;
 	}
+	function paintTag(tagElement, tagDef, selected) {
+		tagElement.innerText = tagDef.name;
+		tagElement.classList.add("gringoTag");
+		tagElement.style.color = tagDef.color != "" ? tagDef.color : "inherit";
+		tagElement.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
+		tagElement.title = tagDef.description;
+		tagElement.classList.toggle("selected", selected);
+	}
 	//#endregion
 	//#region typescript/pageObserver.ts
 	var PartialUrlPageFilter = class {
@@ -31668,6 +31676,108 @@ Total Duration: ${a - u}ms`);
 		saveBudgetSubGroupings
 	} };
 	//#endregion
+	//#region typescript/aanvragen/metaBlock.ts
+	async function onTagsPopupButtonClick(meta, button, afterMetaChange) {
+		let popover = showPopover("gringo-tags-popover", button);
+		popover.innerHTML = "";
+		emmet.indent.appendChild(popover, `
+            div.flexRow
+                button.closePopup.naked{x}
+            div.popoverContainer
+    `);
+		addButtonClickNoPropagation(popover.querySelector("button.closePopup"), (ev) => {
+			let popover = document.getElementById("gringo-tags-popover");
+			if (!popover) return;
+			popover.togglePopover({ source: button });
+		});
+		let container = popover.querySelector(".popoverContainer");
+		container.classList.add("tagList");
+		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			let tagButton = emmet.appendChild(container, `
+                    button.naked.gringoTag{${tagDef.name}}
+                `).first;
+			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
+			tagButton.onclick = async () => {
+				tagButton.classList.toggle("selected");
+				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
+				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
+				await saveMeta(meta.prId, meta, "localStorage and cloud");
+				await afterMetaChange(meta);
+			};
+		});
+	}
+	async function addTagsBlock(container, meta) {
+		container = getElement(container);
+		emmet.indent.appendChild(container, `
+        div.tagsWrapper.flexRow
+            button.naked.tagsPopupButton
+                li.far.fa-circle-down
+            div.tagsContainer
+    `);
+		let button = container.querySelector("button.tagsPopupButton");
+		button.onclick = async () => {
+			await onTagsPopupButtonClick(meta, button, async () => {
+				await updateTagsBlock(container, meta);
+			});
+		};
+		await updateTagsBlock(container, meta);
+	}
+	async function addDepartmentBlock(container, meta) {
+		let wrapper = emmet.indent.appendChild(getElement(container), `
+        div.deptWrapper.flexRow
+            select
+            span
+    `).first;
+		let select = wrapper.querySelector("select");
+		let options = [SELECT_PROJECT, ...(await getGlobalSettingsCached()).projects];
+		for (let option of options) {
+			let optionEl = document.createElement("option");
+			optionEl.textContent = option;
+			optionEl.value = option;
+			select.appendChild(optionEl);
+		}
+		select.onchange = async () => {
+			await onSelectDepartmentClick(meta, select);
+		};
+		updateDepartmentBlock(wrapper, meta);
+	}
+	const SELECT_PROJECT = "--selecteer--";
+	function updateDepartmentBlock(container, meta) {
+		let select = container.querySelector("select");
+		let span = container.querySelector("span");
+		select.value = meta.project ?? SELECT_PROJECT;
+		span.textContent = meta.project ?? SELECT_PROJECT;
+		container.classList.toggle("hasProject", (meta.project ?? SELECT_PROJECT) != SELECT_PROJECT);
+	}
+	async function onSelectDepartmentClick(meta, select) {
+		meta.project = select.value;
+		await saveMeta(meta.prId, meta, "localStorage and cloud");
+		updateDepartmentBlock(select.closest(".deptWrapper"), meta);
+	}
+	async function displayTags(tagsContainer, meta) {
+		tagsContainer.innerHTML = "";
+		let globalTagsMap = await getGlobalTags();
+		meta.tags.map((tag) => {
+			return globalTagsMap.get(tag);
+		}).filter((t) => !!t).sort((a, b) => a.order - b.order).forEach((tagDef) => {
+			let tagSpan = emmet.appendChild(tagsContainer, `
+                span    
+            `).first;
+			paintTag(tagSpan, tagDef, true);
+		});
+		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
+		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
+	}
+	async function updateTagsBlock(metaWrapper, meta) {
+		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
+	}
+	async function displayMetaFields(container, meta) {
+		let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first;
+		await addTagsBlock(metaWrapper, meta);
+		await addDepartmentBlock(metaWrapper, meta);
+		return metaWrapper;
+	}
+	//#endregion
 	//#region typescript/aanvragen/totalsTab.ts
 	async function fillTotalsTab() {
 		hideFloatingHelp();
@@ -31973,102 +32083,6 @@ Total Duration: ${a - u}ms`);
 		};
 	}
 	//#endregion
-	//#region typescript/aanvragen/metaBlock.ts
-	async function onTagsPopupButtonClick(meta, button, afterMetaChange) {
-		let popover = showPopover("gringo-tags-popover", button);
-		popover.innerHTML = "";
-		emmet.indent.appendChild(popover, `
-            div.flexRow
-                button.closePopup.naked{x}
-            div.popoverContainer
-    `);
-		addButtonClickNoPropagation(popover.querySelector("button.closePopup"), (ev) => {
-			let popover = document.getElementById("gringo-tags-popover");
-			if (!popover) return;
-			popover.togglePopover({ source: button });
-		});
-		let container = popover.querySelector(".popoverContainer");
-		container.classList.add("tagList");
-		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			let tagButton = emmet.appendChild(container, `
-                    button.naked.gringoTag{${tagDef.name}}
-                `).first;
-			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
-			tagButton.onclick = async () => {
-				tagButton.classList.toggle("selected");
-				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
-				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
-				await saveMeta(meta.prId, meta, "localStorage and cloud");
-				await afterMetaChange(meta);
-			};
-		});
-	}
-	async function addTagsBlock(container, meta) {
-		container = getElement(container);
-		emmet.indent.appendChild(container, `
-        div.tagsWrapper.flexRow
-            button.naked.tagsPopupButton
-                li.far.fa-circle-down
-            div.tagsContainer
-    `);
-		let button = container.querySelector("button.tagsPopupButton");
-		button.onclick = async () => {
-			await onTagsPopupButtonClick(meta, button, async () => {
-				await updateTagsBlock(container, meta);
-			});
-		};
-		await updateTagsBlock(container, meta);
-	}
-	async function addDepartmentBlock(container, meta) {
-		let wrapper = emmet.indent.appendChild(getElement(container), `
-        div.deptWrapper.flexRow
-            select
-            span
-    `).first;
-		let select = wrapper.querySelector("select");
-		let options = [SELECT_PROJECT, ...(await getGlobalSettingsCached()).projects];
-		for (let option of options) {
-			let optionEl = document.createElement("option");
-			optionEl.textContent = option;
-			optionEl.value = option;
-			select.appendChild(optionEl);
-		}
-		select.onchange = async () => {
-			await onSelectDepartmentClick(meta, select);
-		};
-		updateDepartmentBlock(wrapper, meta);
-	}
-	const SELECT_PROJECT = "--selecteer--";
-	function updateDepartmentBlock(container, meta) {
-		let select = container.querySelector("select");
-		let span = container.querySelector("span");
-		select.value = meta.project ?? SELECT_PROJECT;
-		span.textContent = meta.project ?? SELECT_PROJECT;
-		container.classList.toggle("hasProject", (meta.project ?? SELECT_PROJECT) != SELECT_PROJECT);
-	}
-	async function onSelectDepartmentClick(meta, select) {
-		meta.project = select.value;
-		await saveMeta(meta.prId, meta, "localStorage and cloud");
-		updateDepartmentBlock(select.closest(".deptWrapper"), meta);
-	}
-	async function displayTags(tagsContainer, meta) {
-		tagsContainer.innerHTML = "";
-		let globalTagsMap = await getGlobalTags();
-		meta.tags.map((tag) => {
-			return globalTagsMap.get(tag);
-		}).filter((t) => !!t).sort((a, b) => a.order - b.order).forEach((tagDef) => {
-			let tagSpan = emmet.appendChild(tagsContainer, `
-                span    
-            `).first;
-			paintTag(tagSpan, tagDef, true);
-		});
-		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
-		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
-	}
-	async function updateTagsBlock(metaWrapper, meta) {
-		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
-	}
-	//#endregion
 	//#region typescript/filterTable.ts
 	async function filterTable(table, rowFilter) {
 		table = getElement(table);
@@ -32279,6 +32293,25 @@ Total Duration: ${a - u}ms`);
 		return tr.innerText.toLowerCase().includes(textFilter.toLowerCase());
 	}
 	//#endregion
+	//#region typescript/aanvragen/scrape.ts
+	function scrapePRs() {
+		gringo("Scraping...");
+		let infos = [...document.querySelectorAll("request-info-item")].map(scrapeInfoItem);
+		gringo(`Found ${infos.length} items.`);
+		if (infos.length > 0) document.body.dataset.gringoPageScraped = "true";
+		return infos;
+	}
+	function scrapeInfoItem(requestDiv) {
+		let id = requestDiv.id.substring(8);
+		let divOrders = requestDiv.querySelector(".item-orders");
+		let orderAnchors = [];
+		if (divOrders) orderAnchors = [...divOrders.querySelectorAll(".request-po-list-container ul > li a")];
+		return {
+			id,
+			orderAnchors
+		};
+	}
+	//#endregion
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -32422,12 +32455,7 @@ Total Duration: ${a - u}ms`);
 		document.querySelector("main").classList.add("hide");
 		fillTotalsTab();
 	}
-	async function decorateSearchPanel() {
-		let requestSearchPanel = document.querySelector(".request-search-panel");
-		let divSearchPanel = document.querySelector(`div.gringoSearchPanel`);
-		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel+div.gringoLeanListPanel`).first;
-		let tagsCollapse = await createSearchPanel(divSearchPanel, applyFilters);
-		let infoBlock = createInfoBlock(divSearchPanel);
+	function addTestButtons(tagsCollapse, infoBlock) {
 		let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last;
 		let ctx = {
 			counter: 0,
@@ -32454,6 +32482,12 @@ Total Duration: ${a - u}ms`);
 		btnTestExportToExcel.onclick = async (ev) => {
 			await exportPrItemsToExcel(infoBlock);
 		};
+	}
+	async function decorateSearchPanel() {
+		let requestSearchPanel = document.querySelector(".request-search-panel");
+		let divSearchPanel = document.querySelector(`div.gringoSearchPanel`);
+		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel+div.gringoLeanListPanel`).first;
+		addTestButtons(await createSearchPanel(divSearchPanel, applyFilters), createInfoBlock(divSearchPanel));
 		function onAribaFilterButton() {
 			let inputCurrentPage = getListTabDecoratedElement();
 			if (!inputCurrentPage) return;
@@ -32462,23 +32496,6 @@ Total Duration: ${a - u}ms`);
 		[...requestSearchPanel.querySelectorAll(".search-button-container button")].forEach((button) => {
 			button.addEventListener("click", onAribaFilterButton);
 		});
-	}
-	function scrapePRs() {
-		gringo("Scraping...");
-		let infos = [...document.querySelectorAll("request-info-item")].map(scrapeInfoItem);
-		gringo(`Found ${infos.length} items.`);
-		if (infos.length > 0) document.body.dataset.gringoPageScraped = "true";
-		return infos;
-	}
-	function scrapeInfoItem(requestDiv) {
-		let id = requestDiv.id.substring(8);
-		let divOrders = requestDiv.querySelector(".item-orders");
-		let orderAnchors = [];
-		if (divOrders) orderAnchors = [...divOrders.querySelectorAll(".request-po-list-container ul > li a")];
-		return {
-			id,
-			orderAnchors
-		};
 	}
 	function addOrderCopyButton(request) {
 		request.orderAnchors.forEach((a) => {
@@ -32516,21 +32533,7 @@ Total Duration: ${a - u}ms`);
 			gringo(`price is 0 for ${request.id}`, request, pr);
 		}
 	}
-	function paintTag(tagElement, tagDef, selected) {
-		tagElement.innerText = tagDef.name;
-		tagElement.classList.add("gringoTag");
-		tagElement.style.color = tagDef.color != "" ? tagDef.color : "inherit";
-		tagElement.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
-		tagElement.title = tagDef.description;
-		tagElement.classList.toggle("selected", selected);
-	}
 	let globalLastRequestTagsClicked = null;
-	async function displayMetaFields(container, meta) {
-		let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first;
-		await addTagsBlock(metaWrapper, meta);
-		await addDepartmentBlock(metaWrapper, meta);
-		return metaWrapper;
-	}
 	async function decoratePrWithMeta(request, meta) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;

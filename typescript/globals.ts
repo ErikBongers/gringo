@@ -2,6 +2,7 @@ import {Observer} from "./pageObserver";
 import {emmet} from "../libs/Emmeter/html";
 import {fetchGlobalSettings, GlobalSettings, options, setGlobalSetting} from "./plugin_options/options";
 import {Actions, sendRequest, TabType} from "./messaging";
+import {TagDef} from "./aanvragen/requests";
 
 export let observers: Observer[] = [];
 export let settingsObservers: (() => void)[] = [];
@@ -261,4 +262,13 @@ export type ElementOrSelector<T extends HTMLElement> = string | T;
 
 export function getElement<T extends HTMLElement>(container: ElementOrSelector<T>): T {
     return typeof container == "string" ? document.querySelector(container) as T : container;
+}
+
+export function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
+    tagElement.innerText = tagDef.name;
+    tagElement.classList.add("gringoTag");
+    tagElement.style.color = tagDef.color != "" ? tagDef.color : "inherit";
+    tagElement.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
+    tagElement.title = tagDef.description;
+    tagElement.classList.toggle("selected", selected);
 }

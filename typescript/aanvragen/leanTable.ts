@@ -2,9 +2,10 @@ import {fetchMetaCached, getPrDataList} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatDate, formatPrice} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
-import {applyFiltersForAribaTable, RequestBasicInfo} from "./observer";
+import {applyFiltersForAribaTable} from "./observer";
 import {filterTable, RowFilter} from "../filterTable";
 import {getTagsFilters, getTextFilter, matchTags, TagsFilter} from "./searchPanel";
+import {RequestBasicInfo} from "./scrape";
 
 export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
     let list = await getPrDataList();

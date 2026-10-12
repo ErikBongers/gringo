@@ -1,6 +1,6 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter";
-import {addButtonClickNoPropagation, createInfoBlock, formatPrice, gringo} from "../globals";
+import {addButtonClickNoPropagation, createInfoBlock, formatPrice, gringo, InfoBlock} from "../globals";
 import {fetchPr} from "../sap/api";
 import {createCompactPr} from "../aanvraag/observer";
 import {
@@ -12,16 +12,16 @@ import {
     fetchRequestList,
     fetchRequestListAndDetails,
     getPrDataList,
-    PrMeta,
-    TagDef
+    PrMeta
 } from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
 import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
 import {applyFiltersForLeanTable, createLeanListTable} from "./leanTable";
-import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
+import {displayMetaFields} from "./metaBlock";
 import {createSearchPanel, getTagsFilters, getTextFilter, matchTags} from "./searchPanel";
+import {RequestBasicInfo, scrapePRs} from "./scrape";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -225,6 +225,36 @@ function onTabButtonClick(tabContainer: HTMLDivElement) {
     fillTotalsTab();
 }
 
+function addTestButtons(tagsCollapse: HTMLDetailsElement, infoBlock: InfoBlock) {
+    let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
+    let ctx: FetchListContext = {
+        counter: 0,
+        infoBlock
+    }
+    btnTestFetch.onclick = async (ev) => {
+        if (globalLastRequestTagsClicked)
+            await fetchFullRequest(globalLastRequestTagsClicked.id, ctx);
+    };
+    let btnTestRequestList = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch all}`).last as HTMLButtonElement;
+    btnTestRequestList.onclick = async (ev) => {
+        await fetchRequestList();
+    };
+    let btnTestListData = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch list data}`).last as HTMLButtonElement;
+    btnTestListData.onclick = async (ev) => {
+        let list = await getPrDataList();
+        gringo("lizst");
+        console.log(list);
+    };
+    let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last as HTMLButtonElement;
+    btnTestRequestListAndDetails.onclick = async (ev) => {
+        await fetchRequestListAndDetails(infoBlock);
+    };
+    let btnTestExportToExcel = emmet.appendChild(tagsCollapse, `div>button#btnTestExportToExcel{TEST Export to Excel}`).last as HTMLButtonElement;
+    btnTestExportToExcel.onclick = async (ev) => {
+        await exportPrItemsToExcel(infoBlock);
+    };
+}
+
 async function decorateSearchPanel() {
     let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
     let divSearchPanel = document.querySelector(`div.gringoSearchPanel`) as HTMLDivElement | null;
@@ -234,33 +264,7 @@ async function decorateSearchPanel() {
     }
     let tagsCollapse = await createSearchPanel(divSearchPanel, applyFilters);
     let infoBlock = createInfoBlock(divSearchPanel);
-    let btnTestFetch = emmet.appendChild(tagsCollapse,`div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
-    let ctx: FetchListContext = {
-        counter: 0,
-        infoBlock
-    }
-    btnTestFetch.onclick = async (ev) => {
-        if(globalLastRequestTagsClicked)
-            await fetchFullRequest(globalLastRequestTagsClicked.id, ctx);
-    };
-    let btnTestRequestList = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestList{TEST Fetch all}`).last as HTMLButtonElement;
-    btnTestRequestList.onclick = async (ev) => {
-        await fetchRequestList();
-    };
-    let btnTestListData = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestList{TEST Fetch list data}`).last as HTMLButtonElement;
-    btnTestListData.onclick = async (ev) => {
-        let list = await getPrDataList();
-        gringo("lizst");
-        console.log(list);
-    };
-    let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse,`div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last as HTMLButtonElement;
-    btnTestRequestListAndDetails.onclick = async (ev) => {
-        await fetchRequestListAndDetails(infoBlock);
-    };
-    let btnTestExportToExcel = emmet.appendChild(tagsCollapse,`div>button#btnTestExportToExcel{TEST Export to Excel}`).last as HTMLButtonElement;
-    btnTestExportToExcel.onclick = async (ev) => {
-        await exportPrItemsToExcel(infoBlock);
-    };
+    addTestButtons(tagsCollapse, infoBlock);
 
     function onAribaFilterButton() {
         let inputCurrentPage = getListTabDecoratedElement();
@@ -273,32 +277,6 @@ async function decorateSearchPanel() {
             button.addEventListener("click", onAribaFilterButton);
         });
 
-}
-
-function scrapePRs() {
-    gringo("Scraping...");
-    let requestsDivs = document.querySelectorAll("request-info-item") as NodeListOf<HTMLElement>;
-    let infos = [...requestsDivs].map(scrapeInfoItem);
-    gringo(`Found ${infos.length} items.`);
-    if(infos.length > 0)
-        document.body.dataset.gringoPageScraped = "true";
-    // globalPrs = infos;
-    return infos;
-}
-
-export type RequestBasicInfo = {
-    id: string,
-    orderAnchors: HTMLAnchorElement[],
-}
-
-function scrapeInfoItem(requestDiv: HTMLElement): RequestBasicInfo {
-    let id = requestDiv.id.substring("request-".length);
-    let divOrders = requestDiv.querySelector(".item-orders");
-    let orderAnchors: HTMLAnchorElement[] = [];
-    if(divOrders) {
-         orderAnchors = [...divOrders.querySelectorAll(".request-po-list-container ul > li a") as NodeListOf<HTMLAnchorElement>];
-    }
-    return {id, orderAnchors};
 }
 
 function addOrderCopyButton(request: RequestBasicInfo) {
@@ -350,23 +328,7 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
 
 }
 
-export function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
-    tagElement.innerText = tagDef.name;
-    tagElement.classList.add("gringoTag");
-    tagElement.style.color = tagDef.color != "" ? tagDef.color : "inherit";
-    tagElement.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
-    tagElement.title = tagDef.description;
-    tagElement.classList.toggle("selected", selected);
-}
-
 let globalLastRequestTagsClicked: RequestBasicInfo | null = null;
-
-export async function displayMetaFields(container: HTMLDivElement, meta: PrMeta) {
-    let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first as HTMLDivElement;
-    await addTagsBlock(metaWrapper, meta);
-    await addDepartmentBlock(metaWrapper, meta);
-    return metaWrapper;
-}
 
 async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     let reqDiv = document.getElementById("request-" + request.id);

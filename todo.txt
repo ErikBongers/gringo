@@ -1,3 +1,7 @@
+* Lean lists refills on every pagination.
+  > detect a full page or tab refresh vs a pagination.
+    > do this generally, so these 'events' can be used througout observer.ts
+
 PR Overview filters
 ====================
 save filters?
