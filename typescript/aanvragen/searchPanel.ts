@@ -30,7 +30,7 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
     let searchField = createSearchField("searchText", ev => {
         saveTextFilter((ev.currentTarget as HTMLInputElement).value);
         applyFilters();
-    }, ""); //todo: add saved search value.
+    }, getTextFilter());
     divSearchPanel.querySelector(".searchTextWrapper")!.appendChild(searchField);
     updateFilters();
     return tagsCollapse;
@@ -50,8 +50,7 @@ export function createSearchField(id: string, onSearchInput: (ev: Event) => any,
     let { first: clearButton } = emmet.appendChild(span, `button>img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"`);
     (clearButton as HTMLElement).onclick = () => {
         input.value = "";
-        // @ts-ignore
-        input.oninput(undefined);
+        input.dispatchEvent(new Event("input"));
         input.focus();
     };
     return span;

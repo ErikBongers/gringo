@@ -32094,7 +32094,7 @@ Total Duration: ${a - u}ms`);
 		let searchField = createSearchField("searchText", (ev) => {
 			saveTextFilter(ev.currentTarget.value);
 			applyFilters();
-		}, "");
+		}, getTextFilter());
 		divSearchPanel.querySelector(".searchTextWrapper").appendChild(searchField);
 		updateFilters();
 		return tagsCollapse;
@@ -32113,7 +32113,7 @@ Total Duration: ${a - u}ms`);
 		let { first: clearButton } = emmet.appendChild(span, `button>img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"`);
 		clearButton.onclick = () => {
 			input.value = "";
-			input.oninput(void 0);
+			input.dispatchEvent(new Event("input"));
 			input.focus();
 		};
 		return span;
