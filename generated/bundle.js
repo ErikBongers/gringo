@@ -569,7 +569,10 @@
 	}
 	//#endregion
 	//#region typescript/plugin_options/options.ts
-	const options = { showDebug: false };
+	const options = {
+		showDebug: false,
+		showLeanRequests: false
+	};
 	let defaultGlobalSettings = {
 		projects: [],
 		tagDefs: structuredClone([{
@@ -623,6 +626,7 @@
 		let items = await chrome.storage.sync.get(null);
 		Object.assign(options, items);
 		setGlobalSetting(await fetchGlobalSettings());
+		return options;
 	}
 	function escapeRegexChars(text) {
 		return text.replaceAll("\\", "\\\\").replaceAll("^", "\\^").replaceAll("$", "\\$").replaceAll(".", "\\.").replaceAll("|", "\\|").replaceAll("?", "\\?").replaceAll("*", "\\*").replaceAll("+", "\\+").replaceAll("(", "\\(").replaceAll(")", "\\)").replaceAll("[", "\\[").replaceAll("]", "\\]").replaceAll("{", "\\{").replaceAll("}", "\\}");
@@ -32367,7 +32371,7 @@ Total Duration: ${a - u}ms`);
 		checkAndSetDecoration(document.querySelector("main"), decorateMain);
 		checkAndSetDecoration(checkandGetTabsFilled(), decorateTabs);
 		checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
-		checkAndSetDecoration(getListTabDecoratedElement(), decorateRequestList, checkAndSetListPageDecorated);
+		checkAndSetDecoration(getListTabDecoratedElement(), decoratePagination, checkAndSetListPageDecorated);
 	}
 	function decorateBody() {}
 	function checkRecentRequestsDecorations() {
@@ -32397,7 +32401,7 @@ Total Duration: ${a - u}ms`);
 		if (!document.querySelector("request-info-requisitions")) return null;
 		return getPagination()?.currentPageElement ?? null;
 	}
-	function decorateRequestList() {
+	function decoratePagination() {
 		let main = document.querySelector("main");
 		if (!main) return;
 		main.classList.toggle("hideOnBehalfOf", true);
@@ -32405,12 +32409,14 @@ Total Duration: ${a - u}ms`);
 		let requests = scrapePRs();
 		fetchChangedMetas().then(async (changedFiles) => {
 			gringo(changedFiles);
-			let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`);
-			if (!divLeanListPanel) {
-				let requestSearchPanel = document.querySelector(".request-search-panel");
-				divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first;
+			if ((await getOptions()).showLeanRequests) {
+				let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`);
+				if (!divLeanListPanel) {
+					let requestSearchPanel = document.querySelector(".request-search-panel");
+					divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first;
+				}
+				await createLeanListTable(divLeanListPanel);
 			}
-			await createLeanListTable(divLeanListPanel);
 			await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map((f) => f.data));
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
@@ -32559,7 +32565,7 @@ Total Duration: ${a - u}ms`);
 	}
 	async function applyFilters(requests) {
 		await applyFiltersForAribaTable(requests);
-		await applyFiltersForLeanTable();
+		if (options.showLeanRequests) await applyFiltersForLeanTable();
 	}
 	async function applyFiltersForAribaTable(requests) {
 		gringo("Applying filters...");

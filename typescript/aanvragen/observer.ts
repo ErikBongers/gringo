@@ -1,6 +1,6 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter";
-import {addButtonClickNoPropagation, createInfoBlock, formatPrice, gringo, InfoBlock} from "../globals";
+import {addButtonClickNoPropagation, createInfoBlock, formatPrice, getOptions, gringo, InfoBlock} from "../globals";
 import {fetchPr} from "../sap/api";
 import {createCompactPr} from "../aanvraag/observer";
 import {
@@ -22,6 +22,7 @@ import {applyFiltersForLeanTable, createLeanListTable} from "./leanTable";
 import {displayMetaFields} from "./metaBlock";
 import {createSearchPanel, getTagsFilters, getTextFilter, matchTags} from "./searchPanel";
 import {RequestBasicInfo, scrapePRs} from "./scrape";
+import {options} from "../plugin_options/options";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -163,12 +164,15 @@ function decoratePagination() {
     fetchChangedMetas().then(async (changedFiles) => {
         gringo(changedFiles);
 
-        let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`) as HTMLDivElement | null;
-        if(!divLeanListPanel) {
-            let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
-            divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first as HTMLDivElement;
+        let options = await getOptions();
+        if(options.showLeanRequests) {
+            let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`) as HTMLDivElement | null;
+            if (!divLeanListPanel) {
+                let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
+                divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first as HTMLDivElement;
+            }
+            await createLeanListTable(divLeanListPanel);
         }
-        await createLeanListTable(divLeanListPanel);
 
         await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map(f => f.data));
         requests.forEach(decoratePr);
@@ -361,7 +365,9 @@ export function hideFloatingHelp() {
 
 export async function applyFilters(requests?: RequestBasicInfo[]) {
     await applyFiltersForAribaTable(requests);
-    await applyFiltersForLeanTable();
+    if(options.showLeanRequests) {
+        await applyFiltersForLeanTable();
+    }
 }
 
 export async function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {

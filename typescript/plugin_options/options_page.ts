@@ -1,5 +1,14 @@
-import {emmet} from "../../libs/Emmeter/html";
-import {defineHtmlOptions, fetchGlobalSettings, getGlobalSettingsCached, GlobalSettings, htmlOptionDefs, options, saveGlobalSettings, setGlobalSetting} from "./options";
+import {emmet} from "../../libs/Emmeter";
+import {
+    defineHtmlOptions,
+    fetchGlobalSettings,
+    getGlobalSettingsCached,
+    GlobalSettings,
+    htmlOptionDefs,
+    options,
+    saveGlobalSettings,
+    setGlobalSetting
+} from "./options";
 import {TagDef} from "../aanvragen/requests";
 
 defineHtmlOptions();

@@ -567,9 +567,13 @@
 	}
 	//#endregion
 	//#region typescript/plugin_options/options.ts
-	const options = { showDebug: false };
+	const options = {
+		showDebug: false,
+		showLeanRequests: false
+	};
 	function defineHtmlOptions() {
 		defineHtmlOption("showDebug", "checked", "Show debug info in console.", "block3");
+		defineHtmlOption("showLeanRequests", "checked", "Show lean requests.", "block3");
 	}
 	let htmlOptionDefs = /* @__PURE__ */ new Map();
 	function defineHtmlOption(id, property, label, blockId) {

@@ -117,6 +117,7 @@ export async function getOptions() {
     // xxx @ts-ignore
     Object.assign(options, items);
     setGlobalSetting(await fetchGlobalSettings());
+    return options;
 }
 
 export function arrayIsEqual(a: string[], b: string[]) {
