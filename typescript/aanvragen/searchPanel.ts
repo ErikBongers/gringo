@@ -16,9 +16,7 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
             summary
                 div.flexRow
                     span{Tags}
-                    div.flexRight
-                        label{Search:}
-                        input#searchText
+                    div.flexRight.searchTextWrapper
             table#tagsFilterTable
                 tbody
     `).first as HTMLDetailsElement;
@@ -29,8 +27,39 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
         .forEach(tagDef => {
             createTagFilterRow(tbody, tagDef, applyFilters);
         });
-    updateTagsFilters(getTagsFilters());
+    let searchField = createSearchField("searchText", ev => {
+        saveTextFilter((ev.currentTarget as HTMLInputElement).value);
+        applyFilters();
+    }, ""); //todo: add saved search value.
+    divSearchPanel.querySelector(".searchTextWrapper")!.appendChild(searchField);
+    updateFilters();
     return tagsCollapse;
+}
+
+export function createSearchField(id: string, onSearchInput: (ev: Event) => any, value: string) {
+    let input = document.createElement("input");
+    input.type = "text";
+    input.id = id;
+    input.classList.add("tableFilter");
+    input.oninput = onSearchInput;
+    input.value = value;
+    input.placeholder = "filter";
+    let span = document.createElement("span");
+    span.classList.add("searchButton");
+    span.appendChild(input);
+    let { first: clearButton } = emmet.appendChild(span, `button>img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"`);
+    (clearButton as HTMLElement).onclick = () => {
+        input.value = "";
+        // @ts-ignore
+        input.oninput(undefined);
+        input.focus();
+    };
+    return span;
+}
+
+function updateFilters() {
+    updateTagsFilters(getTagsFilters());
+    saveTextFilter(getTextFilter());
 }
 
 export function updateTagsFilters(filters: TagsFilter[]) {
@@ -87,6 +116,7 @@ function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef, appl
     };
 }
 
+//todo: combine all filters in one json.
 export function getTagsFilters() {
     let json = localStorage.getItem('gringo.tagsFilters');
     if (!json)
@@ -94,8 +124,19 @@ export function getTagsFilters() {
     return JSON.parse(json) as TagsFilter[];
 }
 
+export function getTextFilter() {
+    let text = localStorage.getItem('gringo.textFilter');
+    if (!text)
+        return "";
+    return text;
+}
+
 function saveTagsFilters(tagsFilters: TagsFilter[]) {
     localStorage.setItem('gringo.tagsFilters', JSON.stringify(tagsFilters));
+}
+
+function saveTextFilter(textFilter: string) {
+    localStorage.setItem('gringo.textFilter', textFilter);
 }
 
 export async function matchTags(prId: string, selectedTags: TagsFilter[], excludedTags: TagsFilter[]) {

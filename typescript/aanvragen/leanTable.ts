@@ -4,7 +4,7 @@ import {acronym, formatDate, formatPrice} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
 import {applyFiltersForAribaTable, RequestBasicInfo} from "./observer";
 import {filterTable, RowFilter} from "../filterTable";
-import {getTagsFilters, matchTags, TagsFilter} from "./searchPanel";
+import {getTagsFilters, getTextFilter, matchTags, TagsFilter} from "./searchPanel";
 
 export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
     let list = await getPrDataList();
@@ -77,18 +77,27 @@ function createPoUrl(uniqueName: string) {
 export async function applyFiltersForLeanTable() {
     let table = document.querySelector("table.leanPrList") as HTMLTableElement;
     //todo: next 3 lines are duplicate with ariba filter function.
-    let filters = getTagsFilters();
-    let selectedTags = filters.filter(t => t.filterType == "==");
-    let excludedTags = filters.filter(t => t.filterType == "!=");
+    let tagsFilters = getTagsFilters();
+    let textFilter = getTextFilter();
+    let selectedTags = tagsFilters.filter(t => t.filterType == "==");
+    let excludedTags = tagsFilters.filter(t => t.filterType == "!=");
     let rowFilter: RowFilter = {
         context: {},
         rowFilter: (tr: HTMLTableRowElement)=>
-            leanRowFilter(tr, selectedTags, excludedTags)
+            leanRowFilter(tr, selectedTags, excludedTags, textFilter)
     }
     await filterTable(table, rowFilter);
 }
 
-async function leanRowFilter(tr: HTMLTableRowElement, selectedTags: TagsFilter[], excludedTags: TagsFilter[]) {
+async function leanRowFilter(tr: HTMLTableRowElement, selectedTags: TagsFilter[], excludedTags: TagsFilter[], textFilter: string) {
     let prId = tr.dataset.prId!; //! must be set
-    return matchTags(prId, selectedTags, excludedTags)
+    let matchingText = matchText(tr, textFilter);
+    let matchingTags = await matchTags(prId, selectedTags, excludedTags);
+    return matchingTags && matchingText;
+}
+
+function matchText(tr: HTMLTableRowElement, textFilter: string) {
+    if(!textFilter)
+        return true;
+    return tr.innerText.toLowerCase().includes(textFilter.toLowerCase());
 }

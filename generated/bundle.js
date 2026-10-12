@@ -32083,9 +32083,7 @@ Total Duration: ${a - u}ms`);
             summary
                 div.flexRow
                     span{Tags}
-                    div.flexRight
-                        label{Search:}
-                        input#searchText
+                    div.flexRight.searchTextWrapper
             table#tagsFilterTable
                 tbody
     `).first;
@@ -32093,8 +32091,36 @@ Total Duration: ${a - u}ms`);
 		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			createTagFilterRow(tbody, tagDef, applyFilters);
 		});
-		updateTagsFilters(getTagsFilters());
+		let searchField = createSearchField("searchText", (ev) => {
+			saveTextFilter(ev.currentTarget.value);
+			applyFilters();
+		}, "");
+		divSearchPanel.querySelector(".searchTextWrapper").appendChild(searchField);
+		updateFilters();
 		return tagsCollapse;
+	}
+	function createSearchField(id, onSearchInput, value) {
+		let input = document.createElement("input");
+		input.type = "text";
+		input.id = id;
+		input.classList.add("tableFilter");
+		input.oninput = onSearchInput;
+		input.value = value;
+		input.placeholder = "filter";
+		let span = document.createElement("span");
+		span.classList.add("searchButton");
+		span.appendChild(input);
+		let { first: clearButton } = emmet.appendChild(span, `button>img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"`);
+		clearButton.onclick = () => {
+			input.value = "";
+			input.oninput(void 0);
+			input.focus();
+		};
+		return span;
+	}
+	function updateFilters() {
+		updateTagsFilters(getTagsFilters());
+		saveTextFilter(getTextFilter());
 	}
 	function updateTagsFilters(filters) {
 		let table = document.getElementById("tagsFilterTable");
@@ -32148,8 +32174,16 @@ Total Duration: ${a - u}ms`);
 		if (!json) return [];
 		return JSON.parse(json);
 	}
+	function getTextFilter() {
+		let text = localStorage.getItem("gringo.textFilter");
+		if (!text) return "";
+		return text;
+	}
 	function saveTagsFilters(tagsFilters) {
 		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
+	}
+	function saveTextFilter(textFilter) {
+		localStorage.setItem("gringo.textFilter", textFilter);
 	}
 	async function matchTags(prId, selectedTags, excludedTags) {
 		let meta = await fetchMetaCached(prId);
@@ -32222,18 +32256,24 @@ Total Duration: ${a - u}ms`);
 	}
 	async function applyFiltersForLeanTable() {
 		let table = document.querySelector("table.leanPrList");
-		let filters = getTagsFilters();
-		let selectedTags = filters.filter((t) => t.filterType == "==");
-		let excludedTags = filters.filter((t) => t.filterType == "!=");
+		let tagsFilters = getTagsFilters();
+		let textFilter = getTextFilter();
+		let selectedTags = tagsFilters.filter((t) => t.filterType == "==");
+		let excludedTags = tagsFilters.filter((t) => t.filterType == "!=");
 		await filterTable(table, {
 			context: {},
-			rowFilter: (tr) => leanRowFilter(tr, selectedTags, excludedTags)
+			rowFilter: (tr) => leanRowFilter(tr, selectedTags, excludedTags, textFilter)
 		});
 	}
-	async function leanRowFilter(tr, selectedTags, excludedTags) {
+	async function leanRowFilter(tr, selectedTags, excludedTags, textFilter) {
 		let prId = tr.dataset.prId;
 		//! must be set
-		return matchTags(prId, selectedTags, excludedTags);
+		let matchingText = matchText$1(tr, textFilter);
+		return await matchTags(prId, selectedTags, excludedTags) && matchingText;
+	}
+	function matchText$1(tr, textFilter) {
+		if (!textFilter) return true;
+		return tr.innerText.toLowerCase().includes(textFilter.toLowerCase());
 	}
 	//#endregion
 	//#region typescript/aanvragen/observer.ts
@@ -32329,6 +32369,12 @@ Total Duration: ${a - u}ms`);
 		let requests = scrapePRs();
 		fetchChangedMetas().then(async (changedFiles) => {
 			gringo(changedFiles);
+			let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`);
+			if (!divLeanListPanel) {
+				let requestSearchPanel = document.querySelector(".request-search-panel");
+				divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first;
+			}
+			await createLeanListTable(divLeanListPanel);
 			await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map((f) => f.data));
 			requests.forEach(decoratePr);
 			await applyFilters(requests);
@@ -32376,12 +32422,7 @@ Total Duration: ${a - u}ms`);
 	async function decorateSearchPanel() {
 		let requestSearchPanel = document.querySelector(".request-search-panel");
 		let divSearchPanel = document.querySelector(`div.gringoSearchPanel`);
-		let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`);
-		if (!divSearchPanel) {
-			let result = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel+div.gringoLeanListPanel`);
-			divSearchPanel = result.first;
-			divLeanListPanel = result.last;
-		}
+		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel+div.gringoLeanListPanel`).first;
 		let tagsCollapse = await createSearchPanel(divSearchPanel, applyFilters);
 		let infoBlock = createInfoBlock(divSearchPanel);
 		let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last;
@@ -32418,8 +32459,6 @@ Total Duration: ${a - u}ms`);
 		[...requestSearchPanel.querySelectorAll(".search-button-container button")].forEach((button) => {
 			button.addEventListener("click", onAribaFilterButton);
 		});
-		await createLeanListTable(divLeanListPanel);
-		//! should be filled
 	}
 	function scrapePRs() {
 		gringo("Scraping...");
@@ -32519,14 +32558,21 @@ Total Duration: ${a - u}ms`);
 	async function applyFiltersForAribaTable(requests) {
 		gringo("Applying filters...");
 		if (!requests) requests = scrapePRs();
-		let filters = getTagsFilters();
-		let selectedTags = filters.filter((t) => t.filterType == "==");
-		let excludedTags = filters.filter((t) => t.filterType == "!=");
+		let tagsFilters = getTagsFilters();
+		let textFilter = getTextFilter();
+		let selectedTags = tagsFilters.filter((t) => t.filterType == "==");
+		let excludedTags = tagsFilters.filter((t) => t.filterType == "!=");
 		for (let request of requests) {
 			let reqDiv = document.getElementById("request-" + request.id);
 			if (!reqDiv) continue;
-			reqDiv.classList.toggle("hidden", !await matchTags(request.id, selectedTags, excludedTags));
+			let matchingTags = await matchTags(request.id, selectedTags, excludedTags);
+			let matchingText = matchText(reqDiv, textFilter);
+			reqDiv.classList.toggle("hidden", !(matchingTags && matchingText));
 		}
+	}
+	function matchText(reqDiv, textFilter) {
+		if (!textFilter) return true;
+		return reqDiv.innerText.toLowerCase().includes(textFilter.toLowerCase());
 	}
 	//#endregion
 	//#region typescript/main.ts

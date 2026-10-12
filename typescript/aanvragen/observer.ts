@@ -21,7 +21,7 @@ import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
 import {applyFiltersForLeanTable, createLeanListTable} from "./leanTable";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
-import {createSearchPanel, getTagsFilters, matchTags} from "./searchPanel";
+import {createSearchPanel, getTagsFilters, getTextFilter, matchTags} from "./searchPanel";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -152,6 +152,7 @@ function gotoNextPage(pagination: HTMLElement) {
 }
 
 function decorateRequestList() {
+
     let main = document.querySelector("main");
     if(!main)
         return;
@@ -162,6 +163,14 @@ function decorateRequestList() {
 
     fetchChangedMetas().then(async (changedFiles) => {
         gringo(changedFiles);
+
+        let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`) as HTMLDivElement | null;
+        if(!divLeanListPanel) {
+            let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
+            divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first as HTMLDivElement;
+        }
+        await createLeanListTable(divLeanListPanel);
+
         await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map(f => f.data));
         requests.forEach(decoratePr);
         await applyFilters(requests);
@@ -219,11 +228,9 @@ function onTabButtonClick(tabContainer: HTMLDivElement) {
 async function decorateSearchPanel() {
     let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
     let divSearchPanel = document.querySelector(`div.gringoSearchPanel`) as HTMLDivElement | null;
-    let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`) as HTMLDivElement | null;
     if(!divSearchPanel) {
         let result = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel+div.gringoLeanListPanel`);
         divSearchPanel = result.first as HTMLDivElement;
-        divLeanListPanel = result.last as HTMLDivElement;
     }
     let tagsCollapse = await createSearchPanel(divSearchPanel, applyFilters);
     let infoBlock = createInfoBlock(divSearchPanel);
@@ -266,7 +273,6 @@ async function decorateSearchPanel() {
             button.addEventListener("click", onAribaFilterButton);
         });
 
-    await createLeanListTable(divLeanListPanel!); //! should be filled
 }
 
 function scrapePRs() {
@@ -401,13 +407,22 @@ export async function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
     gringo("Applying filters...");
     if(!requests)
         requests = scrapePRs();
-    let filters = getTagsFilters();
-    let selectedTags = filters.filter(t => t.filterType == "==");
-    let excludedTags = filters.filter(t => t.filterType == "!=");
+    let tagsFilters = getTagsFilters();
+    let textFilter = getTextFilter();
+    let selectedTags = tagsFilters.filter(t => t.filterType == "==");
+    let excludedTags = tagsFilters.filter(t => t.filterType == "!=");
     for (let request of requests) {
         let reqDiv = document.getElementById("request-" + request.id);
         if (!reqDiv)
             continue;
-        reqDiv.classList.toggle("hidden", !(await matchTags(request.id, selectedTags, excludedTags)));
+        let matchingTags = await matchTags(request.id, selectedTags, excludedTags);
+        let matchingText = matchText(reqDiv, textFilter);
+        reqDiv.classList.toggle("hidden", !(matchingTags && matchingText) );
     }
+}
+
+function matchText(reqDiv: HTMLElement, textFilter: string) {
+    if(!textFilter)
+        return true;
+    return reqDiv.innerText.toLowerCase().includes(textFilter.toLowerCase());
 }
