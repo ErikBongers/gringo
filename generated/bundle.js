@@ -29771,8 +29771,9 @@ Total Duration: ${a - u}ms`);
 		localStorage.setItem(KEY_LAST_FETCHED_METAS, zFetchedDate);
 		return changedMetas;
 	}
-	async function fetchMetaCached(prId) {
-		let localMeta = await (await getLocalCache()).PrMetas.get(prId);
+	async function fetchMetaCached(prId, prMetas) {
+		if (!prMetas) prMetas = (await getLocalCache()).PrMetas;
+		let localMeta = await prMetas.get(prId);
 		if (localMeta) return localMeta;
 		let meta = {
 			prId,
@@ -31334,8 +31335,9 @@ Total Duration: ${a - u}ms`);
 			"budget"
 		];
 		let rows = [];
+		let prMetas = (await getLocalCache()).PrMetas;
 		for (let item of jsonPrData.items) {
-			let meta = await fetchMetaCached(item.prId);
+			let meta = await fetchMetaCached(item.prId, prMetas);
 			let row = [];
 			row.push(item.prId);
 			row.push(item.status);
@@ -31364,7 +31366,7 @@ Total Duration: ${a - u}ms`);
 			let bruto = 0;
 			bruto = calcBrutoLinePrice(await createExpandedCompactPrItem(createCompactReqItem(item.item)));
 			let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
-			let meta = await fetchMetaCached(pr.pr.reqId);
+			let meta = await fetchMetaCached(pr.pr.reqId, (await getLocalCache()).PrMetas);
 			meta.project;
 			meta.tags.join(",");
 			let title = pr.pr.title.value;
@@ -31857,8 +31859,9 @@ Total Duration: ${a - u}ms`);
 	}
 	async function onCopyToClipboardClicked(ev) {}
 	async function createProjectItemGroups(expenses) {
+		let prMetas = (await getLocalCache()).PrMetas;
 		return [...(await getItemsPerGroup(expenses, async (item) => {
-			return (await fetchMetaCached(item.prId)).project ?? "";
+			return (await fetchMetaCached(item.prId, prMetas)).project ?? "";
 		}, (await getGlobalSettingsCached()).projects)).entries()].map((mappedItem) => {
 			let groupId = mappedItem[0];
 			let items = mappedItem[1].map((item) => {
@@ -31914,7 +31917,7 @@ Total Duration: ${a - u}ms`);
 			let groupItems = [];
 			for (let item of items.items) {
 				if (!item.tags) {
-					let meta = await fetchMetaCached(item.item.prId);
+					let meta = await fetchMetaCached(item.item.prId, (await getLocalCache()).PrMetas);
 					item.tags = new Set(meta.tags);
 				}
 				let matchingTags = tagSet.intersection(item.tags);
@@ -31939,7 +31942,7 @@ Total Duration: ${a - u}ms`);
 		let popover = showPopover("totalsPrPopover", anchorTo);
 		popover.innerHTML = "";
 		popover.classList.add("gringoPopover", "popoverPosBottomLeft");
-		let meta = await fetchMetaCached(item.prId);
+		let meta = await fetchMetaCached(item.prId, (await getLocalCache()).PrMetas);
 		emmet.indent.appendChild(popover, `
             div.content
                 button.naked.goto{${item.prId}}
@@ -32206,11 +32209,10 @@ Total Duration: ${a - u}ms`);
 	function saveTextFilter(textFilter) {
 		localStorage.setItem("gringo.textFilter", textFilter);
 	}
-	async function matchTags(prId, selectedTags, excludedTags) {
-		let meta = await fetchMetaCached(prId);
-		let hasAllSelectedTags = selectedTags.every((t) => meta.tags.includes(t.name));
-		let hasNoExcludedTags = excludedTags.every((t) => !meta.tags.includes(t.name));
-		return hasAllSelectedTags && hasNoExcludedTags;
+	async function matchTags(prId, selectedTags, excludedTags, prMetas) {
+		let meta = await fetchMetaCached(prId, prMetas);
+		if (!selectedTags.every((t) => meta.tags.includes(t.name))) return false;
+		return excludedTags.every((t) => !meta.tags.includes(t.name));
 	}
 	//#endregion
 	//#region typescript/aanvragen/leanTable.ts
@@ -32281,20 +32283,21 @@ Total Duration: ${a - u}ms`);
 		let textFilter = getTextFilter();
 		let selectedTags = tagsFilters.filter((t) => t.filterType == "==");
 		let excludedTags = tagsFilters.filter((t) => t.filterType == "!=");
+		let prMetas = (await getLocalCache()).PrMetas;
 		await filterTable(table, {
 			context: {},
-			rowFilter: (tr) => leanRowFilter(tr, selectedTags, excludedTags, textFilter)
+			rowFilter: (tr) => leanRowFilter(tr, selectedTags, excludedTags, textFilter.toLowerCase(), prMetas)
 		});
 	}
-	async function leanRowFilter(tr, selectedTags, excludedTags, textFilter) {
+	async function leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas) {
 		let prId = tr.dataset.prId;
 		//! must be set
-		let matchingText = matchText$1(tr, textFilter);
-		return await matchTags(prId, selectedTags, excludedTags) && matchingText;
+		if (!matchText$1(tr, textFilter)) return false;
+		return await matchTags(prId, selectedTags, excludedTags, prMetas);
 	}
 	function matchText$1(tr, textFilter) {
 		if (!textFilter) return true;
-		return tr.innerText.toLowerCase().includes(textFilter.toLowerCase());
+		return tr.innerText.toLowerCase().includes(textFilter);
 	}
 	//#endregion
 	//#region typescript/aanvragen/scrape.ts
@@ -32520,7 +32523,7 @@ Total Duration: ${a - u}ms`);
 		if (reqDiv.dataset.gringo == "decorated") return;
 		reqDiv.dataset.gringo = "decorated";
 		addOrderCopyButton(request);
-		let meta = await fetchMetaCached(request.id);
+		let meta = await fetchMetaCached(request.id, (await getLocalCache()).PrMetas);
 		await decoratePrWithMeta(request, meta);
 		await updatePrLine(request, meta);
 	}
@@ -32574,10 +32577,11 @@ Total Duration: ${a - u}ms`);
 		let textFilter = getTextFilter();
 		let selectedTags = tagsFilters.filter((t) => t.filterType == "==");
 		let excludedTags = tagsFilters.filter((t) => t.filterType == "!=");
+		let prMetas = (await getLocalCache()).PrMetas;
 		for (let request of requests) {
 			let reqDiv = document.getElementById("request-" + request.id);
 			if (!reqDiv) continue;
-			let matchingTags = await matchTags(request.id, selectedTags, excludedTags);
+			let matchingTags = await matchTags(request.id, selectedTags, excludedTags, prMetas);
 			let matchingText = matchText(reqDiv, textFilter);
 			reqDiv.classList.toggle("hidden", !(matchingTags && matchingText));
 		}

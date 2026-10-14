@@ -1,11 +1,11 @@
-import {fetchMetaCached, getPrDataList} from "./requests";
+import {getPrDataList} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatDate, formatPrice} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
-import {applyFiltersForAribaTable} from "./observer";
 import {filterTable, RowFilter} from "../filterTable";
 import {getTagsFilters, getTextFilter, matchTags, TagsFilter} from "./searchPanel";
-import {RequestBasicInfo} from "./scrape";
+import {Repository} from "../db/idb/repository";
+import {getLocalCache, LocalDb} from "../db/idb/localDb";
 
 export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
     let list = await getPrDataList();
@@ -82,23 +82,25 @@ export async function applyFiltersForLeanTable() {
     let textFilter = getTextFilter();
     let selectedTags = tagsFilters.filter(t => t.filterType == "==");
     let excludedTags = tagsFilters.filter(t => t.filterType == "!=");
+    let prMetas = (await getLocalCache()).PrMetas;
     let rowFilter: RowFilter = {
         context: {},
         rowFilter: (tr: HTMLTableRowElement)=>
-            leanRowFilter(tr, selectedTags, excludedTags, textFilter)
+            leanRowFilter(tr, selectedTags, excludedTags, textFilter.toLowerCase(), prMetas)
     }
     await filterTable(table, rowFilter);
 }
 
-async function leanRowFilter(tr: HTMLTableRowElement, selectedTags: TagsFilter[], excludedTags: TagsFilter[], textFilter: string) {
+async function leanRowFilter(tr: HTMLTableRowElement, selectedTags: TagsFilter[], excludedTags: TagsFilter[], textFilter: string, prMetas: Repository<LocalDb, "PrMetas">) {
     let prId = tr.dataset.prId!; //! must be set
     let matchingText = matchText(tr, textFilter);
-    let matchingTags = await matchTags(prId, selectedTags, excludedTags);
-    return matchingTags && matchingText;
+    if (!matchingText)
+        return false;
+    return await matchTags(prId, selectedTags, excludedTags, prMetas);
 }
 
 function matchText(tr: HTMLTableRowElement, textFilter: string) {
     if(!textFilter)
         return true;
-    return tr.innerText.toLowerCase().includes(textFilter.toLowerCase());
+    return tr.innerText.toLowerCase().includes(textFilter);
 }

@@ -302,7 +302,7 @@ async function decoratePr(request: RequestBasicInfo) {
         return;
     reqDiv.dataset.gringo = "decorated";
     addOrderCopyButton(request);
-    let meta = await fetchMetaCached(request.id);
+    let meta = await fetchMetaCached(request.id, (await getLocalCache()).PrMetas);
     await decoratePrWithMeta(request, meta);
     await updatePrLine(request, meta);
 }
@@ -378,11 +378,12 @@ export async function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
     let textFilter = getTextFilter();
     let selectedTags = tagsFilters.filter(t => t.filterType == "==");
     let excludedTags = tagsFilters.filter(t => t.filterType == "!=");
+    let prMetas = (await getLocalCache()).PrMetas;
     for (let request of requests) {
         let reqDiv = document.getElementById("request-" + request.id);
         if (!reqDiv)
             continue;
-        let matchingTags = await matchTags(request.id, selectedTags, excludedTags);
+        let matchingTags = await matchTags(request.id, selectedTags, excludedTags, prMetas);
         let matchingText = matchText(reqDiv, textFilter);
         reqDiv.classList.toggle("hidden", !(matchingTags && matchingText) );
     }

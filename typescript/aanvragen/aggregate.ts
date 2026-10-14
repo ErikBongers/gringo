@@ -3,6 +3,7 @@ import {calcBrutoLinePrice, ExpandedPr, ExpandedPrItem, fetchMetaCached, fetchRe
 import {createHtmlTable, InfoBlock} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
 import {createExpandedCompactPrItem, createExpandedPr} from "../aanvraag/expand";
+import {getLocalCache} from "../db/idb/localDb";
 
 let _budgetMap: Map<string, LedgerToBudgetCode> | null = null;
 export function getBudgetCode(ledger: string) {
@@ -83,8 +84,9 @@ export async function exportPrItemsToExcel(infoBlock: InfoBlock){
 
     let headers = ["prId", "status", "itemNo", "bruto", "tarif", "project", "tags", "title", "budget"];
     let rows: string[][] = [];
+    let prMetas = (await getLocalCache()).PrMetas;
     for (let item of jsonPrData.items) {
-        let meta = await fetchMetaCached(item.prId);
+        let meta = await fetchMetaCached(item.prId, prMetas);
         let row: string[] = [];
         row.push(item.prId);
         row.push(item.status);
@@ -132,7 +134,7 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
             let bruto = 0;
             bruto = calcBrutoLinePrice(await createExpandedCompactPrItem(createCompactReqItem(item.item)));
             let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
-            let meta = await fetchMetaCached(pr.pr.reqId);
+            let meta = await fetchMetaCached(pr.pr.reqId, (await getLocalCache()).PrMetas);
             let project = meta.project??"";
             let tags = meta.tags.join(",");
             let title = pr.pr.title.value;

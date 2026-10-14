@@ -2,6 +2,8 @@ import {emmet} from "../../libs/Emmeter";
 import {fetchMetaCached, getGlobalTags, TagDef} from "./requests";
 
 import {paintTag} from "../globals";
+import {getLocalCache, LocalDb} from "../db/idb/localDb";
+import {Repository} from "../db/idb/repository";
 
 export type FilterType = "==" | "!=";
 
@@ -142,9 +144,10 @@ function saveTextFilter(textFilter: string) {
     localStorage.setItem('gringo.textFilter', textFilter);
 }
 
-export async function matchTags(prId: string, selectedTags: TagsFilter[], excludedTags: TagsFilter[]) {
-    let meta = await fetchMetaCached(prId);
+export async function matchTags(prId: string, selectedTags: TagsFilter[], excludedTags: TagsFilter[], prMetas: Repository<LocalDb, "PrMetas">) {
+    let meta = await fetchMetaCached(prId, prMetas);
     let hasAllSelectedTags = selectedTags.every(t => meta.tags.includes(t.name));
-    let hasNoExcludedTags = excludedTags.every(t => !meta.tags.includes(t.name));
-    return hasAllSelectedTags && hasNoExcludedTags;
+    if (!hasAllSelectedTags)
+        return false;
+    return excludedTags.every(t => !meta.tags.includes(t.name));
 }

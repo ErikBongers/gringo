@@ -11,8 +11,9 @@ import {LedgerToBudgetCode} from "./budgetCodes";
 import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {savePrMetaToFireStore} from "../db/fireStore";
-import {getLocalCache} from "../db/idb/localDb";
+import {getLocalCache, LocalDb} from "../db/idb/localDb";
 import {getTarifDefCached} from "../sessionCache";
+import {Repository} from "../db/idb/repository";
 
 export interface BaseLineItem {
     tarif: TarifDef | null;
@@ -215,8 +216,11 @@ export async function fetchChangedMetas() {
     return changedMetas;
 }
 
-export async function fetchMetaCached(prId: string) {
-    let localMeta = await (await getLocalCache()).PrMetas.get(prId);
+export async function fetchMetaCached(prId: string, prMetas?: Repository<LocalDb, "PrMetas">) {
+    if(!prMetas)
+        prMetas = (await getLocalCache()).PrMetas;
+
+    let localMeta = await prMetas.get(prId);
     if (localMeta)
         return localMeta
 
