@@ -283,9 +283,10 @@ export function getPrItemGrant(prItem: SapLineItem) {
 let globalTagsMap: Map<string, TagDef> | null = null;
 
 export async function getGlobalTags() {
-    let globalSettings = await getGlobalSettingsCached();
-    if(!globalTagsMap)
+    if(!globalTagsMap) {
+        let globalSettings = await getGlobalSettingsCached();
         globalTagsMap = new Map<string, TagDef>(globalSettings.tagDefs.map(t => [t.name, t]));
+    }
     return globalTagsMap;
 }
 

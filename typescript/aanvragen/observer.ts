@@ -10,19 +10,20 @@ import {
     FetchListContext,
     fetchMetaCached,
     fetchRequestList,
-    fetchRequestListAndDetails,
+    fetchRequestListAndDetails, getGlobalTags,
     getPrDataList,
-    PrMeta
+    PrMeta, TagDef
 } from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
 import {createExpandedCompactPr} from "../aanvraag/expand";
-import {getLocalCache} from "../db/idb/localDb";
+import {getLocalCache, LocalDb} from "../db/idb/localDb";
 import {applyFiltersForLeanTable, createLeanListTable} from "./leanTable";
 import {displayMetaFields} from "./metaBlock";
 import {createSearchPanel, getTagsFilters, getTextFilter, matchTags} from "./searchPanel";
 import {RequestBasicInfo, scrapePRs} from "./scrape";
-import {options} from "../plugin_options/options";
+import {getGlobalSettingsCached, options} from "../plugin_options/options";
+import {Repository} from "../db/idb/repository";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -90,7 +91,7 @@ function checkDecorations() {
     checkAndSetDecoration(document.querySelector("main"), decorateMain);
     checkAndSetDecoration(checkandGetTabsFilled(), decorateTabs);
     checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
-    checkAndSetDecoration(getListTabDecoratedElement(), decoratePagination, checkAndSetListPageDecorated);
+    checkAndSetDecoration(getListTabDecoratedElement(), (el) => decoratePagination(), checkAndSetListPageDecorated);
 }
 
 function decorateBody() {
@@ -175,7 +176,10 @@ function decoratePagination() {
         }
 
         await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map(f => f.data));
-        requests.forEach(decoratePr);
+        let departments = (await getGlobalSettingsCached()).projects;
+        let tagsMap = await getGlobalTags();
+        let prMetas = (await getLocalCache()).PrMetas;
+        requests.forEach((r) => decoratePr(r, departments, tagsMap, prMetas));
         await applyFilters(requests);
     });
 }
@@ -294,7 +298,7 @@ function addOrderCopyButton(request: RequestBasicInfo) {
     });
 }
 
-async function decoratePr(request: RequestBasicInfo) {
+async function decoratePr(request: RequestBasicInfo, departments: string[], tagsMap: Map<string, TagDef>, prMetas: Repository<LocalDb, "PrMetas">) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
         return;
@@ -302,8 +306,8 @@ async function decoratePr(request: RequestBasicInfo) {
         return;
     reqDiv.dataset.gringo = "decorated";
     addOrderCopyButton(request);
-    let meta = await fetchMetaCached(request.id, (await getLocalCache()).PrMetas);
-    await decoratePrWithMeta(request, meta);
+    let meta = await fetchMetaCached(request.id, prMetas);
+    decoratePrWithMeta(request, meta, departments, tagsMap);
     await updatePrLine(request, meta);
 }
 
@@ -333,7 +337,7 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
 
 let globalLastRequestTagsClicked: RequestBasicInfo | null = null;
 
-async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
+function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta, departments: string[], tagsMap: Map<string, TagDef>) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
         return;
@@ -341,7 +345,7 @@ async function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta) {
     if(!divStatusContainer)
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
-    let metaWrapper = await displayMetaFields(divStatusContainer, meta);
+    let metaWrapper = displayMetaFields(divStatusContainer, meta, departments, tagsMap);
 
     metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev: Event) => {
         ev.stopPropagation();

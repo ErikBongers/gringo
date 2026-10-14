@@ -210,7 +210,9 @@ async function createAndShowPopover(item: JsonPrItem, anchorTo: HTMLElement) {
         window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
     };
     let metaFieldsContainer = popover.querySelector(".metaFieldsContainer") as HTMLDivElement;
-    await displayMetaFields(metaFieldsContainer, meta);
+    let departments = (await getGlobalSettingsCached()).projects;
+    let tagsMap = await getGlobalTags();
+    await displayMetaFields(metaFieldsContainer, meta, departments, tagsMap);
 }
 
 async function displayPerProject(wrapper: HTMLElement, tabData: TotalsTabDef) {

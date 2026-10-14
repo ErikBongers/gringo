@@ -1,14 +1,17 @@
-import {getPrDataList} from "./requests";
+import {getGlobalTags, getPrDataList} from "./requests";
 import {emmet} from "../../libs/Emmeter";
-import {acronym, formatDate, formatPrice} from "../globals";
+import {acronym, formatDate, formatPrice, gringo} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
 import {filterTable, RowFilter} from "../filterTable";
 import {getTagsFilters, getTextFilter, matchTags, TagsFilter} from "./searchPanel";
 import {Repository} from "../db/idb/repository";
 import {getLocalCache, LocalDb} from "../db/idb/localDb";
+import {getGlobalSettingsCached} from "../plugin_options/options";
 
 export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
+    gringo("LEAN: getPrDataList()");
     let list = await getPrDataList();
+    gringo("LEAN: build table");
     let table = emmet.indent.appendChild(divLeanListPanel, `
         table.leanPrList.bruto
             thead
@@ -38,6 +41,10 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
     `).first as HTMLTableElement;
 
     let tbody = table.querySelector("tbody")!; //! ok
+    gringo("LEAN: get extra data...");
+    let departments = (await getGlobalSettingsCached()).projects;
+    let tagsMap = await getGlobalTags();
+    gringo("LEAN: create rows...");
     for (let pr of list) {
         let poAnchorList = pr.request.gbPurchaseOrderList
             ?.map(po => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
@@ -58,8 +65,8 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                 td{reserved for project(s))}
         `).first as HTMLTableRowElement;
         tr.dataset.prId = pr.prListData.prId;
-        await addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta);
-        await addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta);
+        addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta, tagsMap);
+        addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta, departments);
     }
     return table;
 }

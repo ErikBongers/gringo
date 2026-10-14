@@ -1,4 +1,4 @@
-import {getGlobalTags, PrMeta, saveMeta} from "./requests";
+import {getGlobalTags, PrMeta, saveMeta, TagDef} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {addButtonClickNoPropagation, ElementOrSelector, getElement, paintTag, showPopover} from "../globals";
@@ -45,42 +45,55 @@ async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, a
 
 }
 
-export async function addTagsBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta) {
+let templateTagsBlock: HTMLElement | null = null
+
+export function addTagsBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, tagsMap: Map<string, TagDef>) {
     container = getElement(container);
-    emmet.indent.appendChild(container, `
-        div.tagsWrapper.flexRow
-            button.naked.tagsPopupButton
-                li.far.fa-circle-down
-            div.tagsContainer
-    `);
+    if (!templateTagsBlock) {
+        templateTagsBlock = emmet.indent.createElement(`
+            div.tagsWrapper.flexRow
+                button.naked.tagsPopupButton
+                    li.far.fa-circle-down
+                div.tagsContainer
+        `);
+    }
+    let clone = templateTagsBlock.cloneNode(true) as HTMLElement;
+    container.appendChild(clone);
     let button = container.querySelector("button.tagsPopupButton") as HTMLButtonElement;
     button.onclick = async () => {
         await onTagsPopupButtonClick(meta, button, async () => {
-            await updateTagsBlock(container, meta);
+            updateTagsBlock(container, meta, tagsMap);
         });
     };
-    await updateTagsBlock(container, meta);
+    updateTagsBlock(container, meta, tagsMap);
 }
 
-export async function addDepartmentBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta) {
-    let wrapper = emmet.indent.appendChild(getElement(container), `
-        div.deptWrapper.flexRow
-            select
-            span
-    `).first as HTMLDivElement;
-    let select = wrapper.querySelector("select")!;
-    let options = [SELECT_PROJECT, ...(await getGlobalSettingsCached()).projects];
-    for (let option of options) {
-        let optionEl = document.createElement("option");
-        optionEl.textContent = option;
-        optionEl.value = option;
-        select.appendChild(optionEl);
+let templateDepartmentBlock: HTMLElement | null = null
+export function addDepartmentBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, departments: string[]) {
+    container = getElement(container);
+    if(!templateDepartmentBlock) {
+        templateDepartmentBlock = emmet.indent.createElement(`
+            div.deptWrapper.flexRow
+                select
+                span
+        `);
+        let select = templateDepartmentBlock.querySelector("select")!;
+        let options = [SELECT_PROJECT, ...departments];
+        for (let option of options) {
+            let optionEl = document.createElement("option");
+            optionEl.textContent = option;
+            optionEl.value = option;
+            select.appendChild(optionEl);
+        }
     }
+    let clone = templateDepartmentBlock.cloneNode(true) as HTMLElement;
+    container.appendChild(clone);
 
+    let select = container.querySelector("select")!;
     select.onchange = async () => {
         await onSelectDepartmentClick(meta, select);
     }
-    updateDepartmentBlock(wrapper, meta);
+    updateDepartmentBlock(container.querySelector(".deptWrapper")!, meta);
 }
 
 const SELECT_PROJECT = "--selecteer--";
@@ -99,12 +112,11 @@ async function onSelectDepartmentClick(meta: PrMeta, select: HTMLSelectElement) 
     updateDepartmentBlock(select.closest(".deptWrapper")!, meta);
 }
 
-async function displayTags(tagsContainer: HTMLElement, meta: PrMeta) {
+function displayTags(tagsContainer: HTMLElement, meta: PrMeta, tagsMap: Map<string, TagDef>) {
     tagsContainer.innerHTML = "";
-    let globalTagsMap = await getGlobalTags();
     meta.tags
         .map(tag => {
-            return globalTagsMap.get(tag);
+            return tagsMap.get(tag);
         })
         .filter(t => !!t)
         .sort((a, b) => a.order - b.order)
@@ -114,20 +126,20 @@ async function displayTags(tagsContainer: HTMLElement, meta: PrMeta) {
             `).first as HTMLSpanElement;
             paintTag(tagSpan, tagDef, true);
         });
-    let orphans = meta.tags.filter(tag => ![...globalTagsMap.values()].find(tagDef => tagDef.name == tag));
+    let orphans = meta.tags.filter(tag => ![...tagsMap.values()].find(tagDef => tagDef.name == tag));
     if (orphans.length > 0) {
         emmet.appendChild(tagsContainer, orphans.map(tag => `span.gringoTag{${tag}}`).join("+"));
     }
 }
 
-async function updateTagsBlock(metaWrapper: HTMLElement, meta: PrMeta) {
+function updateTagsBlock(metaWrapper: HTMLElement, meta: PrMeta, tagsMap: Map<string, TagDef>) {
     let tagsContainer = metaWrapper.querySelector(".tagsContainer") as HTMLElement;
-    await displayTags(tagsContainer, meta);
+    displayTags(tagsContainer, meta, tagsMap);
 }
 
-export async function displayMetaFields(container: HTMLDivElement, meta: PrMeta) {
+export function displayMetaFields(container: HTMLDivElement, meta: PrMeta, departments: string[], tagsMap: Map<string, TagDef>) {
     let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first as HTMLDivElement;
-    await addTagsBlock(metaWrapper, meta);
-    await addDepartmentBlock(metaWrapper, meta);
+    addTagsBlock(metaWrapper, meta, tagsMap);
+    addDepartmentBlock(metaWrapper, meta, departments);
     return metaWrapper;
 }

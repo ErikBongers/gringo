@@ -29829,8 +29829,10 @@ Total Duration: ${a - u}ms`);
 	}
 	let globalTagsMap = null;
 	async function getGlobalTags() {
-		let globalSettings = await getGlobalSettingsCached();
-		if (!globalTagsMap) globalTagsMap = new Map(globalSettings.tagDefs.map((t) => [t.name, t]));
+		if (!globalTagsMap) {
+			let globalSettings = await getGlobalSettingsCached();
+			globalTagsMap = new Map(globalSettings.tagDefs.map((t) => [t.name, t]));
+		}
 		return globalTagsMap;
 	}
 	function calcBrutoLinePrice(item) {
@@ -31712,40 +31714,50 @@ Total Duration: ${a - u}ms`);
 			};
 		});
 	}
-	async function addTagsBlock(container, meta) {
+	let templateTagsBlock = null;
+	function addTagsBlock(container, meta, tagsMap) {
 		container = getElement(container);
-		emmet.indent.appendChild(container, `
-        div.tagsWrapper.flexRow
-            button.naked.tagsPopupButton
-                li.far.fa-circle-down
-            div.tagsContainer
-    `);
+		if (!templateTagsBlock) templateTagsBlock = emmet.indent.createElement(`
+            div.tagsWrapper.flexRow
+                button.naked.tagsPopupButton
+                    li.far.fa-circle-down
+                div.tagsContainer
+        `);
+		let clone = templateTagsBlock.cloneNode(true);
+		container.appendChild(clone);
 		let button = container.querySelector("button.tagsPopupButton");
 		button.onclick = async () => {
 			await onTagsPopupButtonClick(meta, button, async () => {
-				await updateTagsBlock(container, meta);
+				updateTagsBlock(container, meta, tagsMap);
 			});
 		};
-		await updateTagsBlock(container, meta);
+		updateTagsBlock(container, meta, tagsMap);
 	}
-	async function addDepartmentBlock(container, meta) {
-		let wrapper = emmet.indent.appendChild(getElement(container), `
-        div.deptWrapper.flexRow
-            select
-            span
-    `).first;
-		let select = wrapper.querySelector("select");
-		let options = [SELECT_PROJECT, ...(await getGlobalSettingsCached()).projects];
-		for (let option of options) {
-			let optionEl = document.createElement("option");
-			optionEl.textContent = option;
-			optionEl.value = option;
-			select.appendChild(optionEl);
+	let templateDepartmentBlock = null;
+	function addDepartmentBlock(container, meta, departments) {
+		container = getElement(container);
+		if (!templateDepartmentBlock) {
+			templateDepartmentBlock = emmet.indent.createElement(`
+            div.deptWrapper.flexRow
+                select
+                span
+        `);
+			let select = templateDepartmentBlock.querySelector("select");
+			let options = [SELECT_PROJECT, ...departments];
+			for (let option of options) {
+				let optionEl = document.createElement("option");
+				optionEl.textContent = option;
+				optionEl.value = option;
+				select.appendChild(optionEl);
+			}
 		}
+		let clone = templateDepartmentBlock.cloneNode(true);
+		container.appendChild(clone);
+		let select = container.querySelector("select");
 		select.onchange = async () => {
 			await onSelectDepartmentClick(meta, select);
 		};
-		updateDepartmentBlock(wrapper, meta);
+		updateDepartmentBlock(container.querySelector(".deptWrapper"), meta);
 	}
 	const SELECT_PROJECT = "--selecteer--";
 	function updateDepartmentBlock(container, meta) {
@@ -31760,27 +31772,26 @@ Total Duration: ${a - u}ms`);
 		await saveMeta(meta.prId, meta, "localStorage and cloud");
 		updateDepartmentBlock(select.closest(".deptWrapper"), meta);
 	}
-	async function displayTags(tagsContainer, meta) {
+	function displayTags(tagsContainer, meta, tagsMap) {
 		tagsContainer.innerHTML = "";
-		let globalTagsMap = await getGlobalTags();
 		meta.tags.map((tag) => {
-			return globalTagsMap.get(tag);
+			return tagsMap.get(tag);
 		}).filter((t) => !!t).sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			let tagSpan = emmet.appendChild(tagsContainer, `
                 span    
             `).first;
 			paintTag(tagSpan, tagDef, true);
 		});
-		let orphans = meta.tags.filter((tag) => ![...globalTagsMap.values()].find((tagDef) => tagDef.name == tag));
+		let orphans = meta.tags.filter((tag) => ![...tagsMap.values()].find((tagDef) => tagDef.name == tag));
 		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
 	}
-	async function updateTagsBlock(metaWrapper, meta) {
-		await displayTags(metaWrapper.querySelector(".tagsContainer"), meta);
+	function updateTagsBlock(metaWrapper, meta, tagsMap) {
+		displayTags(metaWrapper.querySelector(".tagsContainer"), meta, tagsMap);
 	}
-	async function displayMetaFields(container, meta) {
+	function displayMetaFields(container, meta, departments, tagsMap) {
 		let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first;
-		await addTagsBlock(metaWrapper, meta);
-		await addDepartmentBlock(metaWrapper, meta);
+		addTagsBlock(metaWrapper, meta, tagsMap);
+		addDepartmentBlock(metaWrapper, meta, departments);
 		return metaWrapper;
 	}
 	//#endregion
@@ -31953,7 +31964,9 @@ Total Duration: ${a - u}ms`);
 		button.onclick = () => {
 			window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
 		};
-		await displayMetaFields(popover.querySelector(".metaFieldsContainer"), meta);
+		let metaFieldsContainer = popover.querySelector(".metaFieldsContainer");
+		let departments = (await getGlobalSettingsCached()).projects;
+		await displayMetaFields(metaFieldsContainer, meta, departments, await getGlobalTags());
 	}
 	async function displayPerProject(wrapper, tabData) {
 		emmet.appendChild(wrapper, `h2{${tabData.title}}`);
@@ -32217,7 +32230,9 @@ Total Duration: ${a - u}ms`);
 	//#endregion
 	//#region typescript/aanvragen/leanTable.ts
 	async function createLeanListTable(divLeanListPanel) {
+		gringo("LEAN: getPrDataList()");
 		let list = await getPrDataList();
+		gringo("LEAN: build table");
 		let table = emmet.indent.appendChild(divLeanListPanel, `
         table.leanPrList.bruto
             thead
@@ -32247,6 +32262,10 @@ Total Duration: ${a - u}ms`);
     `).first;
 		let tbody = table.querySelector("tbody");
 		//! ok
+		gringo("LEAN: get extra data...");
+		let departments = (await getGlobalSettingsCached()).projects;
+		let tagsMap = await getGlobalTags();
+		gringo("LEAN: create rows...");
 		for (let pr of list) {
 			let poAnchorList = pr.request.gbPurchaseOrderList?.map((po) => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
 			let tr = emmet.indent.appendChild(tbody, `
@@ -32266,8 +32285,8 @@ Total Duration: ${a - u}ms`);
                 td{reserved for project(s))}
         `).first;
 			tr.dataset.prId = pr.prListData.prId;
-			await addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta);
-			await addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta);
+			addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta, tagsMap);
+			addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta, departments);
 		}
 		return table;
 	}
@@ -32374,7 +32393,7 @@ Total Duration: ${a - u}ms`);
 		checkAndSetDecoration(document.querySelector("main"), decorateMain);
 		checkAndSetDecoration(checkandGetTabsFilled(), decorateTabs);
 		checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
-		checkAndSetDecoration(getListTabDecoratedElement(), decoratePagination, checkAndSetListPageDecorated);
+		checkAndSetDecoration(getListTabDecoratedElement(), (el) => decoratePagination(), checkAndSetListPageDecorated);
 	}
 	function decorateBody() {}
 	function checkRecentRequestsDecorations() {
@@ -32421,7 +32440,10 @@ Total Duration: ${a - u}ms`);
 				await createLeanListTable(divLeanListPanel);
 			}
 			await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map((f) => f.data));
-			requests.forEach(decoratePr);
+			let departments = (await getGlobalSettingsCached()).projects;
+			let tagsMap = await getGlobalTags();
+			let prMetas = (await getLocalCache()).PrMetas;
+			requests.forEach((r) => decoratePr(r, departments, tagsMap, prMetas));
 			await applyFilters(requests);
 		});
 	}
@@ -32517,14 +32539,14 @@ Total Duration: ${a - u}ms`);
 			});
 		});
 	}
-	async function decoratePr(request) {
+	async function decoratePr(request, departments, tagsMap, prMetas) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
 		if (reqDiv.dataset.gringo == "decorated") return;
 		reqDiv.dataset.gringo = "decorated";
 		addOrderCopyButton(request);
-		let meta = await fetchMetaCached(request.id, (await getLocalCache()).PrMetas);
-		await decoratePrWithMeta(request, meta);
+		let meta = await fetchMetaCached(request.id, prMetas);
+		decoratePrWithMeta(request, meta, departments, tagsMap);
 		await updatePrLine(request, meta);
 	}
 	async function updatePrLine(request, meta) {
@@ -32543,13 +32565,13 @@ Total Duration: ${a - u}ms`);
 		}
 	}
 	let globalLastRequestTagsClicked = null;
-	async function decoratePrWithMeta(request, meta) {
+	function decoratePrWithMeta(request, meta, departments, tagsMap) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
 		let divStatusContainer = reqDiv.querySelector("div.item-status-container");
 		if (!divStatusContainer) return;
 		divStatusContainer = divStatusContainer.parentElement;
-		let metaWrapper = await displayMetaFields(divStatusContainer, meta);
+		let metaWrapper = displayMetaFields(divStatusContainer, meta, departments, tagsMap);
 		metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
 			ev.stopPropagation();
 		};
