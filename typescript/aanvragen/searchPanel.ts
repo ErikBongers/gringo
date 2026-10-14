@@ -1,8 +1,7 @@
 import {emmet} from "../../libs/Emmeter";
 import {fetchMetaCached, getGlobalTags, TagDef} from "./requests";
-
 import {paintTag} from "../globals";
-import {getLocalCache, LocalDb} from "../db/idb/localDb";
+import {LocalDb} from "../db/idb/localDb";
 import {Repository} from "../db/idb/repository";
 
 export type FilterType = "==" | "!=";
