@@ -1,6 +1,7 @@
-* Lean lists refills on every pagination.
-  > decoratePagination should only decorate the ariba list.
-  > create a decorateLeanList with a checkAnd... call.
+* Filter: scrapes rows every time.
+  > provide the scraped requests list to applyFilters();
+    > use a global?
+      > needs to be reset on pagination.
 
 PR Overview filters
 ====================

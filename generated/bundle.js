@@ -32250,6 +32250,7 @@ Total Duration: ${a - u}ms`);
                 tr
                     th{ID/BB}
                     th{Omschrijving}
+                    th{Leverancier}
                     th{Door}
                     th{Datum}
                     th{Status}
@@ -32275,6 +32276,7 @@ Total Duration: ${a - u}ms`);
                     ${poAnchorList?.join("+")}
                 td
                     a{${pr.request.reqTitle ?? ""}}
+                td{${pr.prListData.items.map((item) => item.supplier).join(", ")}}
                 td{${acronym(pr.request.preparer)}}
                 td{${formatDate(pr.prListData.changed_date)}}
                 td{${pr.request.status}}

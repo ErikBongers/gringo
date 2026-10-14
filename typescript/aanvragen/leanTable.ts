@@ -29,6 +29,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                 tr
                     th{ID/BB}
                     th{Omschrijving}
+                    th{Leverancier}
                     th{Door}
                     th{Datum}
                     th{Status}
@@ -55,6 +56,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                     ${poAnchorList?.join("+")}
                 td
                     a{${pr.request.reqTitle ?? ""}}
+                td{${pr.prListData.items.map(item => item.supplier).join(", ")}}
                 td{${acronym(pr.request.preparer)}}
                 td{${formatDate(pr.prListData.changed_date)}}
                 td{${pr.request.status}}
