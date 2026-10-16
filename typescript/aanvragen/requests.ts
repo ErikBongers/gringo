@@ -2,7 +2,6 @@ import {FetchChain} from "../fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListItem, RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
-import {InfoBlock} from "../globals";
 import {KEY_ALL_PRS_FILENAME_NOEXT, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
 import {cloud} from "../cloud";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
@@ -14,6 +13,7 @@ import {savePrMetaToFireStore} from "../db/fireStore";
 import {getLocalCache, LocalDb} from "../db/idb/localDb";
 import {getTarifDefCached} from "../sessionCache";
 import {Repository} from "../db/idb/repository";
+import {getInfoBlockForCurrentPage, InfoBlock} from "../infoBlock";
 
 export interface BaseLineItem {
     tarif: TarifDef | null;
@@ -159,16 +159,16 @@ export async function fetchRequestList() {
 
 export async function fetchFullRequest(prId: string, ctx: FetchListContext) {
     let pr = await fetchPr(prId);
-    ctx.infoBlock.info.innerHTML = `PR details ophalen...(${ctx.counter++})`;
+    ctx.infoBlock.infoBar.setInfoLine(`PR details ophalen...(${ctx.counter++})`);
     if(pr.title == null)
         return null; //todo : report this error somehow.
     return pr;
 }
 
 export async function fetchRequestListAndDetails(infoBlock: InfoBlock) {
-    infoBlock.info.innerHTML = "PR lijst ophalen...";
+    infoBlock.infoBar.setInfoLine("PR lijst ophalen...");
     let requestList = await fetchRequestList();
-    infoBlock.info.innerHTML = "PR details ophalen...";
+    infoBlock.infoBar.setInfoLine("PR details ophalen...");
     let ctx: FetchListContext = {
         counter: 0,
         infoBlock
@@ -344,9 +344,12 @@ async function convertPrToListData(request: RequestListItem, pr: PurchaseRequisi
 }
 
 export async function getPrDataList(){
+    let infoBlock = getInfoBlockForCurrentPage();
     let requests = await fetchRequestList(); //todo: fetch first 200 only?
     let prListDatas: PrListPrData[] = [];
     let cache = await getLocalCache();
+    infoBlock.infoBar.setInfoLine("Ophalen gewijzigde PR's...");
+    infoBlock.progressBar.start(requests.requestList.length);
     for(let request of requests.requestList){
         let prListData: PrListPrData | undefined = await cache.PrListData.get(request.reqUniqueName);
         if(prListData && prListData.changed_date == request.timeUpdated) {
@@ -357,7 +360,10 @@ export async function getPrDataList(){
         let prData = await convertPrToListData(request, pr);
         await cache.PrListData.put(prData);
         prListDatas.push(prData);
+        infoBlock.progressBar.next();
     }
+    infoBlock.infoBar.setInfoLine("");
+    infoBlock.progressBar.stop();
     return mergeRequestsAndData(prListDatas, requests);
 }
 

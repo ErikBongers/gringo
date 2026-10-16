@@ -56,24 +56,6 @@
     }
 }
 
-.infoMessage {
-    text-align: center;
-}
-
-.infoLine {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    .progressText {
-        font-size: .7em;
-        opacity: 0.7;
-    }
-    .progressBar {
-        margin-bottom: 6px;
-    }
-}
-
 table tfoot.separatorLine {
     border-top-style: solid;
     border-top-color: black;

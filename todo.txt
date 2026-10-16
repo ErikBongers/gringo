@@ -1,3 +1,6 @@
+* Avoid this error?
+  : @firebase/firestore: Firestore (13.0.0): WebChannelConnection RPC 'Listen' stream 0x37400713 transport errored. Name: undefined Message: undefined
+
 * Filter: scrapes rows every time.
   > provide the scraped requests list to applyFilters();
     > use a global?

@@ -1,9 +1,10 @@
 import {createCompactReqItem} from "../aanvraag/observer";
 import {calcBrutoLinePrice, ExpandedPr, ExpandedPrItem, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
-import {createHtmlTable, InfoBlock} from "../globals";
+import {createHtmlTable} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
 import {createExpandedCompactPrItem, createExpandedPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
+import {InfoBlock} from "../infoBlock";
 
 let _budgetMap: Map<string, LedgerToBudgetCode> | null = null;
 export function getBudgetCode(ledger: string) {

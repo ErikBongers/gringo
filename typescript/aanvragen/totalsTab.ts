@@ -1,5 +1,5 @@
 import {emmet} from "../../libs/Emmeter";
-import {createInfoBlock, formatPrice, paintTag, showPopover} from "../globals";
+import {formatPrice, paintTag, showPopover} from "../globals";
 import {getBudgetDscr, getExpenses, getItemsPerGroup, JsonPrItem} from "./aggregate";
 import {hideFloatingHelp} from "./observer";
 import {Tabs} from "../tabs";
@@ -10,6 +10,7 @@ import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
 import {BudgetGrouping, storage} from "../db/localStorage";
 import {displayMetaFields} from "./metaBlock";
 import {getLocalCache} from "../db/idb/localDb";
+import {getInfoBlock} from "../infoBlock";
 
 export interface BudgetLine {
     budget: string,
@@ -26,11 +27,13 @@ export async function fillTotalsTab() {
     hideFloatingHelp();
     let totalsTab = document.querySelector("div.gringo.totalsTab") as HTMLElement;
     totalsTab.innerHTML = "";
-    emmet.appendChild(totalsTab, `
-        (button.naked.refresh>i.fa.fa-repeat)+
-        (button.naked.copyToClipboard>i.fa.fa-copy)+
-        div.infoContainer+
-        div.tabsContainer+
+    emmet.indent.appendChild(totalsTab, `
+        button.naked.refresh
+            i.fa.fa-repeat
+        button.naked.copyToClipboard
+            i.fa.fa-copy
+        div.infoContainer
+        div.tabsContainer
         div.popoversContainer
     `);
     let button = totalsTab.querySelector("button.refresh") as HTMLButtonElement;
@@ -39,9 +42,8 @@ export async function fillTotalsTab() {
     button.onclick = (ev) => onCopyToClipboardClicked(ev);
     let infoContainer = totalsTab.querySelector("div.infoContainer") as HTMLElement;
     let tabsContainer = totalsTab.querySelector("div.tabsContainer") as HTMLElement;
-    let infoBlock = createInfoBlock(infoContainer);
-    infoBlock.title.textContent = "Totalen";
-    infoBlock.info.textContent = "Ophalen van gegevens....";
+    let infoBlock = getInfoBlock(infoContainer);
+    infoBlock.infoBar.setInfoLine("Ophalen van gegevens....");
     emmet.appendChild(tabsContainer, `
         div.perProjectTab+div.perBudgetTab
     `);
@@ -59,7 +61,7 @@ export async function fillTotalsTab() {
     let expenses = await getExpenses(infoBlock);
     expenses.sort((a, b) => a.budget.localeCompare(b.budget)); //todo: is this sort needed?
 
-    infoBlock.info.innerHTML = "";
+    infoBlock.infoBar.setInfoLine("");
 
     let projectItemGroups = await createProjectItemGroups(expenses);
     let tabData: TotalsTabDef = {

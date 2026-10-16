@@ -3,6 +3,7 @@ import {emmet} from "../libs/Emmeter/html";
 import {fetchGlobalSettings, GlobalSettings, options, setGlobalSetting} from "./plugin_options/options";
 import {Actions, sendRequest, TabType} from "./messaging";
 import {TagDef} from "./aanvragen/requests";
+import {InfoBlock} from "./infoBlock";
 
 export let observers: Observer[] = [];
 export let settingsObservers: (() => void)[] = [];
@@ -180,28 +181,6 @@ export function canBeDecoratedAndSet(el: HTMLElement | null) {
     if (!el)
         return false;
     return !getAndSetFlag(el, "Decorated");
-}
-export function createInfoBlock(el: HTMLElement) {
-    emmet.appendChild(el, `
-        div.infoBlock>(
-            h2.title+
-            div.errors+
-            div.info+
-            div.extra
-        )
-    `);
-    let title = el.querySelector("h2.title") as HTMLElement;
-    let errors = el.querySelector("div.errors") as HTMLElement;
-    let info = el.querySelector("div.info") as HTMLElement;
-    let extra = el.querySelector("div.extra") as HTMLElement;
-    return {title, errors, info, extra} satisfies InfoBlock as InfoBlock;
-}
-
-export interface InfoBlock {
-    title: HTMLElement;
-    errors: HTMLElement;
-    info: HTMLElement;
-    extra: HTMLElement;
 }
 
 export let priceFormatter = new Intl.NumberFormat("nl-BE", {maximumFractionDigits: 2, minimumFractionDigits: 2});

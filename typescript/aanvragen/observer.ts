@@ -1,6 +1,6 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter";
-import {addButtonClickNoPropagation, createInfoBlock, formatPrice, getOptions, gringo, InfoBlock} from "../globals";
+import {addButtonClickNoPropagation, formatPrice, getOptions, gringo} from "../globals";
 import {fetchPr} from "../sap/api";
 import {createCompactPr} from "../aanvraag/observer";
 import {
@@ -24,6 +24,7 @@ import {createSearchPanel, getTagsFilters, getTextFilter, matchTags} from "./sea
 import {RequestBasicInfo, scrapePRs} from "./scrape";
 import {getGlobalSettingsCached, options} from "../plugin_options/options";
 import {Repository} from "../db/idb/repository";
+import {getInfoBlock, InfoBlock} from "../infoBlock";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -270,7 +271,7 @@ async function decorateSearchPanel() {
         divSearchPanel = result.first as HTMLDivElement;
     }
     let tagsCollapse = await createSearchPanel(divSearchPanel, applyFilters);
-    let infoBlock = createInfoBlock(divSearchPanel);
+    let infoBlock = getInfoBlock(divSearchPanel);
     addTestButtons(tagsCollapse, infoBlock);
 
     function onAribaFilterButton() {
