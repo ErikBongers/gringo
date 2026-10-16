@@ -3,6 +3,8 @@
     > use a global?
       > needs to be reset on pagination.
 
+* update or load of database : show InfoBlock.
+
 PR Overview filters
 ====================
 save filters?

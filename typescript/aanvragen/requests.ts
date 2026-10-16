@@ -327,7 +327,7 @@ async function convertPrListItemData(item: SapLineItem): Promise<PrListItemData>
         bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
         commodityCode: getPrItemCommodity(item)?.code??"",
         currency: item.price.currency??"",
-        supplier: item.supplier.name??""
+        supplier: item.supplier.value??""
     };
 }
 
@@ -393,4 +393,11 @@ async function mergeRequestsAndData(prListDatas: PrListPrData[], requests: Reque
     }
     return expandedPrListData
         .filter(item => item !== undefined) as ExpandedPrListData[];
+}
+
+export async function getSuppliers(prId: string): Promise<string[]> {
+    let pr = await fetchPr(prId);
+    if(pr.lineItems)
+        return pr.lineItems.map(item => item.supplier.value);
+    return [];
 }

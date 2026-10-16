@@ -1,8 +1,8 @@
-import {DBSchema, IDBPDatabase, openDB} from 'idb';
+import {DBSchema, IDBPDatabase, IDBPTransaction, openDB} from 'idb';
 import {Repository} from "./repository";
-import {PrListPrData, PrMeta} from "../../aanvragen/requests";
+import {getSuppliers, PrListPrData, PrMeta} from "../../aanvragen/requests";
 
-const DB_VERSION = 2;
+const DB_VERSION = 10;
 const LOCAL_DB_PREFIX = 'LocalGringoDb';
 
 export interface LocalDb extends DBSchema {
@@ -62,7 +62,7 @@ export class LocalCache {
 
     static async get(schoolId: string) {
         return new LocalCache(await openDB<LocalDb>(LocalCache.getDbName(schoolId), DB_VERSION, {
-            upgrade(db, oldVersion , newVersion: number) {
+            async upgrade(db, oldVersion, newVersion: number, transaction) {
                 if (oldVersion < 1) {
                     db.createObjectStore("KeyValues", {keyPath: "key"});
                     db.createObjectStore("PrMetas", {keyPath: "prId"});
@@ -70,7 +70,19 @@ export class LocalCache {
                 if (oldVersion < 2) {
                     db.createObjectStore("PrListData", {keyPath: "prId"});
                 }
+                if (oldVersion < 10) {
+                    await updateSuppliers(transaction);
+                }
             },
         }));
+    }
+}
+
+async function updateSuppliers(transaction: IDBPTransaction<LocalDb, ["KeyValues", "PrMetas", "PrListData"], "versionchange">) {
+    let prDatas = await transaction.objectStore("PrListData").getAll();
+
+    for (const prData of prDatas) {
+        prData.changed_date = "0"; //force update on next load.
+        await transaction.objectStore("PrListData").put(prData);
     }
 }

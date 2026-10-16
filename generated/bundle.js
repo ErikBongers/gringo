@@ -29529,6 +29529,9 @@ Total Duration: ${a - u}ms`);
 		async get(id) {
 			return this.db.get(this.storeName, id);
 		}
+		async getAll() {
+			return this.db.getAll(this.storeName);
+		}
 		async put(data, key) {
 			return this.db.put(this.storeName, data, key);
 		}
@@ -29546,7 +29549,7 @@ Total Duration: ${a - u}ms`);
 	};
 	//#endregion
 	//#region typescript/db/idb/localDb.ts
-	const DB_VERSION = 2;
+	const DB_VERSION = 10;
 	const LOCAL_DB_PREFIX = "LocalGringoDb";
 	let cacheMap = /* @__PURE__ */ new Map();
 	async function getLocalCache(schoolId = "Berchem") {
@@ -29581,15 +29584,23 @@ Total Duration: ${a - u}ms`);
 			return `${LOCAL_DB_PREFIX}_${schoolId}`;
 		}
 		static async get(schoolId) {
-			return new LocalCache(await openDB(LocalCache.getDbName(schoolId), DB_VERSION, { upgrade(db, oldVersion, newVersion) {
+			return new LocalCache(await openDB(LocalCache.getDbName(schoolId), DB_VERSION, { async upgrade(db, oldVersion, newVersion, transaction) {
 				if (oldVersion < 1) {
 					db.createObjectStore("KeyValues", { keyPath: "key" });
 					db.createObjectStore("PrMetas", { keyPath: "prId" });
 				}
 				if (oldVersion < 2) db.createObjectStore("PrListData", { keyPath: "prId" });
+				if (oldVersion < 10) await updateSuppliers(transaction);
 			} }));
 		}
 	};
+	async function updateSuppliers(transaction) {
+		let prDatas = await transaction.objectStore("PrListData").getAll();
+		for (const prData of prDatas) {
+			prData.changed_date = "0";
+			await transaction.objectStore("PrListData").put(prData);
+		}
+	}
 	const db = getFirestore(initializeApp({ projectId: "ebo-tain" }), "gringo-store");
 	const prMetaConverter = {
 		toFirestore(prMeta) {
@@ -29865,7 +29876,7 @@ Total Duration: ${a - u}ms`);
 			bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
 			commodityCode: getPrItemCommodity(item)?.code ?? "",
 			currency: item.price.currency ?? "",
-			supplier: item.supplier.name ?? ""
+			supplier: item.supplier.value ?? ""
 		};
 	}
 	async function convertPrToListData(request, pr) {
@@ -32229,6 +32240,11 @@ Total Duration: ${a - u}ms`);
 	}
 	//#endregion
 	//#region typescript/aanvragen/leanTable.ts
+	function sliceSupplierName(supplier) {
+		let slices = supplier.split(/[()\[\]]/);
+		if (slices.length > 1) return slices[1].trim();
+		return supplier;
+	}
 	async function createLeanListTable(divLeanListPanel) {
 		gringo("LEAN: getPrDataList()");
 		let list = await getPrDataList();
@@ -32276,7 +32292,7 @@ Total Duration: ${a - u}ms`);
                     ${poAnchorList?.join("+")}
                 td
                     a{${pr.request.reqTitle ?? ""}}
-                td{${pr.prListData.items.map((item) => item.supplier).join(", ")}}
+                td{${pr.prListData.items.map((item) => sliceSupplierName(item.supplier)).join(", ")}}
                 td{${acronym(pr.request.preparer)}}
                 td{${formatDate(pr.prListData.changed_date)}}
                 td{${pr.request.status}}

@@ -8,6 +8,10 @@ export class Repository<Schema, K extends StoreNames<Schema>> {
         return this.db.get(this.storeName, id);
     }
 
+    async getAll(): Promise<StoreValue<Schema, K>[]> {
+        return this.db.getAll(this.storeName);
+    }
+
     async put(data: StoreValue<Schema, K>, key?: StoreKey<Schema, K>) {
         return this.db.put(this.storeName, data, key);
     }

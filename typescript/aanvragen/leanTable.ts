@@ -8,6 +8,13 @@ import {Repository} from "../db/idb/repository";
 import {getLocalCache, LocalDb} from "../db/idb/localDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 
+function sliceSupplierName(supplier: string) {
+    let slices = supplier.split(/[()\[\]]/);
+    if(slices.length > 1)
+        return slices[1].trim();
+    return supplier;
+}
+
 export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
     gringo("LEAN: getPrDataList()");
     let list = await getPrDataList();
@@ -56,7 +63,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                     ${poAnchorList?.join("+")}
                 td
                     a{${pr.request.reqTitle ?? ""}}
-                td{${pr.prListData.items.map(item => item.supplier).join(", ")}}
+                td{${pr.prListData.items.map(item => sliceSupplierName(item.supplier)).join(", ")}}
                 td{${acronym(pr.request.preparer)}}
                 td{${formatDate(pr.prListData.changed_date)}}
                 td{${pr.request.status}}
