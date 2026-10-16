@@ -1,6 +1,6 @@
 import {InfoBar} from "./infoBar";
 import {ProgressBar} from "./progressBar";
-import {emmet} from "../libs/Emmeter";
+import {emmet} from "../../libs/Emmeter";
 
 export interface InfoBlock {
     infoBar: InfoBar,

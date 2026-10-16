@@ -1,0 +1,176 @@
+import {ClampedValue} from "./clampedValue";
+import {emmet} from "../../libs/Emmeter";
+
+export class NavigatableList {
+    readonly list: HTMLElement;
+    private index: ClampedValue;
+    private readonly abortController: AbortController | undefined;
+    private indexChangedListeners: ((index: number) => void)[] = [];
+
+    constructor(list: HTMLElement, abortController?: AbortController) {
+        this.list = list;
+        this.abortController = abortController;
+        this.list.addEventListener("keydown", this.onMenuKeyDown, {capture: true});
+        this.list.setAttribute("tabindex", "0");
+        this.list.classList.add("hideFocus");
+        this.list.focus();
+        //keep this statement last as it triggers onSelectionChanged().
+        this.index = new ClampedValue(NaN, NaN, NaN, (index) => this.onSelectionChanged(index));
+    }
+
+    onMenuKeyDown = (ev: KeyboardEvent) => {
+        console.log("keydown");
+        if(ev.key == "ArrowDown") {
+            if(this.index.value < this.list.children.length - 1)
+                this.index.value++;
+            else
+                this.index.value = 0;
+            this.indexChangedListeners.forEach((listener) => listener(this.index.value));
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+            ev.preventDefault();
+        }
+        else if(ev.key == "ArrowUp") {
+            if(this.index.value > 0)
+                this.index.value--;
+            else
+                this.index.value = this.list.children.length - 1;
+            this.indexChangedListeners.forEach((listener) => listener(this.index.value));
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+            ev.preventDefault();
+        }
+        else if(ev.key == "Tab") {
+            //try to keep focus inside menu
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+            ev.preventDefault();
+        } else if(ev.key == "Enter") {
+            if(this.abortController)
+                this.abortController.abort();
+            this.getItem(this.index.value).click();
+            setTimeout(() => {
+                if(document.activeElement instanceof HTMLElement)
+                    document.activeElement?.blur();
+            });
+        } else if(ev.key == "c" && ev.ctrlKey) {
+            // noinspection JSIgnoredPromiseFromCall
+            const textHtml = "text/html";
+            const textPlain = "text/plain";
+            const clonedList = this.list.cloneNode(true) as HTMLElement;
+            clonedList.querySelectorAll(".noClipboard").forEach((element) => element.remove());
+            const clipboardItemData = {
+                [textHtml]: clonedList.innerHTML,
+                [textPlain]: clonedList.innerText,
+            };
+            const clipboardItem = new ClipboardItem(clipboardItemData);
+            // noinspection JSIgnoredPromiseFromCall
+            navigator.clipboard.write([clipboardItem]);
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+            ev.preventDefault();
+        }
+
+    }
+
+    addItem(title: string | HTMLElement, indentLevel: number, onClick: ((ev: MouseEvent) => void) | string) {
+        let indentClass = indentLevel ? ".menuIndent" + indentLevel : "";
+        let item = emmet.appendChild(this.list, `button.naked.hideFocus.dropDownItem.pre${indentClass}`).first as HTMLButtonElement;
+        this.setItemContent(this.list.children.length - 1, title);
+        if(typeof onClick === "string")
+            item.setAttribute("onclick", onClick);
+        else if(typeof onClick === "function")
+            item.onclick = (ev) => {
+                if ((ev.target as HTMLElement).checkVisibility()) {
+                    onClick(ev);
+                }
+                else
+                    console.log("Item clicked, but invisible");
+            };
+        this.index.setRange(0, this.list.children.length - 1);
+        return this.list.children.length - 1;
+    }
+
+    setItemContent(index: number, title: string | HTMLElement) {
+        let item = this.getItem(index);
+        this.setContent(item, title);
+    }
+
+    private setContent(item: HTMLElement, title: string | HTMLElement) {
+        if(typeof title === "string")
+            item.innerHTML = title;
+        else {
+            item.innerHTML = "";
+            item.appendChild(title);
+        }
+    }
+
+    addSeparator(title: string | HTMLElement, indentLevel: number) {
+        let indentClass = indentLevel ? ".menuIndent" + indentLevel : "";
+        let first = emmet.appendChild(this.list, `div.dropDownSeparator.dropDownIgnoreHide${indentClass}`).first as HTMLElement;
+        this.setContent(first, title);
+        let item = first as HTMLElement;
+        item.onclick = (ev) => {
+            ev.stopPropagation();
+        }
+    }
+
+    addInfo(element: HTMLElement, indentLevel: number) {
+        let indentClass = indentLevel ? ".menuIndent" + indentLevel : "";
+        let {first} = emmet.appendChild(this.list, `div.dropDownInfo.dropDownIgnoreHide${indentClass}`);
+        let item = first as HTMLElement;
+        item.onclick = (ev) => {
+            ev.stopPropagation();
+        }
+        item.appendChild(element);
+    }
+
+    clickItem(itemIndex: number) {
+        (this.list.children[itemIndex] as HTMLElement).click();
+    }
+
+    removeItem(index: number) {
+        if(index < 0 || index >= this.list.children.length)
+            return false;
+        this.list.removeChild(this.list.children[index]);
+        this.index.setRange(0, this.list.children.length - 1);
+        return true;
+    }
+
+    getItem(index: number) {
+        return this.list.children[index] as HTMLElement;
+    }
+
+    removeAllItems() {
+        this.list.innerHTML = "";
+        this.index.setRange(NaN, NaN);
+    }
+
+    setSelected(index: number) {
+        this.index.value = index;
+    }
+
+    onSelectionChanged(itemIndex: number) {
+        for(let item of this.list.children)
+            item.classList.remove("selected");
+        if(!isNaN(itemIndex) && itemIndex >= 0 && itemIndex < this.list.children.length)
+            this.list.children[itemIndex].classList.add("selected");
+    }
+
+    focus() {
+        this.list.focus();
+    }
+
+    addKeyDownListener(listener: (ev: KeyboardEvent) => void) {
+        this.list.addEventListener("keydown", listener);
+    }
+
+    addIndexChanged(listener: (index: number) => void) {
+        this.indexChangedListeners.push(listener);
+    }
+
+    remove() {
+        this.list.remove();
+    }
+}
+

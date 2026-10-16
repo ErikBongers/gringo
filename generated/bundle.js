@@ -915,7 +915,7 @@
 		}
 	};
 	//#endregion
-	//#region typescript/fetchChain.ts
+	//#region typescript/utils/fetchChain.ts
 	var FetchChain = class {
 		lastText = "";
 		get() {
@@ -29692,7 +29692,7 @@ Total Duration: ${a - u}ms`);
 		await saveTarifDefToFireStore(tarifDef);
 	}
 	//#endregion
-	//#region typescript/infoBar.ts
+	//#region typescript/infoBlock/infoBar.ts
 	var InfoBar = class InfoBar {
 		parent;
 		container;
@@ -29759,7 +29759,7 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	//#endregion
-	//#region typescript/progressBar.ts
+	//#region typescript/infoBlock/progressBar.ts
 	var ProgressBar = class ProgressBar {
 		barElement;
 		parent;
@@ -29819,7 +29819,7 @@ Total Duration: ${a - u}ms`);
 		}
 	};
 	//#endregion
-	//#region typescript/infoBlock.ts
+	//#region typescript/infoBlock/infoBlock.ts
 	function getInfoBlock(parent) {
 		return {
 			infoBar: new InfoBar(parent),
@@ -32390,6 +32390,8 @@ Total Duration: ${a - u}ms`);
                     th{}
                     th{}
                     th{}
+                    th{}
+                    th{}
                     th[colspan="2"]
                         button#inclExcl.naked{Incl.}
                     th{}
@@ -32423,6 +32425,9 @@ Total Duration: ${a - u}ms`);
                     a.prId.op07[href="${createPrUrl(pr.prListData.prId)}"]{${pr.prListData.prId}}
                     ${poAnchorList?.join("+")}
                 td
+                    button.naked
+                        i.far.fa-copy
+                td
                     a{${pr.request.reqTitle ?? ""}}
                 td{${pr.prListData.items.map((item) => sliceSupplierName(item.supplier)).join(", ")}}
                 td{${acronym(pr.request.preparer)}}
@@ -32437,6 +32442,9 @@ Total Duration: ${a - u}ms`);
 			tr.dataset.prId = pr.prListData.prId;
 			addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta, tagsMap);
 			addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta, departments);
+			tr.querySelector("button")?.addEventListener("click", () => {
+				pr.prListData.prId, pr.request.gbPurchaseOrderList?.map((po) => "B603/" + po.orderId).join(", ");
+			});
 		}
 		return table;
 	}

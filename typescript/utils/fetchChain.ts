@@ -1,5 +1,5 @@
-import {TokenScanner} from "./tokenScanner";
-import * as def from "./def";
+import {TokenScanner} from "../tokenScanner";
+import * as def from "../def";
 import HeaderInfo = chrome.declarativeNetRequest.HeaderInfo;
 
 export class FetchChain {

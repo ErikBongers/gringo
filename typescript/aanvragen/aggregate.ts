@@ -4,7 +4,7 @@ import {createHtmlTable} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
 import {createExpandedCompactPrItem, createExpandedPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
-import {InfoBlock} from "../infoBlock";
+import {InfoBlock} from "../infoBlock/infoBlock";
 
 let _budgetMap: Map<string, LedgerToBudgetCode> | null = null;
 export function getBudgetCode(ledger: string) {

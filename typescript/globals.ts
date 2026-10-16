@@ -3,7 +3,7 @@ import {emmet} from "../libs/Emmeter/html";
 import {fetchGlobalSettings, GlobalSettings, options, setGlobalSetting} from "./plugin_options/options";
 import {Actions, sendRequest, TabType} from "./messaging";
 import {TagDef} from "./aanvragen/requests";
-import {InfoBlock} from "./infoBlock";
+import {InfoBlock} from "./infoBlock/infoBlock";
 
 export let observers: Observer[] = [];
 export let settingsObservers: (() => void)[] = [];

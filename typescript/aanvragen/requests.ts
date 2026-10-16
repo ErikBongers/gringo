@@ -1,4 +1,4 @@
-import {FetchChain} from "../fetchChain";
+import {FetchChain} from "../utils/fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListItem, RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
@@ -13,7 +13,7 @@ import {savePrMetaToFireStore} from "../db/fireStore";
 import {getLocalCache, LocalDb} from "../db/idb/localDb";
 import {getTarifDefCached} from "../sessionCache";
 import {Repository} from "../db/idb/repository";
-import {getInfoBlockForCurrentPage, InfoBlock} from "../infoBlock";
+import {getInfoBlockForCurrentPage, InfoBlock} from "../infoBlock/infoBlock";
 
 export interface BaseLineItem {
     tarif: TarifDef | null;

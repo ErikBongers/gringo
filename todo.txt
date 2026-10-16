@@ -1,3 +1,15 @@
+* new PRs do not appear in the lean list
+
+* Easy copy of BB nr
+  > Add copy-button, but have a dropdown menu with
+    - Copy
+      - PR12345
+      - PR12345/443216549
+      - 443216549
+      - B603/443216549
+
+* Filter: refresh (re-apply) button
+
 * Avoid this error?
   : @firebase/firestore: Firestore (13.0.0): WebChannelConnection RPC 'Listen' stream 0x37400713 transport errored. Name: undefined Message: undefined
 

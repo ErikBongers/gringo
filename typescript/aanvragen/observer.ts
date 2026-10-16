@@ -24,7 +24,7 @@ import {createSearchPanel, getTagsFilters, getTextFilter, matchTags} from "./sea
 import {RequestBasicInfo, scrapePRs} from "./scrape";
 import {getGlobalSettingsCached, options} from "../plugin_options/options";
 import {Repository} from "../db/idb/repository";
-import {getInfoBlock, InfoBlock} from "../infoBlock";
+import {getInfoBlock, InfoBlock} from "../infoBlock/infoBlock";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {

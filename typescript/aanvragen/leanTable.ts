@@ -28,6 +28,8 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                     th{}
                     th{}
                     th{}
+                    th{}
+                    th{}
                     th[colspan="2"]
                         button#inclExcl.naked{Incl.}
                     th{}
@@ -62,6 +64,9 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                     a.prId.op07[href="${createPrUrl(pr.prListData.prId)}"]{${pr.prListData.prId}}
                     ${poAnchorList?.join("+")}
                 td
+                    button.naked
+                        i.far.fa-copy
+                td
                     a{${pr.request.reqTitle ?? ""}}
                 td{${pr.prListData.items.map(item => sliceSupplierName(item.supplier)).join(", ")}}
                 td{${acronym(pr.request.preparer)}}
@@ -76,8 +81,16 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
         tr.dataset.prId = pr.prListData.prId;
         addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta, tagsMap);
         addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta, departments);
+        let button = tr.querySelector("button");
+        button?.addEventListener("click", () => {
+            showPrCopyMenu(pr.prListData.prId, pr.request.gbPurchaseOrderList?.map(po => "B603/" + po.orderId).join(", ")??"");
+        });
     }
     return table;
+}
+
+function showPrCopyMenu(prId: string, poIds: string) {
+
 }
 
 function createPrUrl(prId: string) {

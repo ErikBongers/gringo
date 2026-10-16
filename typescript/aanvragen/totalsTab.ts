@@ -10,7 +10,7 @@ import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
 import {BudgetGrouping, storage} from "../db/localStorage";
 import {displayMetaFields} from "./metaBlock";
 import {getLocalCache} from "../db/idb/localDb";
-import {getInfoBlock} from "../infoBlock";
+import {getInfoBlock} from "../infoBlock/infoBlock";
 
 export interface BudgetLine {
     budget: string,

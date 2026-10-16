@@ -1,4 +1,4 @@
-import {FetchChain} from "../fetchChain";
+import {FetchChain} from "../utils/fetchChain";
 import {PurchaseRequisition} from "./SapPrInfo";
 import {UserInfo} from "./SapUserInfo";
 import {RequisitionContext} from "./RequisitionContext";
