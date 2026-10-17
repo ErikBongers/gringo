@@ -18,7 +18,7 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
         details
             summary
                 div.flexRow
-                    span{Tags}
+                    span{Filter}
                     div.flexRight.searchTextWrapper
             table#tagsFilterTable
                 tbody

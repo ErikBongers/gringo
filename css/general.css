@@ -194,11 +194,12 @@ main.hideTeam {
     }
 }
 
-.gringoSearchPanel {
+.gringo.gringoSearchPanel {
     background: white;
     padding-inline: 5ch;
     padding-block: 1ch;
     & summary {
+        list-style-position: outside;
         margin-block-start: .5ch;
         margin-block-end: 1.5ch;
     }

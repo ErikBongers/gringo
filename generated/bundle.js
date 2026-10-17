@@ -32980,8 +32980,8 @@ Total Duration: ${a - u}ms`);
 	}
 	async function decorateSearchPanel() {
 		let requestSearchPanel = document.querySelector(".request-search-panel");
-		let divSearchPanel = document.querySelector(`div.gringoSearchPanel`);
-		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel+div.gringoLeanListPanel`).first;
+		let divSearchPanel = document.querySelector(`div.gringo.gringoSearchPanel`);
+		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringo.gringoSearchPanel+div.gringoLeanListPanel`).first;
 		addTestButtons(await createSearchPanel(divSearchPanel, applyFilters), getInfoBlock(divSearchPanel));
 		function onAribaFilterButton() {
 			let inputCurrentPage = getListTabDecoratedElement();

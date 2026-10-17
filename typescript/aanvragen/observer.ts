@@ -267,9 +267,9 @@ function addTestButtons(tagsCollapse: HTMLDetailsElement, infoBlock: InfoBlock) 
 
 async function decorateSearchPanel() {
     let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
-    let divSearchPanel = document.querySelector(`div.gringoSearchPanel`) as HTMLDivElement | null;
+    let divSearchPanel = document.querySelector(`div.gringo.gringoSearchPanel`) as HTMLDivElement | null;
     if(!divSearchPanel) {
-        let result = emmet.insertAfter(requestSearchPanel, `div.gringoSearchPanel+div.gringoLeanListPanel`);
+        let result = emmet.insertAfter(requestSearchPanel, `div.gringo.gringoSearchPanel+div.gringoLeanListPanel`);
         divSearchPanel = result.first as HTMLDivElement;
     }
     let tagsCollapse = await createSearchPanel(divSearchPanel, applyFilters);
