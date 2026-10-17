@@ -540,3 +540,8 @@ button.toggle {
         background-color: lightgray;
     }
 }
+
+.trim {
+    text-box-trim: trim-both;
+    text-box-edge: cap alphabetic;
+}
