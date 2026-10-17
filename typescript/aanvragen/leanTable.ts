@@ -1,6 +1,6 @@
 import {ExpandedPrListData, getGlobalTags, PrMeta} from "./requests";
 import {emmet} from "../../libs/Emmeter";
-import {acronym, formatDate, formatPrice, gringo} from "../globals";
+import {acronym, formatShortDate, formatPrice, gringo} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
 import {filterTable, RowFilter} from "../filterTable";
 import {getPrFilterStrings, rowFilter} from "./searchPanel";
@@ -69,7 +69,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement, prLi
                     a{${pr.request.reqTitle ?? ""}}
                 td{${pr.prListData.items.map(item => sliceSupplierName(item.supplier)).join(", ")}}
                 td{${acronym(pr.request.preparer)}}
-                td{${formatDate(pr.prListData.changed_date)}}
+                td{${formatShortDate(pr.prListData.changed_date)}}
                 td{${pr.request.status}}
                 td.netto{${formatPrice(pr.netto)}}
                 td.bruto{${formatPrice(pr.bruto)}}

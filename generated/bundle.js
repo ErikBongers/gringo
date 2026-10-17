@@ -667,8 +667,11 @@
 		anchorPerEenheid.dispatchEvent(new Event("click", { bubbles: true }));
 		anchorPerEenheid.dispatchEvent(new Event("mouseup", { bubbles: true }));
 	}
-	function formatDate(changed_date) {
-		return new Date(changed_date).toLocaleDateString();
+	function formatShortDate(changed_date) {
+		return new Date(changed_date).toLocaleDateString("nl-BE", {
+			month: "2-digit",
+			day: "2-digit"
+		});
 	}
 	function acronym(preparer) {
 		return preparer.split(" ").map((name) => name[0]).join("");
@@ -32033,7 +32036,7 @@ Total Duration: ${a - u}ms`);
 	}
 	function updateFilters() {
 		updateTagsFilters(getTagsFilters());
-		saveTextFilter(getTextFilter());
+		updateTextFilter(getTextFilter());
 	}
 	function updateTagsFilters(filters) {
 		let table = document.getElementById("tagsFilterTable");
@@ -32051,6 +32054,11 @@ Total Duration: ${a - u}ms`);
 			btnFilter.classList.toggle("equal", filter.filterType == "==");
 			btnFilter.classList.toggle("notEqual", filter.filterType == "!=");
 		}
+	}
+	function updateTextFilter(filter) {
+		let textFilterInput = document.getElementById("searchText");
+		textFilterInput.classList.toggle("active", filter.solo);
+		textFilterInput.closest(".searchTextWrapper").querySelector("button.solo").classList.toggle("active", filter.solo);
 	}
 	function createTagFilterRow(tbody, tagDef, applyFilters) {
 		let tr = emmet.appendChild(tbody, `tr`).first;
@@ -32436,7 +32444,7 @@ Total Duration: ${a - u}ms`);
                     a{${pr.request.reqTitle ?? ""}}
                 td{${pr.prListData.items.map((item) => sliceSupplierName(item.supplier)).join(", ")}}
                 td{${acronym(pr.request.preparer)}}
-                td{${formatDate(pr.prListData.changed_date)}}
+                td{${formatShortDate(pr.prListData.changed_date)}}
                 td{${pr.request.status}}
                 td.netto{${formatPrice(pr.netto)}}
                 td.bruto{${formatPrice(pr.bruto)}}

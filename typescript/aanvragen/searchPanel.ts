@@ -53,10 +53,10 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
 
 function updateFilters() {
     updateTagsFilters(getTagsFilters());
-    saveTextFilter(getTextFilter());
+    updateTextFilter(getTextFilter());
 }
 
-export function updateTagsFilters(filters: TagsFilter[]) {
+function updateTagsFilters(filters: TagsFilter[]) {
     let table = document.getElementById("tagsFilterTable") as HTMLTableElement;
     for (let tr of table.tBodies[0].rows) {
         let tagName = tr.dataset.tagName!;
@@ -72,6 +72,13 @@ export function updateTagsFilters(filters: TagsFilter[]) {
         btnFilter.classList.toggle("equal", filter.filterType == "==");
         btnFilter.classList.toggle("notEqual", filter.filterType == "!=");
     }
+}
+
+function updateTextFilter(filter: TextFilterDef) {
+    let textFilterInput = document.getElementById("searchText") as HTMLInputElement;
+    textFilterInput.classList.toggle("active", filter.solo);
+    let soloButton = textFilterInput.closest(".searchTextWrapper")!.querySelector("button.solo")!;
+    soloButton.classList.toggle("active", filter.solo);
 }
 
 function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef, applyFilters: () => Promise<void>) {
@@ -118,7 +125,7 @@ export function getTagsFilters() {
     return JSON.parse(json) as TagsFilter[];
 }
 
-export function getTextFilter() {
+export function getTextFilter(): TextFilterDef {
     let text = localStorage.getItem('gringo.textFilter')??"";
     let solo = localStorage.getItem('gringo.textFilterSolo') == "true";
     if (!text)
@@ -130,7 +137,7 @@ function saveTagsFilters(tagsFilters: TagsFilter[]) {
     localStorage.setItem('gringo.tagsFilters', JSON.stringify(tagsFilters));
 }
 
-function saveTextFilter(textFilter: {text: string, solo: boolean}) {
+function saveTextFilter(textFilter: TextFilterDef) {
     localStorage.setItem('gringo.textFilter', textFilter.text);
     localStorage.setItem('gringo.textFilterSolo', textFilter.solo ? "true" : "false");
 }
@@ -142,8 +149,13 @@ export function matchTags(selectedTags: string[], excludedTags: string[], tagStr
     return excludedTags.every(t => !tagString.includes(t));
 }
 
+export type TextFilterDef = {
+    text: string,
+    solo: boolean
+}
+
 export type FilterDef = {
-    textFilter: { text: string, solo: boolean },
+    textFilter: TextFilterDef,
     selectedTags: string[],
     excludedTags: string[]
 }

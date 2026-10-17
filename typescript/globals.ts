@@ -205,8 +205,11 @@ export function fakeAnchorClick(anchorPerEenheid: any) {
     anchorPerEenheid.dispatchEvent(new Event("mouseup", {bubbles: true}));
 }
 
-export function formatDate(changed_date: string) {
-    return new Date(changed_date).toLocaleDateString();
+export function formatShortDate(changed_date: string) {
+    return new Date(changed_date).toLocaleDateString("nl-BE", {
+        month: '2-digit',
+        day: '2-digit'
+    });
 }
 
 export function acronym(preparer: string) {
