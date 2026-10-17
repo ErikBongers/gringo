@@ -4,14 +4,14 @@ import {addButtonClickNoPropagation, formatPrice, getOptions, gringo} from "../g
 import {fetchPr} from "../sap/api";
 import {createCompactPr} from "../aanvraag/observer";
 import {
-    calcPrTotal,
+    calcPrTotal, ExpandedPrListData,
     fetchChangedMetas,
     fetchFullRequest,
     FetchListContext,
     fetchMetaCached,
     fetchRequestList,
     fetchRequestListAndDetails, getGlobalTags,
-    getPrDataList,
+    getPrDataList, PrListPrData,
     PrMeta, TagDef
 } from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
@@ -154,7 +154,7 @@ function gotoNextPage(pagination: HTMLElement) {
     }
 }
 
-function decoratePagination() {
+async function decoratePagination() {
     let main = document.querySelector("main");
     if(!main)
         return;
@@ -163,28 +163,38 @@ function decoratePagination() {
 
     let requests  = scrapePRs();
 
-    fetchChangedMetas().then(async (changedFiles) => {
-        gringo(changedFiles);
-
-        let options = await getOptions();
-        if(options.showLeanRequests) {
-            let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`) as HTMLDivElement | null;
-            if (!divLeanListPanel) {
-                let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
-                divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first as HTMLDivElement;
-            }
-            await createLeanListTable(divLeanListPanel);
+    gringo("LEAN: getPrDataList()");
+    let prDataList = await getPrDataList();
+    let changedFiles = await fetchChangedMetas();
+    let options = await getOptions();
+    if(options.showLeanRequests) {
+        let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`) as HTMLDivElement | null;
+        if (!divLeanListPanel) {
+            let requestSearchPanel = document.querySelector(".request-search-panel") as HTMLDivElement;
+            divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first as HTMLDivElement;
         }
+        await createLeanListTable(divLeanListPanel, prDataList);
+    }
 
-        await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map(f => f.data));
-        let departments = (await getGlobalSettingsCached()).projects;
-        let tagsMap = await getGlobalTags();
-        let prMetas = (await getLocalCache()).PrMetas;
-        for (const r of requests) {
-            await decoratePr(r, departments, tagsMap, prMetas);
-        }
-        await applyFilters(requests);
-    });
+    gringo("Saving changed metas...");
+    await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map(f => f.data));
+    let departments = (await getGlobalSettingsCached()).projects;
+    let tagsMap = await getGlobalTags();
+    let prMetas = (await getLocalCache()).PrMetas;
+
+    gringo("Decorating requests...");
+    let prDataMap: Map<string, ExpandedPrListData> = new Map();
+    for(let pr of prDataList) {
+        prDataMap.set(pr.prListData.prId, pr);
+    }
+    for (const r of requests) {
+        await decoratePr(r, departments, tagsMap, prMetas, prDataMap.get(r.id));
+    }
+
+    gringo("Applying filters...");
+    await applyFilters(requests);
+
+    gringo("Done.");
 }
 
 function decorateTabs(el: HTMLElement) {
@@ -301,7 +311,7 @@ function addOrderCopyButton(request: RequestBasicInfo) {
     });
 }
 
-async function decoratePr(request: RequestBasicInfo, departments: string[], tagsMap: Map<string, TagDef>, prMetas: Repository<LocalDb, "PrMetas">) {
+async function decoratePr(request: RequestBasicInfo, departments: string[], tagsMap: Map<string, TagDef>, prMetas: Repository<LocalDb, "PrMetas">, prData: ExpandedPrListData | undefined) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
         return;
@@ -311,10 +321,10 @@ async function decoratePr(request: RequestBasicInfo, departments: string[], tags
     addOrderCopyButton(request);
     let meta = await fetchMetaCached(request.id, prMetas);
     decoratePrWithMeta(request, meta, departments, tagsMap);
-    await updatePrLine(request, meta);
+    updatePrLine(request, meta, prData);
 }
 
-async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
+function updatePrLine(request: RequestBasicInfo, meta: PrMeta, prData: ExpandedPrListData | undefined) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
         return;
@@ -322,21 +332,10 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
     if(!metaWrapper)
         return;
     let newTotal = reqDiv.querySelector("div.gringo.listRowTotal") as HTMLDivElement;
-    let pr = await fetchPr(request.id);
-    let compactPr = createCompactPr(pr);
-    let expPr = await createExpandedCompactPr(compactPr);
-    let {total, currencySymbel, currency} = calcPrTotal(expPr);
 
-    if(total != 0) {
-        newTotal.textContent = formatPrice(total, currencySymbel, currency);
-        newTotal.style.display = "block";
-    }
-    else {
-        newTotal.style.display = "none";
-        gringo(`price is 0 for ${request.id}`, request, pr);
-    }
+    newTotal.textContent = formatPrice(prData?.bruto??null);
+    newTotal.style.display = "block";
     reqDiv.dataset.gringoTags = ";" + meta.tags.join(";") + ";";
-
 }
 
 let globalLastRequestTagsClicked: RequestBasicInfo | null = null;

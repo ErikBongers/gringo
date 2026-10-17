@@ -789,23 +789,6 @@
 		}
 	}
 	//#endregion
-	//#region typescript/sap/api.ts
-	async function fetchUserInfoCached() {
-		return await (await fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false")).json();
-	}
-	async function fetchPr(prId) {
-		let userInfo = await fetchUserInfoCached();
-		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`)).json();
-	}
-	async function fetchReqContext() {
-		let userInfo = await fetchUserInfoCached();
-		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/obo`)).json();
-	}
-	async function fetchShoppingCart() {
-		let userInfo = await fetchUserInfoCached();
-		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/shoppingCart`)).json();
-	}
-	//#endregion
 	//#region typescript/tokenScanner.ts
 	var ScannerElse = class {
 		scannerIf;
@@ -1008,6 +991,455 @@
 			headers
 		})).text();
 	}
+	//#endregion
+	//#region typescript/sap/api.ts
+	async function fetchUserInfoCached() {
+		return await (await fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false")).json();
+	}
+	async function fetchPr(prId) {
+		let userInfo = await fetchUserInfoCached();
+		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/${prId}`)).json();
+	}
+	async function fetchReqContext() {
+		let userInfo = await fetchUserInfoCached();
+		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/requisition/obo`)).json();
+	}
+	async function fetchShoppingCart() {
+		let userInfo = await fetchUserInfoCached();
+		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/shoppingCart`)).json();
+	}
+	//#endregion
+	//#region typescript/sap/SapUserInfo.ts
+	async function getUserInfo() {
+		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
+	}
+	//#endregion
+	//#region typescript/calculator/cursor.ts
+	var Cursor = class Cursor {
+		text;
+		currentPos;
+		length;
+		constructor(text) {
+			this.text = text;
+			this.length = this.text.length;
+			this.currentPos = -1;
+		}
+		static copy(cursor) {
+			let newCursor = new Cursor(cursor.text);
+			newCursor.currentPos = cursor.currentPos;
+			return newCursor;
+		}
+		eat(char) {
+			if (this.currentPos >= this.length) return false;
+			if (this.text[this.currentPos] == char) {
+				this.currentPos++;
+				return true;
+			}
+			return false;
+		}
+		get pos() {
+			return this.currentPos;
+		}
+		get current() {
+			if (this.currentPos >= this.length) return "";
+			return this.text[this.currentPos];
+		}
+		next() {
+			if (this.currentPos >= this.length) return "";
+			this.currentPos++;
+			return this.current;
+		}
+		peek() {
+			if (this.currentPos + 1 >= this.length) return "";
+			return this.text[this.currentPos + 1];
+		}
+		getText(pos, length) {
+			return this.text.substring(pos, pos + length);
+		}
+		back() {
+			if (this.currentPos < 0) return;
+			this.currentPos--;
+		}
+	};
+	//#endregion
+	//#region typescript/calculator/tokenizer.ts
+	function getText(token) {
+		return token.cursor.getText(token.pos, token.length);
+	}
+	var Tokenizer = class {
+		cursor;
+		constructor(text) {
+			this.cursor = new Cursor(text);
+		}
+		setCursor(cursor) {
+			this.cursor = cursor;
+		}
+		cloneCursor() {
+			return Cursor.copy(this.cursor);
+		}
+		next() {
+			this.skipWhitespace();
+			let char = this.cursor.next();
+			switch (char) {
+				case "": return null;
+				case "€":
+				case "$":
+				case "(":
+				case ")":
+				case "+":
+				case "-":
+				case "*":
+				case "/": return {
+					type: char,
+					cursor: this.cursor,
+					pos: this.cursor.pos,
+					length: 1
+				};
+				case ".":
+				case ",":
+				case "0":
+				case "1":
+				case "2":
+				case "3":
+				case "4":
+				case "5":
+				case "6":
+				case "7":
+				case "8":
+				case "9": return this.getNumberToken();
+				default: return {
+					type: "UNKNOWN",
+					cursor: this.cursor,
+					pos: this.cursor.pos,
+					length: 1
+				};
+			}
+		}
+		getNumberToken() {
+			let token = {
+				type: "NUMBER",
+				cursor: this.cursor,
+				pos: this.cursor.pos,
+				length: 0
+			};
+			let start = this.cursor.pos;
+			while (this.cursor.peek().match(/[\d., ]/)) this.cursor.next();
+			while (this.cursor.current == " ") this.cursor.back();
+			token.length = this.cursor.pos - start + 1;
+			return token;
+		}
+		skipWhitespace() {
+			while (this.cursor.peek().match(/\s/)) this.cursor.next();
+		}
+	};
+	//#endregion
+	//#region typescript/calculator/peekingTokenizer.ts
+	var PeekingTokenizer = class {
+		tokenizer;
+		peekedToken = null;
+		constructor(text) {
+			this.tokenizer = new Tokenizer(text);
+		}
+		peek() {
+			if (this.peekedToken) return this.peekedToken;
+			let cursor = this.tokenizer.cloneCursor();
+			this.peekedToken = this.tokenizer.next();
+			this.tokenizer.setCursor(cursor);
+			return this.peekedToken;
+		}
+		next() {
+			this.peekedToken = null;
+			return this.tokenizer.next();
+		}
+		getCursor() {
+			return this.tokenizer.cloneCursor();
+		}
+		match(tokenType) {
+			let token = this.peek();
+			if (token?.type == tokenType) {
+				this.next();
+				return token;
+			}
+			return null;
+		}
+	};
+	//#endregion
+	//#region typescript/calculator/parser.ts
+	const ERR_EXPECTED_CLOSE_PAREN = {
+		error_type: "E",
+		message: "expected ')'"
+	};
+	var Parser$1 = class {
+		peekingTokenizer;
+		constructor(text) {
+			this.peekingTokenizer = new PeekingTokenizer(text);
+		}
+		parse() {
+			return this.parseExpression();
+		}
+		parseExpression() {
+			let term1 = this.parseTerm();
+			while (true) {
+				let operator = this.peekingTokenizer.peek();
+				if (!operator) return term1;
+				if (operator.type != "+" && operator.type != "-") return term1;
+				this.peekingTokenizer.next();
+				let term2 = this.parseTerm();
+				if (operator.type == "+") term1 = {
+					result: term1.result + term2.result,
+					errors: term1.errors.concat(term2.errors)
+				};
+				else term1 = {
+					result: term1.result - term2.result,
+					errors: term1.errors.concat(term2.errors)
+				};
+			}
+		}
+		parseTerm() {
+			let factor1 = this.parseFactor();
+			while (true) {
+				let operator = this.peekingTokenizer.peek();
+				if (!operator) return factor1;
+				if (operator.type != "*" && operator.type != "/") return factor1;
+				this.peekingTokenizer.next();
+				let factor2 = this.parseFactor();
+				if (operator.type == "*") factor1 = {
+					result: factor1.result * factor2.result,
+					errors: factor1.errors.concat(factor2.errors)
+				};
+				else factor1 = {
+					result: factor1.result / factor2.result,
+					errors: factor1.errors.concat(factor2.errors)
+				};
+			}
+		}
+		parseFactor() {
+			if (this.peekingTokenizer.match("(")) {
+				let res = this.parseExpression();
+				let peeked = this.peekingTokenizer.peek();
+				if (peeked?.type == ")") this.peekingTokenizer.next();
+				else if (peeked != null) res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
+				else res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
+				return res;
+			}
+			return this.parseCurrency();
+		}
+		parseCurrency() {
+			let peeked = this.peekingTokenizer.peek();
+			if (!peeked) return {
+				result: 0,
+				errors: []
+			};
+			if (peeked.type == "€") this.peekingTokenizer.next();
+			return this.parseNumber();
+		}
+		parseNumber() {
+			let token = this.peekingTokenizer.next();
+			if (!token) return {
+				result: 0,
+				errors: []
+			};
+			let text = getText(token);
+			text = text.replaceAll(" ", "");
+			if (text.startsWith("€")) text = text.substring(1);
+			let decimalPoint;
+			let thousandSeparator;
+			let lastCommaIndex = text.lastIndexOf(",");
+			if (text.lastIndexOf(".") > lastCommaIndex) {
+				decimalPoint = ".";
+				thousandSeparator = ",";
+			} else {
+				decimalPoint = ",";
+				thousandSeparator = ".";
+			}
+			text = text.replaceAll(thousandSeparator, "");
+			let slices = text.split(decimalPoint);
+			if (slices.length > 1) {
+				let decimals = slices.pop();
+				text = slices.join("") + "." + decimals;
+			}
+			return {
+				result: parseFloat(text),
+				errors: []
+			};
+		}
+	};
+	//#endregion
+	//#region typescript/aanvraag/calcField.ts
+	var CalcField = class {
+		input;
+		resultDiv;
+		resultLabel;
+		resultErrorImage;
+		result = null;
+		postFieldLabelDiv = null;
+		constructor(container, label, postFieldLabel, postFieldLabelClass, onRecalculated) {
+			let postFieldLabelClassString = postFieldLabelClass.join(".");
+			if (postFieldLabelClassString) postFieldLabelClassString = "." + postFieldLabelClassString;
+			let fieldDiv = emmet.indent.appendChild(container, `
+            div
+                div.input-wrap
+                    div.form-group
+                        label.editable-field-label{${label}}
+                        div.field-wrapper
+                            div.flexRow
+                                input.form-control[type="text"]
+                                div.postFieldLabel${postFieldLabelClassString}
+                            div.flexRow.calcResult
+                                label
+                                i.fa.fa-triangle-exclamation
+        `).first;
+			let postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel");
+			if (typeof postFieldLabel == "string") postFieldLabelDiv.innerHTML = postFieldLabel;
+			else postFieldLabelDiv.appendChild(postFieldLabel);
+			this.input = fieldDiv.querySelector("input");
+			this.resultDiv = fieldDiv.querySelector("div.calcResult");
+			this.resultLabel = this.resultDiv.querySelector("label");
+			this.resultErrorImage = fieldDiv.querySelector("i.fa");
+			this.input.addEventListener("keyup", (ev) => {
+				this.reParse();
+				onRecalculated(this);
+			});
+			this.input.addEventListener("gringo.recalc", (ev) => {
+				gringo("recalc");
+				this.reParse();
+				onRecalculated(this);
+			});
+			if (postFieldLabel != "") this.postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel");
+		}
+		setReadOnly() {
+			this.input.readOnly = true;
+			this.input.classList.add("readonly");
+		}
+		reParse() {
+			if (this.input.value == "") {
+				this.result = null;
+				this.resultLabel.textContent = "";
+				this.resultDiv.classList.toggle("error", false);
+				return;
+			}
+			let parser = new Parser$1(this.input.value);
+			this.result = parser.parse();
+			this.resultLabel.textContent = formatPrice(this.result.result);
+			this.resultDiv.classList.toggle("error", this.result.errors.length > 0);
+			this.resultErrorImage.title = this.result.errors.map((e) => e.message).join("\n");
+		}
+	};
+	//#endregion
+	//#region typescript/aanvraag/entangledFields.ts
+	var EntangledFields = class {
+		fields;
+		currentSourceField;
+		isTransfering;
+		context;
+		constructor(context) {
+			this.fields = [];
+			this.context = context;
+			this.currentSourceField = null;
+			this.isTransfering = false;
+		}
+		add(field, updateCallback1) {
+			this.fields.push({
+				field,
+				callback: updateCallback1
+			});
+			field.addEventListener("focus", () => {
+				if (!this.isTransfering) this.currentSourceField = field;
+			});
+		}
+		setCurrentSource(field) {
+			this.currentSourceField = field;
+		}
+		triggerRecalc() {
+			if (this.currentSourceField) this.currentSourceField.dispatchEvent(new Event("gringo.recalc"));
+			else this.fields[0].field.dispatchEvent(new Event("gringo.recalc"));
+		}
+		updateOtherFields() {
+			if (this.isTransfering) return;
+			this.isTransfering = true;
+			this.fields.filter((f) => f.field != this.currentSourceField).forEach((f) => f.callback(this.context));
+			this.isTransfering = false;
+		}
+	};
+	//#endregion
+	//#region typescript/utils/unreachable.ts
+	function unreachable(x) {
+		throw new Error("This error will never be thrown. It is used for type safety.");
+	}
+	//#endregion
+	//#region typescript/aanvraag/priceDataModel.ts
+	var PriceDataModel = class {
+		_bruto = null;
+		_netto = null;
+		_tarif = null;
+		_unitPrice;
+		_quantity;
+		expandedPrItem;
+		isGenericProduct;
+		constructor(quantity, unitPriceOrGeneric, btw, expandedPrItem) {
+			this._tarif = btw;
+			this.expandedPrItem = expandedPrItem;
+			this._quantity = quantity;
+			this.isGenericProduct = unitPriceOrGeneric == null;
+			this._unitPrice = unitPriceOrGeneric ?? 1;
+		}
+		get tarif() {
+			return this._tarif;
+		}
+		set tarif(value) {
+			this._tarif = value;
+			if (this._tarif != null && this._netto != null && this._unitPrice != null && this._quantity != null) this._bruto = this._netto * (1 + this._tarif / 100);
+		}
+		get netto() {
+			return this._netto;
+		}
+		set netto(value) {
+			this._netto = value;
+			if (this._netto != null) {
+				this._quantity = this._netto / this._unitPrice;
+				this._bruto = this._tarif != null ? this._netto * (1 + this._tarif / 100) : null;
+			}
+			this.updatePrItem();
+		}
+		get bruto() {
+			return this._bruto;
+		}
+		set bruto(value) {
+			this._bruto = value;
+			if (this._bruto != null) {
+				this._netto = this._tarif != null ? this._bruto / (1 + this._tarif / 100) : null;
+				if (this._netto != null) this._quantity = this._netto / this._unitPrice;
+			}
+			this.updatePrItem();
+		}
+		get unitPrice() {
+			return this._unitPrice;
+		}
+		setUnitPrice(value, recalcFrom) {
+			this.isGenericProduct = value == null;
+			this._unitPrice = value ?? 1;
+			switch (recalcFrom) {
+				case "netto":
+					this.netto = this._netto;
+					break;
+				case "bruto":
+					this.bruto = this._bruto;
+					break;
+				default: unreachable(recalcFrom);
+			}
+		}
+		get quantity() {
+			return this._quantity;
+		}
+		set quantity(value) {
+			this._quantity = value;
+			this.updatePrItem();
+		}
+		updatePrItem() {
+			if (!this.expandedPrItem) return;
+			this.expandedPrItem.quantity = this._quantity;
+		}
+	};
 	//#endregion
 	//#region node_modules/@firebase/util/dist/postinstall.mjs
 	const getDefaultsFromPostinstall = () => void 0;
@@ -10128,7 +10560,7 @@
 	*
 	* The only public entry point is {@link #parse(String pattern, int flags)}.
 	*/
-	var Parser$1 = class Parser {
+	var Parser = class Parser {
 		static ERR_INTERNAL_ERROR = "regexp/syntax: internal error";
 		static ERR_INVALID_CHAR_RANGE = "invalid character class range";
 		static ERR_INVALID_ESCAPE = "invalid escape sequence";
@@ -11240,7 +11672,7 @@
 			return RE2.compileImpl(expr, RE2Flags.POSIX, true);
 		}
 		static compileImpl(expr, mode, longest) {
-			let re = Parser$1.parse(expr, mode);
+			let re = Parser.parse(expr, mode);
 			const maxCap = re.maxCap();
 			re = Simplify.simplify(re);
 			const prefilter = PrefilterTree.build(re);
@@ -11712,7 +12144,7 @@
 			if ((this.jsFlags & PublicFlags.CASE_INSENSITIVE) !== 0) fregex = `(?i)${fregex}`;
 			if ((this.jsFlags & PublicFlags.DOTALL) !== 0) fregex = `(?s)${fregex}`;
 			if ((this.jsFlags & PublicFlags.MULTILINE) !== 0) fregex = `(?m)${fregex}`;
-			const re = Parser$1.parse(fregex, this.re2Flags);
+			const re = Parser.parse(fregex, this.re2Flags);
 			this.regexps.push(Simplify.simplify(re));
 			return this.regexps.length - 1;
 		}
@@ -29692,810 +30124,6 @@ Total Duration: ${a - u}ms`);
 		await saveTarifDefToFireStore(tarifDef);
 	}
 	//#endregion
-	//#region typescript/infoBlock/infoBar.ts
-	var InfoBar = class InfoBar {
-		parent;
-		container;
-		divInfoLine;
-		divTempLine;
-		divExtraLine;
-		divErrorLine;
-		tempMessage;
-		divCacheInfo;
-		static ID = "dp3p_infoContainer";
-		static EXTRA_ID = "dp3_extraInfo";
-		static ERROR_ID = "dp3_errorInfo";
-		static TEMP_ID = "dp3_tempInfo";
-		static CACHE_ID = "dp3p_cacheInfo";
-		constructor(parent) {
-			this.parent = parent;
-			this.tempMessage = "";
-			let container = parent.querySelector(`div#${InfoBar.ID}`);
-			if (!container) {
-				container = emmet.appendChild(parent, `div#${InfoBar.ID}`).first;
-				this.divExtraLine = emmet.appendChild(container, `div#${InfoBar.EXTRA_ID}.infoMessage`).last;
-				this.divErrorLine = emmet.appendChild(container, `div#${InfoBar.ERROR_ID}.infoError`).last;
-				this.divInfoLine = emmet.appendChild(container, "div.infoLine").last;
-				this.divTempLine = emmet.appendChild(container, `div#${InfoBar.TEMP_ID}.infoMessage.tempLine`).last;
-				this.divCacheInfo = emmet.appendChild(container, `div#${InfoBar.CACHE_ID}.cacheInfo`).last;
-			} else {
-				this.divExtraLine = container.querySelector(`#${InfoBar.EXTRA_ID}`);
-				this.divErrorLine = container.querySelector(`#${InfoBar.ERROR_ID}`);
-				this.divInfoLine = container.querySelector("div.infoLine");
-				this.divTempLine = container.querySelector(`#${InfoBar.TEMP_ID}`);
-				this.divCacheInfo = container.querySelector(`#${InfoBar.CACHE_ID}`);
-			}
-			this.container = container;
-		}
-		setTempMessage(msg) {
-			this.tempMessage = msg;
-			this.#updateTempMessage();
-			setTimeout(this.clearTempMessage.bind(this), 4e3);
-		}
-		clearTempMessage() {
-			this.tempMessage = "";
-			this.#updateTempMessage();
-		}
-		#updateTempMessage() {
-			this.divTempLine.innerHTML = this.tempMessage;
-		}
-		setInfoLine(message) {
-			this.divInfoLine.innerHTML = message;
-		}
-		setErrorLine(message) {
-			this.divErrorLine.innerHTML = message;
-		}
-		setCacheInfo(info, reset_onclick) {
-			this.divCacheInfo.innerHTML = info;
-			let button = emmet.appendChild(this.divCacheInfo, "button.likeLink").first;
-			button.innerHTML = "refresh";
-			button.onclick = reset_onclick;
-		}
-		setExtraInfo(message, click_element_id, callback) {
-			this.divExtraLine.innerHTML = message;
-			if (click_element_id) {
-				if (callback) document.getElementById(click_element_id).onclick = callback;
-			}
-		}
-	};
-	//#endregion
-	//#region typescript/infoBlock/progressBar.ts
-	var ProgressBar = class ProgressBar {
-		barElement;
-		parent;
-		container;
-		maxCount;
-		count;
-		static ID = "progressBarContainer";
-		constructor(parent) {
-			this.parent = parent;
-			let container = this.parent.querySelector("#" + ProgressBar.ID);
-			if (!container) container = emmet.indent.appendChild(this.parent, `
-                div#${ProgressBar.ID}
-                    div.progressBar
-            `).first;
-			this.container = container;
-			this.barElement = this.container.querySelector(".progressBar");
-			this.hide();
-			this.maxCount = 0;
-			this.count = 0;
-		}
-		reset(maxCount) {
-			this.maxCount = maxCount;
-			this.count = 0;
-			this.barElement.innerHTML = "";
-			for (let i = 0; i < maxCount; i++) {
-				let block = document.createElement("div");
-				this.barElement.appendChild(block);
-				block.classList.add("progressBlock");
-				if (maxCount > 50) block.classList.add("mini");
-			}
-		}
-		start(maxCount) {
-			this.reset(maxCount);
-			this.container.style.display = "";
-			this.next();
-		}
-		hide() {
-			this.container.style.display = "none";
-		}
-		stop() {
-			this.hide();
-		}
-		next() {
-			if (this.count >= this.maxCount) return false;
-			this.barElement.children[this.count].classList.remove("iddle", "loaded");
-			this.barElement.children[this.count].classList.add("loading");
-			for (let i = 0; i < this.count; i++) {
-				this.barElement.children[i].classList.remove("iddle", "loading");
-				this.barElement.children[i].classList.add("loaded");
-			}
-			for (let i = this.count + 1; i < this.maxCount; i++) {
-				this.barElement.children[i].classList.remove("loaded", "loading");
-				this.barElement.children[i].classList.add("iddle");
-			}
-			this.count++;
-			return true;
-		}
-	};
-	//#endregion
-	//#region typescript/infoBlock/infoBlock.ts
-	function getInfoBlock(parent) {
-		return {
-			infoBar: new InfoBar(parent),
-			progressBar: new ProgressBar(parent)
-		};
-	}
-	function getInfoBlockForCurrentPage() {
-		let infoContainer = document.querySelector("div.infoContainer");
-		if (!infoContainer) infoContainer = emmet.indent.insertAfter(document.getElementById("navigation"), "div").first;
-		return getInfoBlock(infoContainer);
-	}
-	//#endregion
-	//#region typescript/aanvragen/requests.ts
-	async function fetchRequestListChunk(chain, userInfo, zSince) {
-		if (!zSince) zSince = (/* @__PURE__ */ new Date()).toISOString().replaceAll("T", " ").split(".")[0] + " GMT";
-		await chain.post(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo.hashedUser}/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435`, {
-			"searchFilters": {
-				"LastUpdatedFromDate": "2026-02-17 23:00:00 GMT",
-				"LastUpdatedToDate": zSince
-			},
-			"requestTypeFilter": "all",
-			"orderByField": "daterequested",
-			"ascendingOrder": false
-		});
-		return await chain.getJson();
-	}
-	async function fetchRequestList() {
-		let chain = new FetchChain();
-		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
-		let userInfo = chain.getJson();
-		if (userInfo == null) throw new Error("gringo: could not get userInfo.");
-		let requestList = await fetchRequestListChunk(chain, userInfo);
-		if (requestList.requestList.length > 0) while (true) {
-			let requestList2 = await fetchRequestListChunk(chain, userInfo, requestList.requestList[requestList.requestList.length - 1].lastModifiedDate + " 00:00:00 GMT");
-			if (requestList2.requestList.length == 0) break;
-			requestList.requestList.push(...requestList2.requestList);
-		}
-		return requestList;
-	}
-	async function fetchFullRequest(prId, ctx) {
-		let pr = await fetchPr(prId);
-		ctx.infoBlock.infoBar.setInfoLine(`PR details ophalen...(${ctx.counter++})`);
-		if (pr.title == null) return null;
-		return pr;
-	}
-	async function fetchRequestListAndDetails(infoBlock) {
-		infoBlock.infoBar.setInfoLine("PR lijst ophalen...");
-		let requestList = await fetchRequestList();
-		infoBlock.infoBar.setInfoLine("PR details ophalen...");
-		let ctx = {
-			counter: 0,
-			infoBlock
-		};
-		let promises = requestList.requestList.map((r) => {
-			let requestId = r.reqUniqueName;
-			return fetchFullRequest(requestId, ctx);
-		});
-		let detailsList = await Promise.all(promises);
-		let jsonList = detailsList.filter((r) => r != null).map((r) => {
-			if (r.lineItems == null) return [];
-			return r.lineItems.map((item) => {
-				let { currency, currencySymbol, ...compactItem } = createCompactReqItem(item);
-				return {
-					prId: r.reqId,
-					status: r.status,
-					title: r.title.value,
-					lineNumber: item.lineNumber,
-					...compactItem
-				};
-			});
-		}).flat();
-		await cloud.json.upload("gringo/pr/allPrs_2026.json", jsonList);
-		return detailsList;
-	}
-	async function fetchChangedMetas() {
-		let changedMetas;
-		let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
-		if (!zSince) {
-			await (await getLocalCache()).PrMetas.clear();
-			changedMetas = [];
-		} else changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
-		let fetchedDate = /* @__PURE__ */ new Date();
-		fetchedDate = /* @__PURE__ */ new Date(fetchedDate.getTime() - 3e5);
-		let zFetchedDate = fetchedDate.toISOString();
-		localStorage.setItem(KEY_LAST_FETCHED_METAS, zFetchedDate);
-		return changedMetas;
-	}
-	async function fetchMetaCached(prId, prMetas) {
-		if (!prMetas) prMetas = (await getLocalCache()).PrMetas;
-		let localMeta = await prMetas.get(prId);
-		if (localMeta) return localMeta;
-		let meta = {
-			prId,
-			tags: []
-		};
-		try {
-			meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
-		} catch {
-			await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
-		}
-		await (await getLocalCache()).PrMetas.put(meta);
-		await savePrMetaToFireStore(meta);
-		return meta;
-	}
-	async function saveMeta(prId, meta, what) {
-		if (what == "localStorage and cloud") await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
-		await (await getLocalCache()).PrMetas.put(meta);
-		await savePrMetaToFireStore(meta);
-	}
-	function getAccountingField(prItem, idIncludes) {
-		let field = prItem.accounting.fields?.find((f) => f.id.endsWith(idIncludes));
-		if (!field) return null;
-		let code = field.uniqueName;
-		let dscr = field.value;
-		if (!code) return null;
-		return {
-			code,
-			dscr
-		};
-	}
-	function getAdvancedField(prItem, idIncludes) {
-		let field = prItem.advanced.fields?.find((f) => f.id.endsWith(idIncludes));
-		if (!field) return null;
-		let code = field.uniqueName;
-		let dscr = field.value;
-		if (!code) return null;
-		return {
-			code,
-			dscr
-		};
-	}
-	function getPrItemCommodity(prItem) {
-		return getAdvancedField(prItem, "pAtHCommonCommodityCode");
-	}
-	function getPrItemLedger(prItem) {
-		return getAccountingField(prItem, "pAtHGeneralLedger");
-	}
-	function getPrItemAsset(prItem) {
-		return getAccountingField(prItem, "pAtHAsset");
-	}
-	function getPrItemGrant(prItem) {
-		return getAccountingField(prItem, "cus_Grant");
-	}
-	let globalTagsMap = null;
-	async function getGlobalTags() {
-		if (!globalTagsMap) {
-			let globalSettings = await getGlobalSettingsCached();
-			globalTagsMap = new Map(globalSettings.tagDefs.map((t) => [t.name, t]));
-		}
-		return globalTagsMap;
-	}
-	function calcBrutoLinePrice(item) {
-		let bruto = null;
-		bruto = item.price * item.quantity * (100 + (item.tarif?.tarif ?? 0));
-		bruto = Math.round(bruto) / 100;
-		return bruto;
-	}
-	function calcPrTotal(pr) {
-		return {
-			total: pr.items.reduce((total, item) => total + calcBrutoLinePrice(item), 0),
-			currencySymbel: "€",
-			currency: "EUR"
-		};
-	}
-	async function convertToBaseLineItem(item) {
-		let commodityCode = getPrItemCommodity(item)?.code ?? "";
-		let tarif = await getTarifDefCached(commodityCode);
-		return {
-			commodityCode,
-			price: item.price.value.amount,
-			quantity: item.quantity.value,
-			tarif
-		};
-	}
-	async function convertPrListItemData(item) {
-		return {
-			index: parseInt(item.lineNumber),
-			netto: item.quantity.value,
-			bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
-			commodityCode: getPrItemCommodity(item)?.code ?? "",
-			currency: item.price.currency ?? "",
-			supplier: item.supplier.value ?? ""
-		};
-	}
-	async function convertPrToListData(request, pr) {
-		let listItemDatas = [];
-		for (let item of pr.lineItems ?? []) listItemDatas.push(await convertPrListItemData(item));
-		return {
-			prId: pr.reqId,
-			items: listItemDatas,
-			changed_date: request.timeUpdated
-		};
-	}
-	async function getPrDataList() {
-		let infoBlock = getInfoBlockForCurrentPage();
-		let requests = await fetchRequestList();
-		let prListDatas = [];
-		let cache = await getLocalCache();
-		infoBlock.infoBar.setInfoLine("Ophalen gewijzigde PR's...");
-		infoBlock.progressBar.start(requests.requestList.length);
-		for (let request of requests.requestList) {
-			let prListData = await cache.PrListData.get(request.reqUniqueName);
-			if (prListData && prListData.changed_date == request.timeUpdated) {
-				prListDatas.push(prListData);
-				continue;
-			}
-			let prData = await convertPrToListData(request, await fetchPr(request.reqUniqueName));
-			await cache.PrListData.put(prData);
-			prListDatas.push(prData);
-			infoBlock.progressBar.next();
-		}
-		infoBlock.infoBar.setInfoLine("");
-		infoBlock.progressBar.stop();
-		return mergeRequestsAndData(prListDatas, requests);
-	}
-	async function mergeRequestsAndData(prListDatas, requests) {
-		let cache = await getLocalCache();
-		let dataSet = /* @__PURE__ */ new Map();
-		for (let prListData of prListDatas) dataSet.set(prListData.prId, prListData);
-		let expandedPrListData = [];
-		for (let request of requests.requestList) {
-			let prListData = dataSet.get(request.reqUniqueName);
-			if (!prListData) {
-				console.error(`Could not find prListData for request ${request.reqUniqueName}`);
-				continue;
-			}
-			let meta = await cache.PrMetas.get(prListData.prId);
-			if (!meta) {
-				console.error(`Could not find meta for pr ${prListData.prId}`);
-				continue;
-			}
-			let netto = prListData.items.reduce((acc, item) => acc + item.netto, 0);
-			let bruto = prListData.items.reduce((acc, item) => acc + item.bruto, 0);
-			expandedPrListData.push({
-				request,
-				prListData,
-				meta,
-				netto,
-				bruto
-			});
-		}
-		return expandedPrListData.filter((item) => item !== void 0);
-	}
-	//#endregion
-	//#region typescript/sap/SapUserInfo.ts
-	async function getUserInfo() {
-		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
-	}
-	//#endregion
-	//#region typescript/calculator/cursor.ts
-	var Cursor = class Cursor {
-		text;
-		currentPos;
-		length;
-		constructor(text) {
-			this.text = text;
-			this.length = this.text.length;
-			this.currentPos = -1;
-		}
-		static copy(cursor) {
-			let newCursor = new Cursor(cursor.text);
-			newCursor.currentPos = cursor.currentPos;
-			return newCursor;
-		}
-		eat(char) {
-			if (this.currentPos >= this.length) return false;
-			if (this.text[this.currentPos] == char) {
-				this.currentPos++;
-				return true;
-			}
-			return false;
-		}
-		get pos() {
-			return this.currentPos;
-		}
-		get current() {
-			if (this.currentPos >= this.length) return "";
-			return this.text[this.currentPos];
-		}
-		next() {
-			if (this.currentPos >= this.length) return "";
-			this.currentPos++;
-			return this.current;
-		}
-		peek() {
-			if (this.currentPos + 1 >= this.length) return "";
-			return this.text[this.currentPos + 1];
-		}
-		getText(pos, length) {
-			return this.text.substring(pos, pos + length);
-		}
-		back() {
-			if (this.currentPos < 0) return;
-			this.currentPos--;
-		}
-	};
-	//#endregion
-	//#region typescript/calculator/tokenizer.ts
-	function getText(token) {
-		return token.cursor.getText(token.pos, token.length);
-	}
-	var Tokenizer = class {
-		cursor;
-		constructor(text) {
-			this.cursor = new Cursor(text);
-		}
-		setCursor(cursor) {
-			this.cursor = cursor;
-		}
-		cloneCursor() {
-			return Cursor.copy(this.cursor);
-		}
-		next() {
-			this.skipWhitespace();
-			let char = this.cursor.next();
-			switch (char) {
-				case "": return null;
-				case "€":
-				case "$":
-				case "(":
-				case ")":
-				case "+":
-				case "-":
-				case "*":
-				case "/": return {
-					type: char,
-					cursor: this.cursor,
-					pos: this.cursor.pos,
-					length: 1
-				};
-				case ".":
-				case ",":
-				case "0":
-				case "1":
-				case "2":
-				case "3":
-				case "4":
-				case "5":
-				case "6":
-				case "7":
-				case "8":
-				case "9": return this.getNumberToken();
-				default: return {
-					type: "UNKNOWN",
-					cursor: this.cursor,
-					pos: this.cursor.pos,
-					length: 1
-				};
-			}
-		}
-		getNumberToken() {
-			let token = {
-				type: "NUMBER",
-				cursor: this.cursor,
-				pos: this.cursor.pos,
-				length: 0
-			};
-			let start = this.cursor.pos;
-			while (this.cursor.peek().match(/[\d., ]/)) this.cursor.next();
-			while (this.cursor.current == " ") this.cursor.back();
-			token.length = this.cursor.pos - start + 1;
-			return token;
-		}
-		skipWhitespace() {
-			while (this.cursor.peek().match(/\s/)) this.cursor.next();
-		}
-	};
-	//#endregion
-	//#region typescript/calculator/peekingTokenizer.ts
-	var PeekingTokenizer = class {
-		tokenizer;
-		peekedToken = null;
-		constructor(text) {
-			this.tokenizer = new Tokenizer(text);
-		}
-		peek() {
-			if (this.peekedToken) return this.peekedToken;
-			let cursor = this.tokenizer.cloneCursor();
-			this.peekedToken = this.tokenizer.next();
-			this.tokenizer.setCursor(cursor);
-			return this.peekedToken;
-		}
-		next() {
-			this.peekedToken = null;
-			return this.tokenizer.next();
-		}
-		getCursor() {
-			return this.tokenizer.cloneCursor();
-		}
-		match(tokenType) {
-			let token = this.peek();
-			if (token?.type == tokenType) {
-				this.next();
-				return token;
-			}
-			return null;
-		}
-	};
-	//#endregion
-	//#region typescript/calculator/parser.ts
-	const ERR_EXPECTED_CLOSE_PAREN = {
-		error_type: "E",
-		message: "expected ')'"
-	};
-	var Parser = class {
-		peekingTokenizer;
-		constructor(text) {
-			this.peekingTokenizer = new PeekingTokenizer(text);
-		}
-		parse() {
-			return this.parseExpression();
-		}
-		parseExpression() {
-			let term1 = this.parseTerm();
-			while (true) {
-				let operator = this.peekingTokenizer.peek();
-				if (!operator) return term1;
-				if (operator.type != "+" && operator.type != "-") return term1;
-				this.peekingTokenizer.next();
-				let term2 = this.parseTerm();
-				if (operator.type == "+") term1 = {
-					result: term1.result + term2.result,
-					errors: term1.errors.concat(term2.errors)
-				};
-				else term1 = {
-					result: term1.result - term2.result,
-					errors: term1.errors.concat(term2.errors)
-				};
-			}
-		}
-		parseTerm() {
-			let factor1 = this.parseFactor();
-			while (true) {
-				let operator = this.peekingTokenizer.peek();
-				if (!operator) return factor1;
-				if (operator.type != "*" && operator.type != "/") return factor1;
-				this.peekingTokenizer.next();
-				let factor2 = this.parseFactor();
-				if (operator.type == "*") factor1 = {
-					result: factor1.result * factor2.result,
-					errors: factor1.errors.concat(factor2.errors)
-				};
-				else factor1 = {
-					result: factor1.result / factor2.result,
-					errors: factor1.errors.concat(factor2.errors)
-				};
-			}
-		}
-		parseFactor() {
-			if (this.peekingTokenizer.match("(")) {
-				let res = this.parseExpression();
-				let peeked = this.peekingTokenizer.peek();
-				if (peeked?.type == ")") this.peekingTokenizer.next();
-				else if (peeked != null) res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
-				else res.errors.push(ERR_EXPECTED_CLOSE_PAREN);
-				return res;
-			}
-			return this.parseCurrency();
-		}
-		parseCurrency() {
-			let peeked = this.peekingTokenizer.peek();
-			if (!peeked) return {
-				result: 0,
-				errors: []
-			};
-			if (peeked.type == "€") this.peekingTokenizer.next();
-			return this.parseNumber();
-		}
-		parseNumber() {
-			let token = this.peekingTokenizer.next();
-			if (!token) return {
-				result: 0,
-				errors: []
-			};
-			let text = getText(token);
-			text = text.replaceAll(" ", "");
-			if (text.startsWith("€")) text = text.substring(1);
-			let decimalPoint;
-			let thousandSeparator;
-			let lastCommaIndex = text.lastIndexOf(",");
-			if (text.lastIndexOf(".") > lastCommaIndex) {
-				decimalPoint = ".";
-				thousandSeparator = ",";
-			} else {
-				decimalPoint = ",";
-				thousandSeparator = ".";
-			}
-			text = text.replaceAll(thousandSeparator, "");
-			let slices = text.split(decimalPoint);
-			if (slices.length > 1) {
-				let decimals = slices.pop();
-				text = slices.join("") + "." + decimals;
-			}
-			return {
-				result: parseFloat(text),
-				errors: []
-			};
-		}
-	};
-	//#endregion
-	//#region typescript/aanvraag/calcField.ts
-	var CalcField = class {
-		input;
-		resultDiv;
-		resultLabel;
-		resultErrorImage;
-		result = null;
-		postFieldLabelDiv = null;
-		constructor(container, label, postFieldLabel, postFieldLabelClass, onRecalculated) {
-			let postFieldLabelClassString = postFieldLabelClass.join(".");
-			if (postFieldLabelClassString) postFieldLabelClassString = "." + postFieldLabelClassString;
-			let fieldDiv = emmet.indent.appendChild(container, `
-            div
-                div.input-wrap
-                    div.form-group
-                        label.editable-field-label{${label}}
-                        div.field-wrapper
-                            div.flexRow
-                                input.form-control[type="text"]
-                                div.postFieldLabel${postFieldLabelClassString}
-                            div.flexRow.calcResult
-                                label
-                                i.fa.fa-triangle-exclamation
-        `).first;
-			let postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel");
-			if (typeof postFieldLabel == "string") postFieldLabelDiv.innerHTML = postFieldLabel;
-			else postFieldLabelDiv.appendChild(postFieldLabel);
-			this.input = fieldDiv.querySelector("input");
-			this.resultDiv = fieldDiv.querySelector("div.calcResult");
-			this.resultLabel = this.resultDiv.querySelector("label");
-			this.resultErrorImage = fieldDiv.querySelector("i.fa");
-			this.input.addEventListener("keyup", (ev) => {
-				this.reParse();
-				onRecalculated(this);
-			});
-			this.input.addEventListener("gringo.recalc", (ev) => {
-				gringo("recalc");
-				this.reParse();
-				onRecalculated(this);
-			});
-			if (postFieldLabel != "") this.postFieldLabelDiv = fieldDiv.querySelector("div.postFieldLabel");
-		}
-		setReadOnly() {
-			this.input.readOnly = true;
-			this.input.classList.add("readonly");
-		}
-		reParse() {
-			if (this.input.value == "") {
-				this.result = null;
-				this.resultLabel.textContent = "";
-				this.resultDiv.classList.toggle("error", false);
-				return;
-			}
-			let parser = new Parser(this.input.value);
-			this.result = parser.parse();
-			this.resultLabel.textContent = formatPrice(this.result.result);
-			this.resultDiv.classList.toggle("error", this.result.errors.length > 0);
-			this.resultErrorImage.title = this.result.errors.map((e) => e.message).join("\n");
-		}
-	};
-	//#endregion
-	//#region typescript/aanvraag/entangledFields.ts
-	var EntangledFields = class {
-		fields;
-		currentSourceField;
-		isTransfering;
-		context;
-		constructor(context) {
-			this.fields = [];
-			this.context = context;
-			this.currentSourceField = null;
-			this.isTransfering = false;
-		}
-		add(field, updateCallback1) {
-			this.fields.push({
-				field,
-				callback: updateCallback1
-			});
-			field.addEventListener("focus", () => {
-				if (!this.isTransfering) this.currentSourceField = field;
-			});
-		}
-		setCurrentSource(field) {
-			this.currentSourceField = field;
-		}
-		triggerRecalc() {
-			if (this.currentSourceField) this.currentSourceField.dispatchEvent(new Event("gringo.recalc"));
-			else this.fields[0].field.dispatchEvent(new Event("gringo.recalc"));
-		}
-		updateOtherFields() {
-			if (this.isTransfering) return;
-			this.isTransfering = true;
-			this.fields.filter((f) => f.field != this.currentSourceField).forEach((f) => f.callback(this.context));
-			this.isTransfering = false;
-		}
-	};
-	//#endregion
-	//#region typescript/utils/unreachable.ts
-	function unreachable(x) {
-		throw new Error("This error will never be thrown. It is used for type safety.");
-	}
-	//#endregion
-	//#region typescript/aanvraag/priceDataModel.ts
-	var PriceDataModel = class {
-		_bruto = null;
-		_netto = null;
-		_tarif = null;
-		_unitPrice;
-		_quantity;
-		expandedPrItem;
-		isGenericProduct;
-		constructor(quantity, unitPriceOrGeneric, btw, expandedPrItem) {
-			this._tarif = btw;
-			this.expandedPrItem = expandedPrItem;
-			this._quantity = quantity;
-			this.isGenericProduct = unitPriceOrGeneric == null;
-			this._unitPrice = unitPriceOrGeneric ?? 1;
-		}
-		get tarif() {
-			return this._tarif;
-		}
-		set tarif(value) {
-			this._tarif = value;
-			if (this._tarif != null && this._netto != null && this._unitPrice != null && this._quantity != null) this._bruto = this._netto * (1 + this._tarif / 100);
-		}
-		get netto() {
-			return this._netto;
-		}
-		set netto(value) {
-			this._netto = value;
-			if (this._netto != null) {
-				this._quantity = this._netto / this._unitPrice;
-				this._bruto = this._tarif != null ? this._netto * (1 + this._tarif / 100) : null;
-			}
-			this.updatePrItem();
-		}
-		get bruto() {
-			return this._bruto;
-		}
-		set bruto(value) {
-			this._bruto = value;
-			if (this._bruto != null) {
-				this._netto = this._tarif != null ? this._bruto / (1 + this._tarif / 100) : null;
-				if (this._netto != null) this._quantity = this._netto / this._unitPrice;
-			}
-			this.updatePrItem();
-		}
-		get unitPrice() {
-			return this._unitPrice;
-		}
-		setUnitPrice(value, recalcFrom) {
-			this.isGenericProduct = value == null;
-			this._unitPrice = value ?? 1;
-			switch (recalcFrom) {
-				case "netto":
-					this.netto = this._netto;
-					break;
-				case "bruto":
-					this.bruto = this._bruto;
-					break;
-				default: unreachable(recalcFrom);
-			}
-		}
-		get quantity() {
-			return this._quantity;
-		}
-		set quantity(value) {
-			this._quantity = value;
-			this.updatePrItem();
-		}
-		updatePrItem() {
-			if (!this.expandedPrItem) return;
-			this.expandedPrItem.quantity = this._quantity;
-		}
-	};
-	//#endregion
 	//#region typescript/aanvraag/priceBlock.ts
 	var PriceBlock = class {
 		brutoCalcField;
@@ -30706,7 +30334,7 @@ Total Duration: ${a - u}ms`);
 		btnUnitOfMeasure.dispatchEvent(new Event("click"));
 		scanAndSelectPerEenheid(ulUnitOfMeasure);
 		scanAndSetRadionButtons(el);
-		let unitPrice = new Parser(fieldUnitPrice.value).parse();
+		let unitPrice = new Parser$1(fieldUnitPrice.value).parse();
 		let expandedPf = {
 			pf: prForm,
 			tarif,
@@ -30739,7 +30367,7 @@ Total Duration: ${a - u}ms`);
 		input.addEventListener("paste", (ev) => {
 			let data = ev.clipboardData?.getData("text/plain");
 			if (data) {
-				let res = new Parser(data).parse();
+				let res = new Parser$1(data).parse();
 				input.value = formatPrice(res.result, "", "");
 				triggerFieldChanged(input);
 				ev.preventDefault();
@@ -31768,10 +31396,383 @@ Total Duration: ${a - u}ms`);
 			quantity = lineEl.querySelector("span[ng-if='item.quantity.value']").textContent;
 			priceBlock.setReadOnly();
 		}
-		let parser = new Parser(quantity.replaceAll(".", ""));
+		let parser = new Parser$1(quantity.replaceAll(".", ""));
 		priceBlock.setNetto(parser.parse().result, true);
 		priceBlock.setCurrentSource(fieldQuantityInput);
 		priceBlock.updateOtherFields();
+	}
+	//#endregion
+	//#region typescript/infoBlock/infoBar.ts
+	var InfoBar = class InfoBar {
+		parent;
+		container;
+		divInfoLine;
+		divTempLine;
+		divExtraLine;
+		divErrorLine;
+		tempMessage;
+		divCacheInfo;
+		static ID = "dp3p_infoContainer";
+		static EXTRA_ID = "dp3_extraInfo";
+		static ERROR_ID = "dp3_errorInfo";
+		static TEMP_ID = "dp3_tempInfo";
+		static CACHE_ID = "dp3p_cacheInfo";
+		constructor(parent) {
+			this.parent = parent;
+			this.tempMessage = "";
+			let container = parent.querySelector(`div#${InfoBar.ID}`);
+			if (!container) {
+				container = emmet.appendChild(parent, `div#${InfoBar.ID}`).first;
+				this.divExtraLine = emmet.appendChild(container, `div#${InfoBar.EXTRA_ID}.infoMessage`).last;
+				this.divErrorLine = emmet.appendChild(container, `div#${InfoBar.ERROR_ID}.infoError`).last;
+				this.divInfoLine = emmet.appendChild(container, "div.infoLine").last;
+				this.divTempLine = emmet.appendChild(container, `div#${InfoBar.TEMP_ID}.infoMessage.tempLine`).last;
+				this.divCacheInfo = emmet.appendChild(container, `div#${InfoBar.CACHE_ID}.cacheInfo`).last;
+			} else {
+				this.divExtraLine = container.querySelector(`#${InfoBar.EXTRA_ID}`);
+				this.divErrorLine = container.querySelector(`#${InfoBar.ERROR_ID}`);
+				this.divInfoLine = container.querySelector("div.infoLine");
+				this.divTempLine = container.querySelector(`#${InfoBar.TEMP_ID}`);
+				this.divCacheInfo = container.querySelector(`#${InfoBar.CACHE_ID}`);
+			}
+			this.container = container;
+		}
+		setTempMessage(msg) {
+			this.tempMessage = msg;
+			this.#updateTempMessage();
+			setTimeout(this.clearTempMessage.bind(this), 4e3);
+		}
+		clearTempMessage() {
+			this.tempMessage = "";
+			this.#updateTempMessage();
+		}
+		#updateTempMessage() {
+			this.divTempLine.innerHTML = this.tempMessage;
+		}
+		setInfoLine(message) {
+			this.divInfoLine.innerHTML = message;
+		}
+		setErrorLine(message) {
+			this.divErrorLine.innerHTML = message;
+		}
+		setCacheInfo(info, reset_onclick) {
+			this.divCacheInfo.innerHTML = info;
+			let button = emmet.appendChild(this.divCacheInfo, "button.likeLink").first;
+			button.innerHTML = "refresh";
+			button.onclick = reset_onclick;
+		}
+		setExtraInfo(message, click_element_id, callback) {
+			this.divExtraLine.innerHTML = message;
+			if (click_element_id) {
+				if (callback) document.getElementById(click_element_id).onclick = callback;
+			}
+		}
+	};
+	//#endregion
+	//#region typescript/infoBlock/progressBar.ts
+	var ProgressBar = class ProgressBar {
+		barElement;
+		parent;
+		container;
+		maxCount;
+		count;
+		static ID = "progressBarContainer";
+		constructor(parent) {
+			this.parent = parent;
+			let container = this.parent.querySelector("#" + ProgressBar.ID);
+			if (!container) container = emmet.indent.appendChild(this.parent, `
+                div#${ProgressBar.ID}
+                    div.progressBar
+            `).first;
+			this.container = container;
+			this.barElement = this.container.querySelector(".progressBar");
+			this.hide();
+			this.maxCount = 0;
+			this.count = 0;
+		}
+		reset(maxCount) {
+			this.maxCount = maxCount;
+			this.count = 0;
+			this.barElement.innerHTML = "";
+			for (let i = 0; i < maxCount; i++) {
+				let block = document.createElement("div");
+				this.barElement.appendChild(block);
+				block.classList.add("progressBlock");
+				if (maxCount > 50) block.classList.add("mini");
+			}
+		}
+		start(maxCount) {
+			this.reset(maxCount);
+			this.container.style.display = "";
+			this.next();
+		}
+		hide() {
+			this.container.style.display = "none";
+		}
+		stop() {
+			this.hide();
+		}
+		next() {
+			if (this.count >= this.maxCount) return false;
+			this.barElement.children[this.count].classList.remove("iddle", "loaded");
+			this.barElement.children[this.count].classList.add("loading");
+			for (let i = 0; i < this.count; i++) {
+				this.barElement.children[i].classList.remove("iddle", "loading");
+				this.barElement.children[i].classList.add("loaded");
+			}
+			for (let i = this.count + 1; i < this.maxCount; i++) {
+				this.barElement.children[i].classList.remove("loaded", "loading");
+				this.barElement.children[i].classList.add("iddle");
+			}
+			this.count++;
+			return true;
+		}
+	};
+	//#endregion
+	//#region typescript/infoBlock/infoBlock.ts
+	function getInfoBlock(parent) {
+		return {
+			infoBar: new InfoBar(parent),
+			progressBar: new ProgressBar(parent)
+		};
+	}
+	function getInfoBlockForCurrentPage() {
+		let infoContainer = document.querySelector("div.infoContainer");
+		if (!infoContainer) infoContainer = emmet.indent.insertAfter(document.getElementById("navigation"), "div").first;
+		return getInfoBlock(infoContainer);
+	}
+	//#endregion
+	//#region typescript/aanvragen/requests.ts
+	async function fetchRequestListChunk(chain, userInfo, zSince) {
+		if (!zSince) zSince = (/* @__PURE__ */ new Date()).toISOString().replaceAll("T", " ").split(".")[0] + " GMT";
+		await chain.post(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo.hashedUser}/requisition/getYourRequestsWithTabSupport?yourRequestsTab=requisition&yourRequestType=all&browserRequestId=newYourRequests1779060906435`, {
+			"searchFilters": {
+				"LastUpdatedFromDate": "2026-02-17 23:00:00 GMT",
+				"LastUpdatedToDate": zSince
+			},
+			"requestTypeFilter": "all",
+			"orderByField": "daterequested",
+			"ascendingOrder": false
+		});
+		return await chain.getJson();
+	}
+	async function fetchRequestList() {
+		let chain = new FetchChain();
+		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
+		let userInfo = chain.getJson();
+		if (userInfo == null) throw new Error("gringo: could not get userInfo.");
+		let requestList = await fetchRequestListChunk(chain, userInfo);
+		if (requestList.requestList.length > 0) while (true) {
+			let requestList2 = await fetchRequestListChunk(chain, userInfo, requestList.requestList[requestList.requestList.length - 1].lastModifiedDate + " 00:00:00 GMT");
+			if (requestList2.requestList.length == 0) break;
+			requestList.requestList.push(...requestList2.requestList);
+		}
+		return requestList;
+	}
+	async function fetchFullRequest(prId, ctx) {
+		let pr = await fetchPr(prId);
+		ctx.infoBlock.infoBar.setInfoLine(`PR details ophalen...(${ctx.counter++})`);
+		if (pr.title == null) return null;
+		return pr;
+	}
+	async function fetchRequestListAndDetails(infoBlock) {
+		infoBlock.infoBar.setInfoLine("PR lijst ophalen...");
+		let requestList = await fetchRequestList();
+		infoBlock.infoBar.setInfoLine("PR details ophalen...");
+		let ctx = {
+			counter: 0,
+			infoBlock
+		};
+		let promises = requestList.requestList.map((r) => {
+			let requestId = r.reqUniqueName;
+			return fetchFullRequest(requestId, ctx);
+		});
+		let detailsList = await Promise.all(promises);
+		let jsonList = detailsList.filter((r) => r != null).map((r) => {
+			if (r.lineItems == null) return [];
+			return r.lineItems.map((item) => {
+				let { currency, currencySymbol, ...compactItem } = createCompactReqItem(item);
+				return {
+					prId: r.reqId,
+					status: r.status,
+					title: r.title.value,
+					lineNumber: item.lineNumber,
+					...compactItem
+				};
+			});
+		}).flat();
+		await cloud.json.upload("gringo/pr/allPrs_2026.json", jsonList);
+		return detailsList;
+	}
+	async function fetchChangedMetas() {
+		let changedMetas;
+		let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
+		if (!zSince) {
+			await (await getLocalCache()).PrMetas.clear();
+			changedMetas = [];
+		} else changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
+		let fetchedDate = /* @__PURE__ */ new Date();
+		fetchedDate = /* @__PURE__ */ new Date(fetchedDate.getTime() - 3e5);
+		let zFetchedDate = fetchedDate.toISOString();
+		localStorage.setItem(KEY_LAST_FETCHED_METAS, zFetchedDate);
+		return changedMetas;
+	}
+	async function fetchMetaCached(prId, prMetas) {
+		if (!prMetas) prMetas = (await getLocalCache()).PrMetas;
+		let localMeta = await prMetas.get(prId);
+		if (localMeta) return localMeta;
+		gringo("Meta not in cache. Fetching meta from cloud for PR " + prId + "...");
+		let meta = {
+			prId,
+			tags: []
+		};
+		try {
+			meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
+		} catch {
+			await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
+		}
+		await (await getLocalCache()).PrMetas.put(meta);
+		await savePrMetaToFireStore(meta);
+		return meta;
+	}
+	async function saveMeta(prId, meta, what) {
+		if (what == "localStorage and cloud") await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
+		await (await getLocalCache()).PrMetas.put(meta);
+		await savePrMetaToFireStore(meta);
+	}
+	function getAccountingField(prItem, idIncludes) {
+		let field = prItem.accounting.fields?.find((f) => f.id.endsWith(idIncludes));
+		if (!field) return null;
+		let code = field.uniqueName;
+		let dscr = field.value;
+		if (!code) return null;
+		return {
+			code,
+			dscr
+		};
+	}
+	function getAdvancedField(prItem, idIncludes) {
+		let field = prItem.advanced.fields?.find((f) => f.id.endsWith(idIncludes));
+		if (!field) return null;
+		let code = field.uniqueName;
+		let dscr = field.value;
+		if (!code) return null;
+		return {
+			code,
+			dscr
+		};
+	}
+	function getPrItemCommodity(prItem) {
+		return getAdvancedField(prItem, "pAtHCommonCommodityCode");
+	}
+	function getPrItemLedger(prItem) {
+		return getAccountingField(prItem, "pAtHGeneralLedger");
+	}
+	function getPrItemAsset(prItem) {
+		return getAccountingField(prItem, "pAtHAsset");
+	}
+	function getPrItemGrant(prItem) {
+		return getAccountingField(prItem, "cus_Grant");
+	}
+	let globalTagsMap = null;
+	async function getGlobalTags() {
+		if (!globalTagsMap) {
+			let globalSettings = await getGlobalSettingsCached();
+			globalTagsMap = new Map(globalSettings.tagDefs.map((t) => [t.name, t]));
+		}
+		return globalTagsMap;
+	}
+	function calcBrutoLinePrice(item) {
+		let bruto = null;
+		bruto = item.price * item.quantity * (100 + (item.tarif?.tarif ?? 0));
+		bruto = Math.round(bruto) / 100;
+		return bruto;
+	}
+	function calcPrTotal(pr) {
+		return {
+			total: pr.items.reduce((total, item) => total + calcBrutoLinePrice(item), 0),
+			currencySymbel: "€",
+			currency: "EUR"
+		};
+	}
+	async function convertToBaseLineItem(item) {
+		let commodityCode = getPrItemCommodity(item)?.code ?? "";
+		let tarif = await getTarifDefCached(commodityCode);
+		return {
+			commodityCode,
+			price: item.price.value.amount,
+			quantity: item.quantity.value,
+			tarif
+		};
+	}
+	async function convertPrListItemData(item) {
+		return {
+			index: parseInt(item.lineNumber),
+			netto: item.quantity.value,
+			bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
+			commodityCode: getPrItemCommodity(item)?.code ?? "",
+			currency: item.price.currency ?? "",
+			supplier: item.supplier.value ?? ""
+		};
+	}
+	async function convertPrToListData(request, pr) {
+		let listItemDatas = [];
+		for (let item of pr.lineItems ?? []) listItemDatas.push(await convertPrListItemData(item));
+		return {
+			prId: pr.reqId,
+			items: listItemDatas,
+			changed_date: request.timeUpdated
+		};
+	}
+	async function getPrDataList() {
+		let infoBlock = getInfoBlockForCurrentPage();
+		let requests = await fetchRequestList();
+		let prListDatas = [];
+		let cache = await getLocalCache();
+		infoBlock.infoBar.setInfoLine("Ophalen gewijzigde PR's...");
+		infoBlock.progressBar.start(requests.requestList.length);
+		for (let request of requests.requestList) {
+			let prListData = await cache.PrListData.get(request.reqUniqueName);
+			if (prListData && prListData.changed_date == request.timeUpdated) {
+				prListDatas.push(prListData);
+				continue;
+			}
+			let prData = await convertPrToListData(request, await fetchPr(request.reqUniqueName));
+			await cache.PrListData.put(prData);
+			prListDatas.push(prData);
+			infoBlock.progressBar.next();
+		}
+		infoBlock.infoBar.setInfoLine("");
+		infoBlock.progressBar.stop();
+		return mergeRequestsAndData(prListDatas, requests);
+	}
+	async function mergeRequestsAndData(prListDatas, requests) {
+		let cache = await getLocalCache();
+		let dataSet = /* @__PURE__ */ new Map();
+		for (let prListData of prListDatas) dataSet.set(prListData.prId, prListData);
+		let expandedPrListData = [];
+		for (let request of requests.requestList) {
+			let prListData = dataSet.get(request.reqUniqueName);
+			if (!prListData) {
+				console.error(`Could not find prListData for request ${request.reqUniqueName}`);
+				continue;
+			}
+			let meta = await cache.PrMetas.get(prListData.prId);
+			if (!meta) {
+				console.error(`Could not find meta for pr ${prListData.prId}`);
+				continue;
+			}
+			let netto = prListData.items.reduce((acc, item) => acc + item.netto, 0);
+			let bruto = prListData.items.reduce((acc, item) => acc + item.bruto, 0);
+			expandedPrListData.push({
+				request,
+				prListData,
+				meta,
+				netto,
+				bruto
+			});
+		}
+		return expandedPrListData.filter((item) => item !== void 0);
 	}
 	//#endregion
 	//#region typescript/tabs.ts
@@ -32284,7 +32285,7 @@ Total Duration: ${a - u}ms`);
         details
             summary
                 div.flexRow
-                    span{Tags}
+                    span{Filter}
                     div.flexRight.searchTextWrapper
             table#tagsFilterTable
                 tbody
@@ -32651,9 +32652,7 @@ Total Duration: ${a - u}ms`);
 		if (slices.length > 1) return slices[1].trim();
 		return supplier;
 	}
-	async function createLeanListTable(divLeanListPanel) {
-		gringo("LEAN: getPrDataList()");
-		let list = await getPrDataList();
+	async function createLeanListTable(divLeanListPanel, prListData) {
 		gringo("LEAN: build table");
 		let table = emmet.indent.appendChild(divLeanListPanel, `
         table.leanPrList.bruto
@@ -32691,7 +32690,7 @@ Total Duration: ${a - u}ms`);
 		let departments = (await getGlobalSettingsCached()).projects;
 		let tagsMap = await getGlobalTags();
 		gringo("LEAN: create rows...");
-		for (let pr of list) {
+		for (let pr of prListData) {
 			let poAnchorList = pr.request.gbPurchaseOrderList?.map((po) => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
 			let tr = emmet.indent.appendChild(tbody, `
             tr
@@ -32887,29 +32886,35 @@ Total Duration: ${a - u}ms`);
 		if (!document.querySelector("request-info-requisitions")) return null;
 		return getPagination()?.currentPageElement ?? null;
 	}
-	function decoratePagination() {
+	async function decoratePagination() {
 		let main = document.querySelector("main");
 		if (!main) return;
 		main.classList.toggle("hideOnBehalfOf", true);
 		main.classList.toggle("hideTeam", true);
 		let requests = scrapePRs();
-		fetchChangedMetas().then(async (changedFiles) => {
-			gringo(changedFiles);
-			if ((await getOptions()).showLeanRequests) {
-				let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`);
-				if (!divLeanListPanel) {
-					let requestSearchPanel = document.querySelector(".request-search-panel");
-					divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first;
-				}
-				await createLeanListTable(divLeanListPanel);
+		gringo("LEAN: getPrDataList()");
+		let prDataList = await getPrDataList();
+		let changedFiles = await fetchChangedMetas();
+		if ((await getOptions()).showLeanRequests) {
+			let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`);
+			if (!divLeanListPanel) {
+				let requestSearchPanel = document.querySelector(".request-search-panel");
+				divLeanListPanel = emmet.insertAfter(requestSearchPanel, `div.gringoLeanListPanel`).first;
 			}
-			await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map((f) => f.data));
-			let departments = (await getGlobalSettingsCached()).projects;
-			let tagsMap = await getGlobalTags();
-			let prMetas = (await getLocalCache()).PrMetas;
-			for (const r of requests) await decoratePr(r, departments, tagsMap, prMetas);
-			await applyFilters(requests);
-		});
+			await createLeanListTable(divLeanListPanel, prDataList);
+		}
+		gringo("Saving changed metas...");
+		await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map((f) => f.data));
+		let departments = (await getGlobalSettingsCached()).projects;
+		let tagsMap = await getGlobalTags();
+		let prMetas = (await getLocalCache()).PrMetas;
+		gringo("Decorating requests...");
+		let prDataMap = /* @__PURE__ */ new Map();
+		for (let pr of prDataList) prDataMap.set(pr.prListData.prId, pr);
+		for (const r of requests) await decoratePr(r, departments, tagsMap, prMetas, prDataMap.get(r.id));
+		gringo("Applying filters...");
+		await applyFilters(requests);
+		gringo("Done.");
 	}
 	function decorateTabs(el) {
 		[...el.querySelectorAll("div:not(.gringo).fd-tabs__item")].forEach((tab) => {
@@ -33003,7 +33008,7 @@ Total Duration: ${a - u}ms`);
 			});
 		});
 	}
-	async function decoratePr(request, departments, tagsMap, prMetas) {
+	async function decoratePr(request, departments, tagsMap, prMetas, prData) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
 		if (reqDiv.dataset.gringo == "decorated") return;
@@ -33011,22 +33016,15 @@ Total Duration: ${a - u}ms`);
 		addOrderCopyButton(request);
 		let meta = await fetchMetaCached(request.id, prMetas);
 		decoratePrWithMeta(request, meta, departments, tagsMap);
-		await updatePrLine(request, meta);
+		await updatePrLine(request, meta, prData);
 	}
-	async function updatePrLine(request, meta) {
+	async function updatePrLine(request, meta, prData) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
 		if (!reqDiv.querySelector(".metaWrapper")) return;
 		let newTotal = reqDiv.querySelector("div.gringo.listRowTotal");
-		let pr = await fetchPr(request.id);
-		let { total, currencySymbel, currency } = calcPrTotal(await createExpandedCompactPr(createCompactPr(pr)));
-		if (total != 0) {
-			newTotal.textContent = formatPrice(total, currencySymbel, currency);
-			newTotal.style.display = "block";
-		} else {
-			newTotal.style.display = "none";
-			gringo(`price is 0 for ${request.id}`, request, pr);
-		}
+		newTotal.textContent = formatPrice(prData?.bruto ?? null);
+		newTotal.style.display = "block";
 		reqDiv.dataset.gringoTags = ";" + meta.tags.join(";") + ";";
 	}
 	let globalLastRequestTagsClicked = null;

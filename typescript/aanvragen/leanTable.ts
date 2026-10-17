@@ -1,4 +1,4 @@
-import {getGlobalTags, getPrDataList, PrMeta} from "./requests";
+import {ExpandedPrListData, getGlobalTags, getPrDataList, PrMeta} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatDate, formatPrice, gringo} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
@@ -16,9 +16,7 @@ function sliceSupplierName(supplier: string) {
     return supplier;
 }
 
-export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
-    gringo("LEAN: getPrDataList()");
-    let list = await getPrDataList();
+export async function createLeanListTable(divLeanListPanel: HTMLDivElement, prListData: ExpandedPrListData[]) {
     gringo("LEAN: build table");
     let table = emmet.indent.appendChild(divLeanListPanel, `
         table.leanPrList.bruto
@@ -56,7 +54,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
     let departments = (await getGlobalSettingsCached()).projects;
     let tagsMap = await getGlobalTags();
     gringo("LEAN: create rows...");
-    for (let pr of list) {
+    for (let pr of prListData) {
         let poAnchorList = pr.request.gbPurchaseOrderList
             ?.map(po => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
         let tr = emmet.indent.appendChild(tbody, `

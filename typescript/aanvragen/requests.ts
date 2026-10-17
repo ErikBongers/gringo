@@ -14,6 +14,7 @@ import {getLocalCache, LocalDb} from "../db/idb/localDb";
 import {getTarifDefCached} from "../sessionCache";
 import {Repository} from "../db/idb/repository";
 import {getInfoBlockForCurrentPage, InfoBlock} from "../infoBlock/infoBlock";
+import {gringo} from "../globals";
 
 export interface BaseLineItem {
     tarif: TarifDef | null;
@@ -222,8 +223,9 @@ export async function fetchMetaCached(prId: string, prMetas?: Repository<LocalDb
 
     let localMeta = await prMetas.get(prId);
     if (localMeta)
-        return localMeta
+        return localMeta;
 
+    gringo("Meta not in cache. Fetching meta from cloud for PR " + prId + "...");
     let meta: PrMeta = {prId, tags: []};
     try {
         meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
