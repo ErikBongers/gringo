@@ -369,26 +369,31 @@ export function hideFloatingHelp() {
 }
 
 export async function applyFilters(requests?: RequestBasicInfo[]) {
-    await applyFiltersForAribaTable(requests);
+    //TEST await applyFiltersForAribaTable(requests);
     if(options.showLeanRequests) {
         await applyFiltersForLeanTable();
     }
 }
 
-export async function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
+export function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
     gringo("Applying filters...");
     if(!requests)
         requests = scrapePRs();
     let tagsFilters = getTagsFilters();
     let textFilter = getTextFilter();
-    let selectedTags = tagsFilters.filter(t => t.filterType == "==");
-    let excludedTags = tagsFilters.filter(t => t.filterType == "!=");
-    let prMetas = (await getLocalCache()).PrMetas;
+    let selectedTags = tagsFilters
+        .filter(t => t.filterType == "==")
+        .map(t => ";" + t.name + ";")
+    ;
+    let excludedTags = tagsFilters
+        .filter(t => t.filterType == "!=")
+        .map(t => ";" + t.name + ";")
+    ;
     for (let request of requests) {
         let reqDiv = document.getElementById("request-" + request.id);
         if (!reqDiv)
             continue;
-        let matchingTags = await matchTags(request.id, selectedTags, excludedTags, prMetas);
+        let matchingTags = matchTags(request.id, selectedTags, excludedTags, "TODO"); //todo!!!
         let matchingText = matchText(reqDiv, textFilter);
         reqDiv.classList.toggle("hidden", !(matchingTags && matchingText) );
     }

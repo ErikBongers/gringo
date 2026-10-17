@@ -143,10 +143,9 @@ function saveTextFilter(textFilter: string) {
     localStorage.setItem('gringo.textFilter', textFilter);
 }
 
-export async function matchTags(prId: string, selectedTags: TagsFilter[], excludedTags: TagsFilter[], prMetas: Repository<LocalDb, "PrMetas">) {
-    let meta = await fetchMetaCached(prId, prMetas);
-    let hasAllSelectedTags = selectedTags.every(t => meta.tags.includes(t.name));
+export function matchTags(prId: string, selectedTags: string[], excludedTags: string[], tagString: string) {
+    let hasAllSelectedTags = selectedTags.every(t => tagString.includes(t));
     if (!hasAllSelectedTags)
         return false;
-    return excludedTags.every(t => !meta.tags.includes(t.name));
+    return excludedTags.every(t => !tagString.includes(t));
 }

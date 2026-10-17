@@ -81,6 +81,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                 td{reserved for project(s))}
         `).first as HTMLTableRowElement;
         tr.dataset.prId = pr.prListData.prId;
+        tr.dataset.gringoTags = ";" + pr.meta.tags.join(";") + ";";
         addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta, tagsMap);
         addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta, departments);
         let button = tr.querySelector("button");
@@ -128,8 +129,14 @@ export async function applyFiltersForLeanTable() {
     //todo: next 3 lines are duplicate with ariba filter function.
     let tagsFilters = getTagsFilters();
     let textFilter = getTextFilter();
-    let selectedTags = tagsFilters.filter(t => t.filterType == "==");
-    let excludedTags = tagsFilters.filter(t => t.filterType == "!=");
+    let selectedTags = tagsFilters
+        .filter(t => t.filterType == "==")
+        .map(t => ";" + t.name + ";")
+    ;
+    let excludedTags = tagsFilters
+        .filter(t => t.filterType == "!=")
+        .map(t => ";" + t.name + ";")
+    ;
     let prMetas = (await getLocalCache()).PrMetas;
     let rowFilter: RowFilter = {
         context: {},
@@ -139,12 +146,12 @@ export async function applyFiltersForLeanTable() {
     await filterTable(table, rowFilter);
 }
 
-async function leanRowFilter(tr: HTMLTableRowElement, selectedTags: TagsFilter[], excludedTags: TagsFilter[], textFilter: string, prMetas: Repository<LocalDb, "PrMetas">) {
+function leanRowFilter(tr: HTMLTableRowElement, selectedTags: string[], excludedTags: string[], textFilter: string, prMetas: Repository<LocalDb, "PrMetas">) {
     let prId = tr.dataset.prId!; //! must be set
     let matchingText = matchText(tr, textFilter);
     if (!matchingText)
         return false;
-    return await matchTags(prId, selectedTags, excludedTags, prMetas);
+    return matchTags(prId, selectedTags, excludedTags, tr.dataset.gringoTags!);
 }
 
 function matchText(tr: HTMLTableRowElement, textFilter: string) {

@@ -32249,7 +32249,7 @@ Total Duration: ${a - u}ms`);
 	//#region typescript/filterTable.ts
 	async function filterTable(table, rowFilter) {
 		table = getElement(table);
-		for (let tr of table.tBodies[0].rows) tr.classList.toggle("hidden", !await rowFilter.rowFilter(tr, rowFilter.context));
+		for (let tr of table.tBodies[0].rows) tr.classList.toggle("hidden", !rowFilter.rowFilter(tr, rowFilter.context));
 	}
 	//#endregion
 	//#region typescript/aanvragen/searchPanel.ts
@@ -32365,10 +32365,9 @@ Total Duration: ${a - u}ms`);
 	function saveTextFilter(textFilter) {
 		localStorage.setItem("gringo.textFilter", textFilter);
 	}
-	async function matchTags(prId, selectedTags, excludedTags, prMetas) {
-		let meta = await fetchMetaCached(prId, prMetas);
-		if (!selectedTags.every((t) => meta.tags.includes(t.name))) return false;
-		return excludedTags.every((t) => !meta.tags.includes(t.name));
+	function matchTags(prId, selectedTags, excludedTags, tagString) {
+		if (!selectedTags.every((t) => tagString.includes(t))) return false;
+		return excludedTags.every((t) => !tagString.includes(t));
 	}
 	//#endregion
 	//#region typescript/utils/clampedValue.ts
@@ -32689,6 +32688,7 @@ Total Duration: ${a - u}ms`);
                 td{reserved for project(s))}
         `).first;
 			tr.dataset.prId = pr.prListData.prId;
+			tr.dataset.gringoTags = ";" + pr.meta.tags.join(";") + ";";
 			addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta, tagsMap);
 			addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta, departments);
 			let button = tr.querySelector("button");
@@ -32728,21 +32728,21 @@ Total Duration: ${a - u}ms`);
 		let table = document.querySelector("table.leanPrList");
 		let tagsFilters = getTagsFilters();
 		let textFilter = getTextFilter();
-		let selectedTags = tagsFilters.filter((t) => t.filterType == "==");
-		let excludedTags = tagsFilters.filter((t) => t.filterType == "!=");
+		let selectedTags = tagsFilters.filter((t) => t.filterType == "==").map((t) => ";" + t.name + ";");
+		let excludedTags = tagsFilters.filter((t) => t.filterType == "!=").map((t) => ";" + t.name + ";");
 		let prMetas = (await getLocalCache()).PrMetas;
 		await filterTable(table, {
 			context: {},
 			rowFilter: (tr) => leanRowFilter(tr, selectedTags, excludedTags, textFilter.toLowerCase(), prMetas)
 		});
 	}
-	async function leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas) {
+	function leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas) {
 		let prId = tr.dataset.prId;
 		//! must be set
-		if (!matchText$1(tr, textFilter)) return false;
-		return await matchTags(prId, selectedTags, excludedTags, prMetas);
+		if (!matchText(tr, textFilter)) return false;
+		return matchTags(prId, selectedTags, excludedTags, tr.dataset.gringoTags);
 	}
-	function matchText$1(tr, textFilter) {
+	function matchText(tr, textFilter) {
 		if (!textFilter) return true;
 		return tr.innerText.toLowerCase().includes(textFilter);
 	}
@@ -33017,28 +33017,7 @@ Total Duration: ${a - u}ms`);
 		helpPopup.style.display = "none";
 	}
 	async function applyFilters(requests) {
-		await applyFiltersForAribaTable(requests);
 		if (options.showLeanRequests) await applyFiltersForLeanTable();
-	}
-	async function applyFiltersForAribaTable(requests) {
-		gringo("Applying filters...");
-		if (!requests) requests = scrapePRs();
-		let tagsFilters = getTagsFilters();
-		let textFilter = getTextFilter();
-		let selectedTags = tagsFilters.filter((t) => t.filterType == "==");
-		let excludedTags = tagsFilters.filter((t) => t.filterType == "!=");
-		let prMetas = (await getLocalCache()).PrMetas;
-		for (let request of requests) {
-			let reqDiv = document.getElementById("request-" + request.id);
-			if (!reqDiv) continue;
-			let matchingTags = await matchTags(request.id, selectedTags, excludedTags, prMetas);
-			let matchingText = matchText(reqDiv, textFilter);
-			reqDiv.classList.toggle("hidden", !(matchingTags && matchingText));
-		}
-	}
-	function matchText(reqDiv, textFilter) {
-		if (!textFilter) return true;
-		return reqDiv.innerText.toLowerCase().includes(textFilter.toLowerCase());
 	}
 	//#endregion
 	//#region typescript/main.ts
