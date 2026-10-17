@@ -3,6 +3,7 @@ import {fetchMetaCached, getGlobalTags, TagDef} from "./requests";
 import {paintTag} from "../globals";
 import {LocalDb} from "../db/idb/localDb";
 import {Repository} from "../db/idb/repository";
+import {createSearchField} from "../utils/searchField";
 
 export type FilterType = "==" | "!=";
 
@@ -33,32 +34,14 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
         saveTextFilter((ev.currentTarget as HTMLInputElement).value);
         applyFilters();
     }, getTextFilter());
-    divSearchPanel.querySelector(".searchTextWrapper")!.appendChild(searchField);
+    let searchWrapper = divSearchPanel.querySelector(".searchTextWrapper") as HTMLDivElement;
+    searchWrapper.appendChild(searchField);
+    emmet.indent.appendChild(searchWrapper, `
+        button.w2ch.naked.greenBkg.white.solo{S}[title="Solo"]
+    `);
+
     updateFilters();
     return tagsCollapse;
-}
-
-export function createSearchField(id: string, onSearchInput: (ev: Event) => any, value: string) {
-    let input = document.createElement("input");
-    input.type = "text";
-    input.id = id;
-    input.classList.add("tableFilter");
-    input.oninput = onSearchInput;
-    input.value = value;
-    input.placeholder = "filter";
-    let span = document.createElement("span");
-    span.classList.add("searchButton");
-    span.appendChild(input);
-    let { first: clearButton } = emmet.indent.appendChild(span, `
-        button.w2ch.naked
-            img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"]
-    `);
-    (clearButton as HTMLElement).onclick = () => {
-        input.value = "";
-        input.dispatchEvent(new Event("input"));
-        input.focus();
-    };
-    return span;
 }
 
 function updateFilters() {

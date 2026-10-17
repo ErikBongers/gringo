@@ -1,9 +1,6 @@
-* Make filtes faster:
-  > add Ariba org table tr.dataset.gringoTags
-  > update this value on tags change.
-  > apply this filter to Ariba table too.
-
 * new PRs do not appear in the lean list
+
+* Add "solo" button to text filter.
 
 * Filter: refresh (re-apply) button
 

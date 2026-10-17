@@ -32253,6 +32253,27 @@ Total Duration: ${a - u}ms`);
 		for (let tr of table.tBodies[0].rows) tr.classList.toggle("hidden", !rowFilter.rowFilter(tr, rowFilter.context));
 	}
 	//#endregion
+	//#region typescript/utils/searchField.ts
+	function createSearchField(id, onSearchInput, value) {
+		let input = document.createElement("input");
+		input.type = "text";
+		input.id = id;
+		input.classList.add("tableFilter");
+		input.oninput = onSearchInput;
+		input.value = value;
+		input.placeholder = "filter";
+		let span = document.createElement("span");
+		span.classList.add("searchButton");
+		span.appendChild(input);
+		let { first: clearButton } = emmet.appendChild(span, `button>img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"`);
+		clearButton.onclick = () => {
+			input.value = "";
+			input.oninput(void 0);
+			input.focus();
+		};
+		return span;
+	}
+	//#endregion
 	//#region typescript/aanvragen/searchPanel.ts
 	async function createSearchPanel(divSearchPanel, applyFilters) {
 		divSearchPanel.innerHTML = "";
@@ -32273,31 +32294,13 @@ Total Duration: ${a - u}ms`);
 			saveTextFilter(ev.currentTarget.value);
 			applyFilters();
 		}, getTextFilter());
-		divSearchPanel.querySelector(".searchTextWrapper").appendChild(searchField);
+		let searchWrapper = divSearchPanel.querySelector(".searchTextWrapper");
+		searchWrapper.appendChild(searchField);
+		emmet.indent.appendChild(searchWrapper, `
+        button.w2ch.naked.greenBkg.white.solo{S}[title="Solo"]
+    `);
 		updateFilters();
 		return tagsCollapse;
-	}
-	function createSearchField(id, onSearchInput, value) {
-		let input = document.createElement("input");
-		input.type = "text";
-		input.id = id;
-		input.classList.add("tableFilter");
-		input.oninput = onSearchInput;
-		input.value = value;
-		input.placeholder = "filter";
-		let span = document.createElement("span");
-		span.classList.add("searchButton");
-		span.appendChild(input);
-		let { first: clearButton } = emmet.indent.appendChild(span, `
-        button.w2ch.naked
-            img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"]
-    `);
-		clearButton.onclick = () => {
-			input.value = "";
-			input.dispatchEvent(new Event("input"));
-			input.focus();
-		};
-		return span;
 	}
 	function updateFilters() {
 		updateTagsFilters(getTagsFilters());
@@ -32879,7 +32882,7 @@ Total Duration: ${a - u}ms`);
 			let departments = (await getGlobalSettingsCached()).projects;
 			let tagsMap = await getGlobalTags();
 			let prMetas = (await getLocalCache()).PrMetas;
-			requests.forEach((r) => decoratePr(r, departments, tagsMap, prMetas));
+			for (const r of requests) await decoratePr(r, departments, tagsMap, prMetas);
 			await applyFilters(requests);
 		});
 	}

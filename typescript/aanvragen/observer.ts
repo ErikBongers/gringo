@@ -180,7 +180,9 @@ function decoratePagination() {
         let departments = (await getGlobalSettingsCached()).projects;
         let tagsMap = await getGlobalTags();
         let prMetas = (await getLocalCache()).PrMetas;
-        requests.forEach((r) => decoratePr(r, departments, tagsMap, prMetas));
+        for (const r of requests) {
+            await decoratePr(r, departments, tagsMap, prMetas);
+        }
         await applyFilters(requests);
     });
 }
