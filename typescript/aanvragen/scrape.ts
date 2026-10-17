@@ -4,10 +4,8 @@ export function scrapePRs() {
     gringo("Scraping...");
     let requestsDivs = document.querySelectorAll("request-info-item") as NodeListOf<HTMLElement>;
     let infos = [...requestsDivs].map(scrapeInfoItem);
-    gringo(`Found ${infos.length} items.`);
     if (infos.length > 0)
         document.body.dataset.gringoPageScraped = "true";
-    // globalPrs = infos;
     return infos;
 }
 
