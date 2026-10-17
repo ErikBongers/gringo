@@ -149,16 +149,18 @@ export async function applyFiltersForLeanTable() {
     let rowFilter: RowFilter = {
         context: {},
         rowFilter: (tr: HTMLTableRowElement)=>
-            leanRowFilter(tr, selectedTags, excludedTags, textFilter.toLowerCase(), prMetas)
+            leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas)
     }
     await filterTable(table, rowFilter);
 }
 
-function leanRowFilter(tr: HTMLTableRowElement, selectedTags: string[], excludedTags: string[], textFilter: string, prMetas: Repository<LocalDb, "PrMetas">) {
+function leanRowFilter(tr: HTMLTableRowElement, selectedTags: string[], excludedTags: string[], textFilter: {text: string, solo: boolean}, prMetas: Repository<LocalDb, "PrMetas">) {
     let prId = tr.dataset.prId!; //! must be set
-    let matchingText = matchText(tr, textFilter);
+    let matchingText = matchText(tr, textFilter.text);
     if (!matchingText)
         return false;
+    if(textFilter.solo)
+        return matchingText;
     return matchTags(prId, selectedTags, excludedTags, tr.dataset.gringoTags!);
 }
 

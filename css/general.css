@@ -532,3 +532,9 @@ tr.hidden {
     border-radius: 1ch;
     corner-shape: squircle;
 }
+
+button.toggle {
+    &:not(.active) {
+        background-color: lightgray;
+    }
+}

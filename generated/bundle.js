@@ -32259,7 +32259,7 @@ Total Duration: ${a - u}ms`);
 		input.type = "text";
 		input.id = id;
 		input.classList.add("tableFilter");
-		input.oninput = onSearchInput;
+		input.oninput = (event) => onSearchInput(event.target.value);
 		input.value = value;
 		input.placeholder = "filter";
 		let span = document.createElement("span");
@@ -32268,7 +32268,7 @@ Total Duration: ${a - u}ms`);
 		let { first: clearButton } = emmet.appendChild(span, `button>img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"`);
 		clearButton.onclick = () => {
 			input.value = "";
-			input.oninput(void 0);
+			onSearchInput("");
 			input.focus();
 		};
 		return span;
@@ -32290,15 +32290,27 @@ Total Duration: ${a - u}ms`);
 		[...(await getGlobalTags()).values()].sort((a, b) => a.order - b.order).forEach((tagDef) => {
 			createTagFilterRow(tbody, tagDef, applyFilters);
 		});
-		let searchField = createSearchField("searchText", (ev) => {
-			saveTextFilter(ev.currentTarget.value);
+		let searchField = createSearchField("searchText", (text) => {
+			saveTextFilter({
+				text,
+				solo: soloButton.classList.contains("active")
+			});
 			applyFilters();
-		}, getTextFilter());
+		}, getTextFilter().text);
 		let searchWrapper = divSearchPanel.querySelector(".searchTextWrapper");
 		searchWrapper.appendChild(searchField);
-		emmet.indent.appendChild(searchWrapper, `
-        button.w2ch.naked.greenBkg.white.solo{S}[title="Solo"]
-    `);
+		let soloButton = emmet.indent.appendChild(searchWrapper, `
+        button.w2ch.naked.greenBkg.white.solo.toggle{S}[title="Solo"]
+    `).first;
+		soloButton.addEventListener("click", () => {
+			soloButton.classList.toggle("active");
+			let solo = soloButton.classList.contains("active");
+			saveTextFilter({
+				text: getTextFilter().text,
+				solo
+			});
+			applyFilters();
+		});
 		updateFilters();
 		return tagsCollapse;
 	}
@@ -32359,15 +32371,23 @@ Total Duration: ${a - u}ms`);
 		return JSON.parse(json);
 	}
 	function getTextFilter() {
-		let text = localStorage.getItem("gringo.textFilter");
-		if (!text) return "";
-		return text;
+		let text = localStorage.getItem("gringo.textFilter") ?? "";
+		let solo = localStorage.getItem("gringo.textFilterSolo") == "true";
+		if (!text) return {
+			text,
+			solo
+		};
+		return {
+			text,
+			solo
+		};
 	}
 	function saveTagsFilters(tagsFilters) {
 		localStorage.setItem("gringo.tagsFilters", JSON.stringify(tagsFilters));
 	}
 	function saveTextFilter(textFilter) {
-		localStorage.setItem("gringo.textFilter", textFilter);
+		localStorage.setItem("gringo.textFilter", textFilter.text);
+		localStorage.setItem("gringo.textFilterSolo", textFilter.solo ? "true" : "false");
 	}
 	function matchTags(prId, selectedTags, excludedTags, tagString) {
 		if (!selectedTags.every((t) => tagString.includes(t))) return false;
@@ -32744,13 +32764,15 @@ Total Duration: ${a - u}ms`);
 		let prMetas = (await getLocalCache()).PrMetas;
 		await filterTable(table, {
 			context: {},
-			rowFilter: (tr) => leanRowFilter(tr, selectedTags, excludedTags, textFilter.toLowerCase(), prMetas)
+			rowFilter: (tr) => leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas)
 		});
 	}
 	function leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas) {
 		let prId = tr.dataset.prId;
 		//! must be set
-		if (!matchText$1(tr, textFilter)) return false;
+		let matchingText = matchText$1(tr, textFilter.text);
+		if (!matchingText) return false;
+		if (textFilter.solo) return matchingText;
 		return matchTags(prId, selectedTags, excludedTags, tr.dataset.gringoTags);
 	}
 	function matchText$1(tr, textFilter) {
@@ -33038,8 +33060,9 @@ Total Duration: ${a - u}ms`);
 		for (let request of requests) {
 			let reqDiv = document.getElementById("request-" + request.id);
 			if (!reqDiv) continue;
-			let matchingTags = matchTags(request.id, selectedTags, excludedTags, reqDiv.dataset.gringoTags);
-			let matchingText = matchText(reqDiv, textFilter);
+			let matchingText = matchText(reqDiv, textFilter.text);
+			let matchingTags = true;
+			if (!textFilter.solo) matchingTags = matchTags(request.id, selectedTags, excludedTags, reqDiv.dataset.gringoTags);
 			reqDiv.classList.toggle("hidden", !(matchingTags && matchingText));
 		}
 	}

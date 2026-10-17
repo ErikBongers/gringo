@@ -386,8 +386,10 @@ export function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
         let reqDiv = document.getElementById("request-" + request.id);
         if (!reqDiv)
             continue;
-        let matchingTags = matchTags(request.id, selectedTags, excludedTags, reqDiv.dataset.gringoTags!);
-        let matchingText = matchText(reqDiv, textFilter);
+        let matchingText = matchText(reqDiv, textFilter.text);
+        let matchingTags = true;
+        if(!textFilter.solo)
+            matchingTags = matchTags(request.id, selectedTags, excludedTags, reqDiv.dataset.gringoTags!);
         reqDiv.classList.toggle("hidden", !(matchingTags && matchingText) );
     }
 }

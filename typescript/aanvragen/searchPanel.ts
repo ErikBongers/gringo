@@ -30,15 +30,22 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
         .forEach(tagDef => {
             createTagFilterRow(tbody, tagDef, applyFilters);
         });
-    let searchField = createSearchField("searchText", ev => {
-        saveTextFilter((ev.currentTarget as HTMLInputElement).value);
+    let searchField = createSearchField("searchText", text => {
+        let solo = soloButton.classList.contains("active");
+        saveTextFilter({text, solo});
         applyFilters();
-    }, getTextFilter());
+    }, getTextFilter().text);
     let searchWrapper = divSearchPanel.querySelector(".searchTextWrapper") as HTMLDivElement;
     searchWrapper.appendChild(searchField);
-    emmet.indent.appendChild(searchWrapper, `
-        button.w2ch.naked.greenBkg.white.solo{S}[title="Solo"]
-    `);
+    let soloButton = emmet.indent.appendChild(searchWrapper, `
+        button.w2ch.naked.greenBkg.white.solo.toggle{S}[title="Solo"]
+    `).first as HTMLButtonElement;
+    soloButton.addEventListener("click", () => {
+        soloButton.classList.toggle("active");
+        let solo = soloButton.classList.contains("active");
+        saveTextFilter({text: getTextFilter().text, solo});
+        applyFilters();
+    });
 
     updateFilters();
     return tagsCollapse;
@@ -112,18 +119,20 @@ export function getTagsFilters() {
 }
 
 export function getTextFilter() {
-    let text = localStorage.getItem('gringo.textFilter');
+    let text = localStorage.getItem('gringo.textFilter')??"";
+    let solo = localStorage.getItem('gringo.textFilterSolo') == "true";
     if (!text)
-        return "";
-    return text;
+        return {text, solo};
+    return {text, solo};
 }
 
 function saveTagsFilters(tagsFilters: TagsFilter[]) {
     localStorage.setItem('gringo.tagsFilters', JSON.stringify(tagsFilters));
 }
 
-function saveTextFilter(textFilter: string) {
-    localStorage.setItem('gringo.textFilter', textFilter);
+function saveTextFilter(textFilter: {text: string, solo: boolean}) {
+    localStorage.setItem('gringo.textFilter', textFilter.text);
+    localStorage.setItem('gringo.textFilterSolo', textFilter.solo ? "true" : "false");
 }
 
 export function matchTags(prId: string, selectedTags: string[], excludedTags: string[], tagString: string) {
