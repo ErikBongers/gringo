@@ -51,7 +51,7 @@ let requestObservers = {
 export default requestObservers;
 
 function onPageRefreshed() {
-    gringo("page Aanvragen refreshed xxx.");
+    gringo("onPageRefreshed()");
     checkDecorations();
 }
 

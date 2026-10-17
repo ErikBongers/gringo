@@ -80,11 +80,11 @@ async function fetchSinglePrMeta(id: string): Promise<PrMeta | null> {
 }
 
 export async function testIt() {
-    gringo("Fetching all metas...");
-    let metas = await fetchPrMetas(null);
-    gringo("Done fetching all metas.");
-    await (await getLocalCache()).PrMetas.bulkPut(metas);
-    gringo("Done saving metas locally.");
+    // gringo("Fetching all metas...");
+    // let metas = await fetchPrMetas(null);
+    // gringo("Done fetching all metas.");
+    // await (await getLocalCache()).PrMetas.bulkPut(metas);
+    // gringo("Done saving metas locally.");
     // await copyCloudtoFireStore();
     // await copyTarifDefsCloudtoFireStore();
 }
