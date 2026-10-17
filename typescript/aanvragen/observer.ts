@@ -18,9 +18,20 @@ import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
 import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache, LocalDb} from "../db/idb/localDb";
-import {applyFiltersForLeanTable, createLeanListTable, decorateRowWithMeta, getPrFilterStrings} from "./leanTable";
+import {
+    applyFiltersForLeanTable,
+    createLeanListTable,
+    decorateRowWithMeta
+} from "./leanTable";
 import {displayMetaFields} from "./metaBlock";
-import {createSearchPanel, getTagsFilters, getTextFilter, matchTags} from "./searchPanel";
+import {
+    createSearchPanel,
+    getPrFilterStrings,
+    getTagsFilters,
+    getTextFilter,
+    matchTags,
+    rowFilter
+} from "./searchPanel";
 import {RequestBasicInfo, scrapePRs} from "./scrape";
 import {getGlobalSettingsCached, options} from "../plugin_options/options";
 import {Repository} from "../db/idb/repository";
@@ -371,30 +382,22 @@ export function hideFloatingHelp() {
 }
 
 export async function applyFilters(requests?: RequestBasicInfo[]) {
-    applyFiltersForAribaTable(requests);
+    await applyFiltersForAribaTable(requests);
     if(options.showLeanRequests) {
         await applyFiltersForLeanTable();
     }
 }
 
-export function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
+export async function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
     if(!requests)
         requests = scrapePRs();
-    let {textFilter, selectedTags, excludedTags} = getPrFilterStrings();
+    let filterDef = getPrFilterStrings();
+    let prMetas = (await getLocalCache()).PrMetas;
     for (let request of requests) {
         let reqDiv = document.getElementById("request-" + request.id);
         if (!reqDiv)
             continue;
-        let matchingText = matchText(reqDiv, textFilter.text);
-        let matchingTags = true;
-        if(!textFilter.solo)
-            matchingTags = matchTags(request.id, selectedTags, excludedTags, reqDiv.dataset.gringoTags!);
-        reqDiv.classList.toggle("hidden", !(matchingTags && matchingText) );
+        let match = rowFilter(reqDiv.innerText.toLowerCase(), filterDef, prMetas, reqDiv.dataset.gringoTags!);
+        reqDiv.classList.toggle("hidden", !match);
     }
-}
-
-function matchText(reqDiv: HTMLElement, textFilter: string) {
-    if(!textFilter)
-        return true;
-    return reqDiv.innerText.toLowerCase().includes(textFilter.toLowerCase());
 }

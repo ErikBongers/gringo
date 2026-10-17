@@ -32106,9 +32106,27 @@ Total Duration: ${a - u}ms`);
 		localStorage.setItem("gringo.textFilter", textFilter.text);
 		localStorage.setItem("gringo.textFilterSolo", textFilter.solo ? "true" : "false");
 	}
-	function matchTags(prId, selectedTags, excludedTags, tagString) {
+	function matchTags(selectedTags, excludedTags, tagString) {
 		if (!selectedTags.every((t) => tagString.includes(t))) return false;
 		return excludedTags.every((t) => !tagString.includes(t));
+	}
+	function rowFilter(text, filterDef, prMetas, tagsString) {
+		let matchingText = matchText(text, filterDef.textFilter.text);
+		if (!matchingText) return false;
+		if (filterDef.textFilter.solo || !filterDef.textFilter.text) return matchingText;
+		return matchTags(filterDef.selectedTags, filterDef.excludedTags, tagsString);
+	}
+	function matchText(text, textFilter) {
+		if (!textFilter) return true;
+		return text.includes(textFilter);
+	}
+	function getPrFilterStrings() {
+		let tagsFilters = getTagsFilters();
+		return {
+			textFilter: getTextFilter(),
+			selectedTags: tagsFilters.filter((t) => t.filterType == "==").map((t) => ";" + t.name + ";"),
+			excludedTags: tagsFilters.filter((t) => t.filterType == "!=").map((t) => ";" + t.name + ";")
+		};
 	}
 	//#endregion
 	//#region typescript/utils/clampedValue.ts
@@ -32465,34 +32483,14 @@ Total Duration: ${a - u}ms`);
 	function createPoUrl(uniqueName) {
 		return `/gb/purchase-order/${uniqueName}`;
 	}
-	function getPrFilterStrings() {
-		let tagsFilters = getTagsFilters();
-		return {
-			textFilter: getTextFilter(),
-			selectedTags: tagsFilters.filter((t) => t.filterType == "==").map((t) => ";" + t.name + ";"),
-			excludedTags: tagsFilters.filter((t) => t.filterType == "!=").map((t) => ";" + t.name + ";")
-		};
-	}
 	async function applyFiltersForLeanTable() {
 		let table = document.querySelector("table.leanPrList");
-		let { textFilter, selectedTags, excludedTags } = getPrFilterStrings();
+		let filterDef = getPrFilterStrings();
 		let prMetas = (await getLocalCache()).PrMetas;
 		await filterTable(table, {
 			context: {},
-			rowFilter: (tr) => leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas)
+			rowFilter: (tr) => rowFilter(tr.innerText.toLowerCase(), filterDef, prMetas, tr.dataset.gringoTags)
 		});
-	}
-	function leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas) {
-		let prId = tr.dataset.prId;
-		//! must be set
-		let matchingText = matchText$1(tr, textFilter.text);
-		if (!matchingText) return false;
-		if (textFilter.solo) return matchingText;
-		return matchTags(prId, selectedTags, excludedTags, tr.dataset.gringoTags);
-	}
-	function matchText$1(tr, textFilter) {
-		if (!textFilter) return true;
-		return tr.innerText.toLowerCase().includes(textFilter);
 	}
 	//#endregion
 	//#region typescript/aanvragen/scrape.ts
@@ -32764,24 +32762,19 @@ Total Duration: ${a - u}ms`);
 		helpPopup.style.display = "none";
 	}
 	async function applyFilters(requests) {
-		applyFiltersForAribaTable(requests);
+		await applyFiltersForAribaTable(requests);
 		if (options.showLeanRequests) await applyFiltersForLeanTable();
 	}
-	function applyFiltersForAribaTable(requests) {
+	async function applyFiltersForAribaTable(requests) {
 		if (!requests) requests = scrapePRs();
-		let { textFilter, selectedTags, excludedTags } = getPrFilterStrings();
+		let filterDef = getPrFilterStrings();
+		let prMetas = (await getLocalCache()).PrMetas;
 		for (let request of requests) {
 			let reqDiv = document.getElementById("request-" + request.id);
 			if (!reqDiv) continue;
-			let matchingText = matchText(reqDiv, textFilter.text);
-			let matchingTags = true;
-			if (!textFilter.solo) matchingTags = matchTags(request.id, selectedTags, excludedTags, reqDiv.dataset.gringoTags);
-			reqDiv.classList.toggle("hidden", !(matchingTags && matchingText));
+			let match = rowFilter(reqDiv.innerText.toLowerCase(), filterDef, prMetas, reqDiv.dataset.gringoTags);
+			reqDiv.classList.toggle("hidden", !match);
 		}
-	}
-	function matchText(reqDiv, textFilter) {
-		if (!textFilter) return true;
-		return reqDiv.innerText.toLowerCase().includes(textFilter.toLowerCase());
 	}
 	//#endregion
 	//#region typescript/main.ts

@@ -1,5 +1,5 @@
 import {emmet} from "../../libs/Emmeter";
-import {fetchMetaCached, getGlobalTags, TagDef} from "./requests";
+import {getGlobalTags, TagDef} from "./requests";
 import {paintTag} from "../globals";
 import {LocalDb} from "../db/idb/localDb";
 import {Repository} from "../db/idb/repository";
@@ -135,9 +135,44 @@ function saveTextFilter(textFilter: {text: string, solo: boolean}) {
     localStorage.setItem('gringo.textFilterSolo', textFilter.solo ? "true" : "false");
 }
 
-export function matchTags(prId: string, selectedTags: string[], excludedTags: string[], tagString: string) {
+export function matchTags(selectedTags: string[], excludedTags: string[], tagString: string) {
     let hasAllSelectedTags = selectedTags.every(t => tagString.includes(t));
     if (!hasAllSelectedTags)
         return false;
     return excludedTags.every(t => !tagString.includes(t));
+}
+
+export type FilterDef = {
+    textFilter: { text: string, solo: boolean },
+    selectedTags: string[],
+    excludedTags: string[]
+}
+
+export function rowFilter(text: string, filterDef: FilterDef, prMetas: Repository<LocalDb, "PrMetas">, tagsString: string) {
+    let matchingText = matchText(text, filterDef.textFilter.text);
+    if (!matchingText)
+        return false;
+    if (filterDef.textFilter.solo || !filterDef.textFilter.text)
+        return matchingText;
+    return matchTags(filterDef.selectedTags, filterDef.excludedTags, tagsString);
+}
+
+export function matchText(text: string, textFilter: string) {
+    if (!textFilter)
+        return true;
+    return text.includes(textFilter);
+}
+
+export function getPrFilterStrings(): FilterDef {
+    let tagsFilters = getTagsFilters();
+    let textFilter = getTextFilter();
+    let selectedTags = tagsFilters
+        .filter(t => t.filterType == "==")
+        .map(t => ";" + t.name + ";")
+    ;
+    let excludedTags = tagsFilters
+        .filter(t => t.filterType == "!=")
+        .map(t => ";" + t.name + ";")
+    ;
+    return {textFilter, selectedTags, excludedTags};
 }

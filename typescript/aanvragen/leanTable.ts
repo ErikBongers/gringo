@@ -1,11 +1,10 @@
-import {ExpandedPrListData, getGlobalTags, getPrDataList, PrMeta} from "./requests";
+import {ExpandedPrListData, getGlobalTags, PrMeta} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatDate, formatPrice, gringo} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
 import {filterTable, RowFilter} from "../filterTable";
-import {getTagsFilters, getTextFilter, matchTags, TagsFilter} from "./searchPanel";
-import {Repository} from "../db/idb/repository";
-import {getLocalCache, LocalDb} from "../db/idb/localDb";
+import {getPrFilterStrings, rowFilter} from "./searchPanel";
+import {getLocalCache} from "../db/idb/localDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {DropDownMenu} from "../utils/dropDownMenus";
 
@@ -125,45 +124,16 @@ function createPoUrl(uniqueName: string) {
     return `/gb/purchase-order/${uniqueName}`;
 }
 
-export function getPrFilterStrings() {
-    let tagsFilters = getTagsFilters();
-    let textFilter = getTextFilter();
-    let selectedTags = tagsFilters
-        .filter(t => t.filterType == "==")
-        .map(t => ";" + t.name + ";")
-    ;
-    let excludedTags = tagsFilters
-        .filter(t => t.filterType == "!=")
-        .map(t => ";" + t.name + ";")
-    ;
-    return {textFilter, selectedTags, excludedTags};
-}
-
 export async function applyFiltersForLeanTable() {
     let table = document.querySelector("table.leanPrList") as HTMLTableElement;
     //todo: next 3 lines are duplicate with ariba filter function.
-    let {textFilter, selectedTags, excludedTags} = getPrFilterStrings();
+    let filterDef = getPrFilterStrings();
     let prMetas = (await getLocalCache()).PrMetas;
-    let rowFilter: RowFilter = {
+    let rowFilterDef: RowFilter = {
         context: {},
         rowFilter: (tr: HTMLTableRowElement)=>
-            leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas)
+            rowFilter(tr.innerText.toLowerCase(), filterDef, prMetas, tr.dataset.gringoTags!)
     }
-    await filterTable(table, rowFilter);
+    await filterTable(table, rowFilterDef);
 }
 
-function leanRowFilter(tr: HTMLTableRowElement, selectedTags: string[], excludedTags: string[], textFilter: {text: string, solo: boolean}, prMetas: Repository<LocalDb, "PrMetas">) {
-    let prId = tr.dataset.prId!; //! must be set
-    let matchingText = matchText(tr, textFilter.text);
-    if (!matchingText)
-        return false;
-    if(textFilter.solo)
-        return matchingText;
-    return matchTags(prId, selectedTags, excludedTags, tr.dataset.gringoTags!);
-}
-
-function matchText(tr: HTMLTableRowElement, textFilter: string) {
-    if(!textFilter)
-        return true;
-    return tr.innerText.toLowerCase().includes(textFilter);
-}
