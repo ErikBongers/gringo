@@ -152,7 +152,7 @@ export function rowFilter(text: string, filterDef: FilterDef, prMetas: Repositor
     let matchingText = matchText(text, filterDef.textFilter.text);
     if (!matchingText)
         return false;
-    if (filterDef.textFilter.solo || !filterDef.textFilter.text)
+    if (filterDef.textFilter.solo && filterDef.textFilter.text)
         return matchingText;
     return matchTags(filterDef.selectedTags, filterDef.excludedTags, tagsString);
 }

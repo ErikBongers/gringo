@@ -32113,7 +32113,7 @@ Total Duration: ${a - u}ms`);
 	function rowFilter(text, filterDef, prMetas, tagsString) {
 		let matchingText = matchText(text, filterDef.textFilter.text);
 		if (!matchingText) return false;
-		if (filterDef.textFilter.solo || !filterDef.textFilter.text) return matchingText;
+		if (filterDef.textFilter.solo && filterDef.textFilter.text) return matchingText;
 		return matchTags(filterDef.selectedTags, filterDef.excludedTags, tagsString);
 	}
 	function matchText(text, textFilter) {
@@ -32622,7 +32622,6 @@ Total Duration: ${a - u}ms`);
 		let prDataMap = /* @__PURE__ */ new Map();
 		for (let pr of prDataList) prDataMap.set(pr.prListData.prId, pr);
 		for (const r of requests) await decoratePr(r, departments, tagsMap, prMetas, prDataMap.get(r.id));
-		gringo("Applying filters...");
 		await applyFilters(requests);
 		gringo("Done.");
 	}
@@ -32762,6 +32761,7 @@ Total Duration: ${a - u}ms`);
 		helpPopup.style.display = "none";
 	}
 	async function applyFilters(requests) {
+		gringo("Applying filters...");
 		await applyFiltersForAribaTable(requests);
 		if (options.showLeanRequests) await applyFiltersForLeanTable();
 	}

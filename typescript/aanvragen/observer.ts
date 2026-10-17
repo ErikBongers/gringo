@@ -202,7 +202,6 @@ async function decoratePagination() {
         await decoratePr(r, departments, tagsMap, prMetas, prDataMap.get(r.id));
     }
 
-    gringo("Applying filters...");
     await applyFilters(requests);
 
     gringo("Done.");
@@ -382,6 +381,7 @@ export function hideFloatingHelp() {
 }
 
 export async function applyFilters(requests?: RequestBasicInfo[]) {
+    gringo("Applying filters...");
     await applyFiltersForAribaTable(requests);
     if(options.showLeanRequests) {
         await applyFiltersForLeanTable();
