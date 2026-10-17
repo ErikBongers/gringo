@@ -32371,6 +32371,254 @@ Total Duration: ${a - u}ms`);
 		return excludedTags.every((t) => !meta.tags.includes(t.name));
 	}
 	//#endregion
+	//#region typescript/utils/clampedValue.ts
+	var ClampedValue = class {
+		_value = NaN;
+		min;
+		max;
+		changedHandler;
+		constructor(value, min, max, changedHandler) {
+			this.min = min;
+			this.max = max;
+			this.changedHandler = changedHandler;
+			this.value = value;
+		}
+		get value() {
+			return this._value;
+		}
+		set value(value) {
+			let oldValue = this._value;
+			if (isNaN(value)) this._value = this.min;
+			else this._value = Math.max(this.min, Math.min(this.max, value));
+			if (oldValue !== this.value) this.changedHandler?.(this.value);
+		}
+		setRange(min, max) {
+			this.min = min;
+			this.max = max;
+			this.value = this.value + parseInt("0");
+		}
+	};
+	//#endregion
+	//#region typescript/utils/navigatableList.ts
+	var NavigatableList = class {
+		list;
+		index;
+		abortController;
+		indexChangedListeners = [];
+		onClickListeners = [];
+		constructor(list, abortController) {
+			this.list = list;
+			this.abortController = abortController;
+			this.list.addEventListener("keydown", this.onMenuKeyDown, { capture: true });
+			this.list.setAttribute("tabindex", "0");
+			this.list.classList.add("hideFocus");
+			this.list.focus();
+			this.index = new ClampedValue(NaN, NaN, NaN, (index) => this.onSelectionChanged(index));
+		}
+		onMenuKeyDown = (ev) => {
+			console.log("keydown");
+			if (ev.key == "ArrowDown") {
+				if (this.index.value < this.list.children.length - 1) this.index.value++;
+				else this.index.value = 0;
+				this.indexChangedListeners.forEach((listener) => listener(this.index.value));
+				ev.stopPropagation();
+				ev.stopImmediatePropagation();
+				ev.preventDefault();
+			} else if (ev.key == "ArrowUp") {
+				if (this.index.value > 0) this.index.value--;
+				else this.index.value = this.list.children.length - 1;
+				this.indexChangedListeners.forEach((listener) => listener(this.index.value));
+				ev.stopPropagation();
+				ev.stopImmediatePropagation();
+				ev.preventDefault();
+			} else if (ev.key == "Tab") {
+				ev.stopPropagation();
+				ev.stopImmediatePropagation();
+				ev.preventDefault();
+			} else if (ev.key == "Enter") {
+				if (this.abortController) this.abortController.abort();
+				this.getItem(this.index.value).click();
+				setTimeout(() => {
+					if (document.activeElement instanceof HTMLElement) document.activeElement?.blur();
+				});
+			} else if (ev.key == "c" && ev.ctrlKey) {
+				const textHtml = "text/html";
+				const textPlain = "text/plain";
+				const clonedList = this.list.cloneNode(true);
+				clonedList.querySelectorAll(".noClipboard").forEach((element) => element.remove());
+				const clipboardItemData = {
+					[textHtml]: clonedList.innerHTML,
+					[textPlain]: clonedList.innerText
+				};
+				const clipboardItem = new ClipboardItem(clipboardItemData);
+				navigator.clipboard.write([clipboardItem]);
+				ev.stopPropagation();
+				ev.stopImmediatePropagation();
+				ev.preventDefault();
+			}
+		};
+		addItem(title, indentLevel, onClick) {
+			let indentClass = indentLevel ? ".menuIndent" + indentLevel : "";
+			let item = emmet.appendChild(this.list, `button.naked.hideFocus.dropDownItem.pre${indentClass}`).first;
+			let itemIndex = this.list.children.length - 1;
+			this.setItemContent(itemIndex, title);
+			if (typeof onClick === "string") item.setAttribute("onclick", onClick);
+			else if (typeof onClick === "function") item.onclick = (ev) => {
+				if (ev.target.checkVisibility()) {
+					onClick(ev);
+					this.onClickListeners.forEach((listener) => listener(itemIndex));
+				} else console.log("Item clicked, but invisible");
+			};
+			this.index.setRange(0, itemIndex);
+			return itemIndex;
+		}
+		setItemContent(index, title) {
+			let item = this.getItem(index);
+			this.setContent(item, title);
+		}
+		setContent(item, title) {
+			if (typeof title === "string") item.innerHTML = title;
+			else {
+				item.innerHTML = "";
+				item.appendChild(title);
+			}
+		}
+		addSeparator(title, indentLevel) {
+			let indentClass = indentLevel ? ".menuIndent" + indentLevel : "";
+			let first = emmet.appendChild(this.list, `div.dropDownSeparator.dropDownIgnoreHide${indentClass}`).first;
+			this.setContent(first, title);
+			let item = first;
+			item.onclick = (ev) => {
+				ev.stopPropagation();
+			};
+		}
+		addInfo(item, indentLevel) {
+			let indentClass = indentLevel ? ".menuIndent" + indentLevel : "";
+			let { first } = emmet.appendChild(this.list, `div.dropDownInfo.dropDownIgnoreHide${indentClass}`);
+			let wrapper = first;
+			if (typeof item === "string") wrapper.appendChild(document.createTextNode(item));
+			else wrapper.appendChild(item);
+			wrapper.onclick = (ev) => {
+				ev.stopPropagation();
+			};
+		}
+		clickItem(itemIndex) {
+			this.list.children[itemIndex].click();
+			this.onClickListeners.forEach((listener) => listener(itemIndex));
+		}
+		removeItem(index) {
+			if (index < 0 || index >= this.list.children.length) return false;
+			this.list.removeChild(this.list.children[index]);
+			this.index.setRange(0, this.list.children.length - 1);
+			return true;
+		}
+		getItem(index) {
+			return this.list.children[index];
+		}
+		removeAllItems() {
+			this.list.innerHTML = "";
+			this.index.setRange(NaN, NaN);
+		}
+		setSelected(index) {
+			this.index.value = index;
+		}
+		onSelectionChanged(itemIndex) {
+			for (let item of this.list.children) item.classList.remove("selected");
+			if (!isNaN(itemIndex) && itemIndex >= 0 && itemIndex < this.list.children.length) this.list.children[itemIndex].classList.add("selected");
+		}
+		focus() {
+			this.list.focus();
+		}
+		addKeyDownListener(listener) {
+			this.list.addEventListener("keydown", listener);
+		}
+		addIndexChanged(listener) {
+			this.indexChangedListeners.push(listener);
+		}
+		addOnClickListener(listener) {
+			this.onClickListeners.push(listener);
+		}
+		remove() {
+			this.list.remove();
+		}
+	};
+	//#endregion
+	//#region typescript/utils/dropDownMenus.ts
+	var DropDownMenu = class {
+		menu;
+		container;
+		button;
+		cancelDropDown;
+		list;
+		fullRefreshAfterClose;
+		abortController;
+		constructor(container, button, showOnClick = true, fullRefreshAfterClose = false, abortController) {
+			this.container = container;
+			this.button = button;
+			this.fullRefreshAfterClose = fullRefreshAfterClose;
+			this.abortController = abortController;
+			this.container.classList.add("dropDownContainer");
+			this.button.classList.add("dropDownIgnoreHide", "dropDownButton");
+			this.container.querySelectorAll("div.dropDownMenu").forEach((el) => el.remove());
+			let { first } = emmet.appendChild(this.container, "div.dropDownMenu.popoverMenu");
+			this.menu = first;
+			this.menu.setAttribute("popover", "");
+			this.menu.addEventListener("toggle", async (ev) => {
+				console.log("toggle", ev.newState);
+				if (ev.newState != "open") this.abortController?.abort();
+			});
+			this.list = new NavigatableList(this.menu, this.abortController);
+			if (showOnClick) this.button.onclick = async (ev) => {
+				ev.preventDefault();
+				ev.stopPropagation();
+				if (await this.cancelDropDown?.(ev)) return;
+				this.show();
+			};
+			this.list.addOnClickListener((index) => this.hide());
+		}
+		addItem(title, indentLevel, onClick) {
+			return this.list.addItem(title, indentLevel, onClick);
+		}
+		addSeparator(title, indentLevel) {
+			this.list.addSeparator(title, indentLevel);
+		}
+		addInfo(info, indentLevel) {
+			this.list.addInfo(info, indentLevel);
+		}
+		setItemContent(index, title) {
+			this.list.setItemContent(index, title);
+		}
+		clickItem(itemIndex) {
+			this.list.clickItem(itemIndex);
+		}
+		removeItem(index) {
+			this.list.removeItem(index);
+		}
+		removeAllItems() {
+			this.list.removeAllItems();
+		}
+		setPosition(position) {
+			if (position === "left") this.container.classList.add("shiftMenuLeft");
+			else this.container.classList.remove("shiftMenuLeft");
+		}
+		show() {
+			console.log("show");
+			document.querySelectorAll(".activePopoverButton").forEach((p) => p.classList.remove("activePopoverButton"));
+			this.button.classList.add("activePopoverButton");
+			this.menu.showPopover();
+			setTimeout(() => {
+				this.list.focus();
+			});
+		}
+		hide() {
+			this.menu.hidePopover();
+		}
+		async remove() {
+			this.list.remove();
+			this.menu.remove();
+		}
+	};
+	//#endregion
 	//#region typescript/aanvragen/leanTable.ts
 	function sliceSupplierName(supplier) {
 		let slices = supplier.split(/[()\[\]]/);
@@ -32398,7 +32646,7 @@ Total Duration: ${a - u}ms`);
                     th{}
                     th{}
                 tr
-                    th{ID/BB}
+                    th[colspan="2"]{ID/BB}
                     th{Omschrijving}
                     th{Leverancier}
                     th{Door}
@@ -32427,6 +32675,7 @@ Total Duration: ${a - u}ms`);
                 td
                     button.naked
                         i.far.fa-copy
+                    div.menuContainer
                 td
                     a{${pr.request.reqTitle ?? ""}}
                 td{${pr.prListData.items.map((item) => sliceSupplierName(item.supplier)).join(", ")}}
@@ -32442,11 +32691,32 @@ Total Duration: ${a - u}ms`);
 			tr.dataset.prId = pr.prListData.prId;
 			addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta, tagsMap);
 			addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta, departments);
-			tr.querySelector("button")?.addEventListener("click", () => {
-				pr.prListData.prId, pr.request.gbPurchaseOrderList?.map((po) => "B603/" + po.orderId).join(", ");
+			let button = tr.querySelector("button");
+			let container = tr.querySelector("div.menuContainer");
+			button?.addEventListener("click", () => {
+				showPrCopyMenu(container, button, pr.prListData.prId, pr.request.gbPurchaseOrderList?.map((po) => po.orderId) ?? []);
 			});
 		}
 		return table;
+	}
+	function showPrCopyMenu(container, button, prId, poIds) {
+		let dropDownMenu = new DropDownMenu(container, button, true, false);
+		dropDownMenu.addInfo("Copy:", 0);
+		dropDownMenu.addItem(prId, 0, async () => {
+			await navigator.clipboard.writeText(prId);
+		});
+		let poIdsString = poIds.join(", ");
+		dropDownMenu.addItem(poIdsString, 0, async () => {
+			await navigator.clipboard.writeText(poIdsString);
+		});
+		dropDownMenu.addItem(prId + "/" + poIdsString, 0, async () => {
+			await navigator.clipboard.writeText(prId + "/" + poIdsString);
+		});
+		let poIdsStringPrefix = poIds.map((poId) => "B603/" + poId).join(", ");
+		dropDownMenu.addItem(poIdsStringPrefix, 0, async () => {
+			await navigator.clipboard.writeText(poIdsStringPrefix);
+		});
+		dropDownMenu.show();
 	}
 	function createPrUrl(prId) {
 		return `/gb/viewRequisition/${prId}`;

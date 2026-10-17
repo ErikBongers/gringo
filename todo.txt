@@ -1,5 +1,3 @@
-* new PRs do not appear in the lean list
-
 * Easy copy of BB nr
   > Add copy-button, but have a dropdown menu with
     - Copy
@@ -7,6 +5,8 @@
       - PR12345/443216549
       - 443216549
       - B603/443216549
+
+* new PRs do not appear in the lean list
 
 * Filter: refresh (re-apply) button
 

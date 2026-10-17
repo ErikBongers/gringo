@@ -7,6 +7,7 @@ import {getTagsFilters, getTextFilter, matchTags, TagsFilter} from "./searchPane
 import {Repository} from "../db/idb/repository";
 import {getLocalCache, LocalDb} from "../db/idb/localDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
+import {DropDownMenu} from "../utils/dropDownMenus";
 
 function sliceSupplierName(supplier: string) {
     let slices = supplier.split(/[()\[\]]/);
@@ -36,7 +37,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                     th{}
                     th{}
                 tr
-                    th{ID/BB}
+                    th[colspan="2"]{ID/BB}
                     th{Omschrijving}
                     th{Leverancier}
                     th{Door}
@@ -66,6 +67,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                 td
                     button.naked
                         i.far.fa-copy
+                    div.menuContainer
                 td
                     a{${pr.request.reqTitle ?? ""}}
                 td{${pr.prListData.items.map(item => sliceSupplierName(item.supplier)).join(", ")}}
@@ -82,15 +84,32 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
         addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta, tagsMap);
         addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta, departments);
         let button = tr.querySelector("button");
+        let container = tr.querySelector("div.menuContainer") as HTMLDivElement;
         button?.addEventListener("click", () => {
-            showPrCopyMenu(pr.prListData.prId, pr.request.gbPurchaseOrderList?.map(po => "B603/" + po.orderId).join(", ")??"");
+            showPrCopyMenu(container, button, pr.prListData.prId, pr.request.gbPurchaseOrderList?.map(po => po.orderId)??[]);
         });
     }
     return table;
 }
 
-function showPrCopyMenu(prId: string, poIds: string) {
-
+function showPrCopyMenu(container: HTMLElement, button: HTMLElement, prId: string, poIds: string[]) {
+    let dropDownMenu = new DropDownMenu(container, button, true, false);
+    dropDownMenu.addInfo("Copy:", 0);
+    dropDownMenu.addItem(prId, 0, async () => {
+        await navigator.clipboard.writeText(prId);
+    });
+    let poIdsString = poIds.join(", ");
+    dropDownMenu.addItem(poIdsString, 0, async () => {
+        await navigator.clipboard.writeText(poIdsString);
+    });
+    dropDownMenu.addItem(prId + "/" + poIdsString, 0, async () => {
+        await navigator.clipboard.writeText(prId + "/" + poIdsString);
+    });
+    let poIdsStringPrefix = poIds.map(poId =>  "B603/" + poId).join(", ");
+    dropDownMenu.addItem(poIdsStringPrefix, 0, async () => {
+        await navigator.clipboard.writeText(poIdsStringPrefix);
+    });
+    dropDownMenu.show();
 }
 
 function createPrUrl(prId: string) {

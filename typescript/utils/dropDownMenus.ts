@@ -56,6 +56,7 @@ export class DropDownMenu {
                 this.show();
             }
         }
+        this.list.addOnClickListener(index => this.hide());
     }
 
     addItem(title: string | HTMLElement, indentLevel: number, onClick: ((ev: MouseEvent) => void) | string) {
@@ -66,8 +67,8 @@ export class DropDownMenu {
         this.list.addSeparator(title, indentLevel);
     }
 
-    addInfo(element: HTMLElement, indentLevel: number) {
-        this.list.addInfo(element, indentLevel);
+    addInfo(info: HTMLElement | string, indentLevel: number) {
+        this.list.addInfo(info, indentLevel);
     }
 
     setItemContent(index: number, title: string | HTMLElement) {
@@ -103,7 +104,7 @@ export class DropDownMenu {
         });
     }
 
-    async hide() {
+    hide() {
         this.menu.hidePopover();
     }
 

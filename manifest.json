@@ -15,6 +15,7 @@
       "css": [
         "css/general.css",
         "css/infoBlock.css",
+        "css/dropDownMenu.css",
         "css/tabs.css",
         "css/light_colors.css",
         "css/dark_colors.css",
