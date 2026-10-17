@@ -532,6 +532,7 @@ tr.hidden {
     width: 3ch;
     border-radius: 1ch;
     corner-shape: squircle;
+    text-box-trim: trim-both;
 }
 
 button.toggle {
