@@ -31875,44 +31875,47 @@ Total Duration: ${a - u}ms`);
 		};
 		updateTagsBlock(container, meta, tagsMap, onMetaChange);
 	}
-	let templateDepartmentBlock = null;
 	function addDepartmentBlock(container, meta, departments, onMetaChange) {
 		container = getElement(container);
-		if (!templateDepartmentBlock) {
-			templateDepartmentBlock = emmet.indent.createElement(`
-            div.deptWrapper.flexRow
-                select
-                span
+		let wrapper = emmet.indent.appendChild(container, `
+        div.deptWrapper.flexRow
+    `).first;
+		updateDepartmentBlock(wrapper, meta, departments);
+	}
+	function updateDepartmentBlock(wrapper, meta, departments) {
+		wrapper.innerHTML = "";
+		let project = meta.project ?? SELECT_PROJECT;
+		if (project == SELECT_PROJECT) {
+			let select = cloneDeptSelectTemplate(departments);
+			wrapper.appendChild(select);
+			select.value = meta.project ?? SELECT_PROJECT;
+			select.onchange = async () => {
+				await onSelectDepartmentClick(meta, select, departments);
+			};
+		} else emmet.appendChild(wrapper, `
+            span{${meta.project}}
         `);
-			let select = templateDepartmentBlock.querySelector("select");
+		wrapper.classList.toggle("hasProject", project != SELECT_PROJECT);
+	}
+	let templateDeptSelect = null;
+	const SELECT_PROJECT = "--selecteer--";
+	function cloneDeptSelectTemplate(departments) {
+		if (!templateDeptSelect) {
+			templateDeptSelect = document.createElement("select");
 			let options = [SELECT_PROJECT, ...departments];
 			for (let option of options) {
 				let optionEl = document.createElement("option");
 				optionEl.textContent = option;
 				optionEl.value = option;
-				select.appendChild(optionEl);
+				templateDeptSelect.appendChild(optionEl);
 			}
 		}
-		let clone = templateDepartmentBlock.cloneNode(true);
-		container.appendChild(clone);
-		let select = container.querySelector("select");
-		select.onchange = async () => {
-			await onSelectDepartmentClick(meta, select);
-		};
-		updateDepartmentBlock(container.querySelector(".deptWrapper"), meta);
+		return templateDeptSelect.cloneNode(true);
 	}
-	const SELECT_PROJECT = "--selecteer--";
-	function updateDepartmentBlock(container, meta) {
-		let select = container.querySelector("select");
-		let span = container.querySelector("span");
-		select.value = meta.project ?? SELECT_PROJECT;
-		span.textContent = meta.project ?? SELECT_PROJECT;
-		container.classList.toggle("hasProject", (meta.project ?? SELECT_PROJECT) != SELECT_PROJECT);
-	}
-	async function onSelectDepartmentClick(meta, select) {
+	async function onSelectDepartmentClick(meta, select, departments) {
 		meta.project = select.value;
 		await saveMeta(meta.prId, meta, "localStorage and cloud");
-		updateDepartmentBlock(select.closest(".deptWrapper"), meta);
+		updateDepartmentBlock(select.closest(".deptWrapper"), meta, departments);
 	}
 	function displayTags(tagsContainer, meta, tagsMap) {
 		tagsContainer.innerHTML = "";
@@ -32672,7 +32675,7 @@ Total Duration: ${a - u}ms`);
                     th[colspan="2"]{ID/BB}
                     th{Omschrijving}
                     th{Leverancier}
-                    th{Door}
+                    th{Wie}
                     th{Datum}
                     th{Status}
                     th.netto{Netto}

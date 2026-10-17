@@ -68,48 +68,54 @@ export function addTagsBlock(container: ElementOrSelector<HTMLDivElement>, meta:
     updateTagsBlock(container, meta, tagsMap, onMetaChange);
 }
 
-let templateDepartmentBlock: HTMLElement | null = null
 export function addDepartmentBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, departments: string[], onMetaChange: (meta: PrMeta)=> void) {
     container = getElement(container);
-    if(!templateDepartmentBlock) {
-        templateDepartmentBlock = emmet.indent.createElement(`
-            div.deptWrapper.flexRow
-                select
-                span
+    let wrapper = emmet.indent.appendChild(container, `
+        div.deptWrapper.flexRow
+    `).first as HTMLElement;
+    updateDepartmentBlock(wrapper, meta, departments);
+}
+
+
+function updateDepartmentBlock(wrapper: HTMLElement, meta: PrMeta, departments: string[]) {
+    wrapper.innerHTML = "";
+    let project = meta.project??SELECT_PROJECT;
+    if(project == SELECT_PROJECT) {
+        let select = cloneDeptSelectTemplate(departments);
+        wrapper.appendChild(select);
+        select.value = meta.project??SELECT_PROJECT;
+        select.onchange = async () => {
+            await onSelectDepartmentClick(meta, select, departments);
+        }
+    } else {
+        emmet.appendChild(wrapper, `
+            span{${meta.project}}
         `);
-        let select = templateDepartmentBlock.querySelector("select")!;
+    }
+    wrapper.classList.toggle("hasProject", project != SELECT_PROJECT);
+}
+
+let templateDeptSelect: HTMLSelectElement | null = null
+const SELECT_PROJECT = "--selecteer--";
+
+function cloneDeptSelectTemplate(departments: string[]) {
+    if(!templateDeptSelect) {
+        templateDeptSelect = document.createElement("select");
         let options = [SELECT_PROJECT, ...departments];
         for (let option of options) {
             let optionEl = document.createElement("option");
             optionEl.textContent = option;
             optionEl.value = option;
-            select.appendChild(optionEl);
+            templateDeptSelect.appendChild(optionEl);
         }
     }
-    let clone = templateDepartmentBlock.cloneNode(true) as HTMLElement;
-    container.appendChild(clone);
-
-    let select = container.querySelector("select")!;
-    select.onchange = async () => {
-        await onSelectDepartmentClick(meta, select);
-    }
-    updateDepartmentBlock(container.querySelector(".deptWrapper")!, meta);
+    return templateDeptSelect.cloneNode(true) as HTMLSelectElement;
 }
 
-const SELECT_PROJECT = "--selecteer--";
-
-function updateDepartmentBlock(container: HTMLElement, meta: PrMeta) {
-    let select = container.querySelector("select")! as HTMLSelectElement;
-    let span = container.querySelector("span") as HTMLSpanElement;
-    select.value = meta.project??SELECT_PROJECT;
-    span.textContent = meta.project??SELECT_PROJECT;
-    container.classList.toggle("hasProject", (meta.project??SELECT_PROJECT) != SELECT_PROJECT);
-}
-
-async function onSelectDepartmentClick(meta: PrMeta, select: HTMLSelectElement) {
+async function onSelectDepartmentClick(meta: PrMeta, select: HTMLSelectElement, departments: string[]) {
     meta.project = select.value;
     await saveMeta(meta.prId, meta, "localStorage and cloud");
-    updateDepartmentBlock(select.closest(".deptWrapper")!, meta);
+    updateDepartmentBlock(select.closest(".deptWrapper")!, meta, departments);
 }
 
 function displayTags(tagsContainer: HTMLElement, meta: PrMeta, tagsMap: Map<string, TagDef>) {

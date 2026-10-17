@@ -1,7 +1,5 @@
 * new PRs do not appear in the lean list
 
-* Add "solo" button to text filter.
-
 * Filter: refresh (re-apply) button
 
 * Avoid this error?

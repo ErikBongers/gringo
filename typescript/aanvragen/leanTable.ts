@@ -40,7 +40,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                     th[colspan="2"]{ID/BB}
                     th{Omschrijving}
                     th{Leverancier}
-                    th{Door}
+                    th{Wie}
                     th{Datum}
                     th{Status}
                     th.netto{Netto}
