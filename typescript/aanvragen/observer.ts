@@ -18,7 +18,7 @@ import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
 import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache, LocalDb} from "../db/idb/localDb";
-import {applyFiltersForLeanTable, createLeanListTable} from "./leanTable";
+import {applyFiltersForLeanTable, createLeanListTable, decorateRowWithMeta, getPrFilterStrings} from "./leanTable";
 import {displayMetaFields} from "./metaBlock";
 import {createSearchPanel, getTagsFilters, getTextFilter, matchTags} from "./searchPanel";
 import {RequestBasicInfo, scrapePRs} from "./scrape";
@@ -333,6 +333,7 @@ async function updatePrLine(request: RequestBasicInfo, meta: PrMeta) {
         newTotal.style.display = "none";
         gringo(`price is 0 for ${request.id}`, request, pr);
     }
+    reqDiv.dataset.gringoTags = ";" + meta.tags.join(";") + ";";
 
 }
 
@@ -346,7 +347,7 @@ function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta, departments
     if(!divStatusContainer)
         return;
     divStatusContainer = divStatusContainer.parentElement as HTMLDivElement;
-    let metaWrapper = displayMetaFields(divStatusContainer, meta, departments, tagsMap);
+    let metaWrapper = displayMetaFields(divStatusContainer, meta, departments, tagsMap, (meta) => decorateRowWithMeta(reqDiv, meta));
 
     metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev: Event) => {
         ev.stopPropagation();
@@ -369,31 +370,21 @@ export function hideFloatingHelp() {
 }
 
 export async function applyFilters(requests?: RequestBasicInfo[]) {
-    //TEST await applyFiltersForAribaTable(requests);
+    applyFiltersForAribaTable(requests);
     if(options.showLeanRequests) {
         await applyFiltersForLeanTable();
     }
 }
 
 export function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
-    gringo("Applying filters...");
     if(!requests)
         requests = scrapePRs();
-    let tagsFilters = getTagsFilters();
-    let textFilter = getTextFilter();
-    let selectedTags = tagsFilters
-        .filter(t => t.filterType == "==")
-        .map(t => ";" + t.name + ";")
-    ;
-    let excludedTags = tagsFilters
-        .filter(t => t.filterType == "!=")
-        .map(t => ";" + t.name + ";")
-    ;
+    let {textFilter, selectedTags, excludedTags} = getPrFilterStrings();
     for (let request of requests) {
         let reqDiv = document.getElementById("request-" + request.id);
         if (!reqDiv)
             continue;
-        let matchingTags = matchTags(request.id, selectedTags, excludedTags, "TODO"); //todo!!!
+        let matchingTags = matchTags(request.id, selectedTags, excludedTags, reqDiv.dataset.gringoTags!);
         let matchingText = matchText(reqDiv, textFilter);
         reqDiv.classList.toggle("hidden", !(matchingTags && matchingText) );
     }

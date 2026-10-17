@@ -1,4 +1,4 @@
-import {getGlobalTags, getPrDataList} from "./requests";
+import {getGlobalTags, getPrDataList, PrMeta} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatDate, formatPrice, gringo} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
@@ -81,9 +81,8 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
                 td{reserved for project(s))}
         `).first as HTMLTableRowElement;
         tr.dataset.prId = pr.prListData.prId;
-        tr.dataset.gringoTags = ";" + pr.meta.tags.join(";") + ";";
-        addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta, tagsMap);
-        addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta, departments);
+        addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta, tagsMap, (meta) => decorateRowWithMeta(tr, meta));
+        addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta, departments, (meta) => decorateRowWithMeta(tr, meta));
         let button = tr.querySelector("button");
         let container = tr.querySelector("div.menuContainer") as HTMLDivElement;
         button?.addEventListener("click", () => {
@@ -91,6 +90,10 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement) {
         });
     }
     return table;
+}
+
+export function decorateRowWithMeta(el: HTMLElement, meta: PrMeta) {
+    el.dataset.gringoTags = ";" + meta.tags.join(";") + ";";
 }
 
 function showPrCopyMenu(container: HTMLElement, button: HTMLElement, prId: string, poIds: string[]) {
@@ -124,9 +127,7 @@ function createPoUrl(uniqueName: string) {
     return `/gb/purchase-order/${uniqueName}`;
 }
 
-export async function applyFiltersForLeanTable() {
-    let table = document.querySelector("table.leanPrList") as HTMLTableElement;
-    //todo: next 3 lines are duplicate with ariba filter function.
+export function getPrFilterStrings() {
     let tagsFilters = getTagsFilters();
     let textFilter = getTextFilter();
     let selectedTags = tagsFilters
@@ -137,6 +138,13 @@ export async function applyFiltersForLeanTable() {
         .filter(t => t.filterType == "!=")
         .map(t => ";" + t.name + ";")
     ;
+    return {textFilter, selectedTags, excludedTags};
+}
+
+export async function applyFiltersForLeanTable() {
+    let table = document.querySelector("table.leanPrList") as HTMLTableElement;
+    //todo: next 3 lines are duplicate with ariba filter function.
+    let {textFilter, selectedTags, excludedTags} = getPrFilterStrings();
     let prMetas = (await getLocalCache()).PrMetas;
     let rowFilter: RowFilter = {
         context: {},

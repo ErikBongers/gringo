@@ -47,7 +47,7 @@ async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, a
 
 let templateTagsBlock: HTMLElement | null = null
 
-export function addTagsBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, tagsMap: Map<string, TagDef>) {
+export function addTagsBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, tagsMap: Map<string, TagDef>, onMetaChange: (meta: PrMeta)=> void) {
     container = getElement(container);
     if (!templateTagsBlock) {
         templateTagsBlock = emmet.indent.createElement(`
@@ -62,14 +62,14 @@ export function addTagsBlock(container: ElementOrSelector<HTMLDivElement>, meta:
     let button = container.querySelector("button.tagsPopupButton") as HTMLButtonElement;
     button.onclick = async () => {
         await onTagsPopupButtonClick(meta, button, async () => {
-            updateTagsBlock(container, meta, tagsMap);
+            updateTagsBlock(container, meta, tagsMap, onMetaChange);
         });
     };
-    updateTagsBlock(container, meta, tagsMap);
+    updateTagsBlock(container, meta, tagsMap, onMetaChange);
 }
 
 let templateDepartmentBlock: HTMLElement | null = null
-export function addDepartmentBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, departments: string[]) {
+export function addDepartmentBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, departments: string[], onMetaChange: (meta: PrMeta)=> void) {
     container = getElement(container);
     if(!templateDepartmentBlock) {
         templateDepartmentBlock = emmet.indent.createElement(`
@@ -132,14 +132,15 @@ function displayTags(tagsContainer: HTMLElement, meta: PrMeta, tagsMap: Map<stri
     }
 }
 
-function updateTagsBlock(metaWrapper: HTMLElement, meta: PrMeta, tagsMap: Map<string, TagDef>) {
+function updateTagsBlock(metaWrapper: HTMLElement, meta: PrMeta, tagsMap: Map<string, TagDef>, onMetaChange: (meta: PrMeta)=> void) {
     let tagsContainer = metaWrapper.querySelector(".tagsContainer") as HTMLElement;
     displayTags(tagsContainer, meta, tagsMap);
+    onMetaChange(meta);
 }
 
-export function displayMetaFields(container: HTMLDivElement, meta: PrMeta, departments: string[], tagsMap: Map<string, TagDef>) {
+export function displayMetaFields(container: HTMLDivElement, meta: PrMeta, departments: string[], tagsMap: Map<string, TagDef>, onMetaChange: (meta: PrMeta)=> void) {
     let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first as HTMLDivElement;
-    addTagsBlock(metaWrapper, meta, tagsMap);
-    addDepartmentBlock(metaWrapper, meta, departments);
+    addTagsBlock(metaWrapper, meta, tagsMap, onMetaChange);
+    addDepartmentBlock(metaWrapper, meta, departments, onMetaChange);
     return metaWrapper;
 }

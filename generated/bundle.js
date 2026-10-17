@@ -31857,7 +31857,7 @@ Total Duration: ${a - u}ms`);
 		});
 	}
 	let templateTagsBlock = null;
-	function addTagsBlock(container, meta, tagsMap) {
+	function addTagsBlock(container, meta, tagsMap, onMetaChange) {
 		container = getElement(container);
 		if (!templateTagsBlock) templateTagsBlock = emmet.indent.createElement(`
             div.tagsWrapper.flexRow
@@ -31870,13 +31870,13 @@ Total Duration: ${a - u}ms`);
 		let button = container.querySelector("button.tagsPopupButton");
 		button.onclick = async () => {
 			await onTagsPopupButtonClick(meta, button, async () => {
-				updateTagsBlock(container, meta, tagsMap);
+				updateTagsBlock(container, meta, tagsMap, onMetaChange);
 			});
 		};
-		updateTagsBlock(container, meta, tagsMap);
+		updateTagsBlock(container, meta, tagsMap, onMetaChange);
 	}
 	let templateDepartmentBlock = null;
-	function addDepartmentBlock(container, meta, departments) {
+	function addDepartmentBlock(container, meta, departments, onMetaChange) {
 		container = getElement(container);
 		if (!templateDepartmentBlock) {
 			templateDepartmentBlock = emmet.indent.createElement(`
@@ -31927,13 +31927,14 @@ Total Duration: ${a - u}ms`);
 		let orphans = meta.tags.filter((tag) => ![...tagsMap.values()].find((tagDef) => tagDef.name == tag));
 		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
 	}
-	function updateTagsBlock(metaWrapper, meta, tagsMap) {
+	function updateTagsBlock(metaWrapper, meta, tagsMap, onMetaChange) {
 		displayTags(metaWrapper.querySelector(".tagsContainer"), meta, tagsMap);
+		onMetaChange(meta);
 	}
-	function displayMetaFields(container, meta, departments, tagsMap) {
+	function displayMetaFields(container, meta, departments, tagsMap, onMetaChange) {
 		let metaWrapper = emmet.indent.appendChild(container, `div.metaWrapper`).first;
-		addTagsBlock(metaWrapper, meta, tagsMap);
-		addDepartmentBlock(metaWrapper, meta, departments);
+		addTagsBlock(metaWrapper, meta, tagsMap, onMetaChange);
+		addDepartmentBlock(metaWrapper, meta, departments, onMetaChange);
 		return metaWrapper;
 	}
 	//#endregion
@@ -32109,7 +32110,7 @@ Total Duration: ${a - u}ms`);
 		};
 		let metaFieldsContainer = popover.querySelector(".metaFieldsContainer");
 		let departments = (await getGlobalSettingsCached()).projects;
-		await displayMetaFields(metaFieldsContainer, meta, departments, await getGlobalTags());
+		displayMetaFields(metaFieldsContainer, meta, departments, await getGlobalTags(), () => {});
 	}
 	async function displayPerProject(wrapper, tabData) {
 		emmet.appendChild(wrapper, `h2{${tabData.title}}`);
@@ -32688,9 +32689,8 @@ Total Duration: ${a - u}ms`);
                 td{reserved for project(s))}
         `).first;
 			tr.dataset.prId = pr.prListData.prId;
-			tr.dataset.gringoTags = ";" + pr.meta.tags.join(";") + ";";
-			addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta, tagsMap);
-			addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta, departments);
+			addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta, tagsMap, (meta) => decorateRowWithMeta(tr, meta));
+			addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta, departments, (meta) => decorateRowWithMeta(tr, meta));
 			let button = tr.querySelector("button");
 			let container = tr.querySelector("div.menuContainer");
 			button?.addEventListener("click", () => {
@@ -32698,6 +32698,9 @@ Total Duration: ${a - u}ms`);
 			});
 		}
 		return table;
+	}
+	function decorateRowWithMeta(el, meta) {
+		el.dataset.gringoTags = ";" + meta.tags.join(";") + ";";
 	}
 	function showPrCopyMenu(container, button, prId, poIds) {
 		let dropDownMenu = new DropDownMenu(container, button, true, false);
@@ -32724,12 +32727,17 @@ Total Duration: ${a - u}ms`);
 	function createPoUrl(uniqueName) {
 		return `/gb/purchase-order/${uniqueName}`;
 	}
+	function getPrFilterStrings() {
+		let tagsFilters = getTagsFilters();
+		return {
+			textFilter: getTextFilter(),
+			selectedTags: tagsFilters.filter((t) => t.filterType == "==").map((t) => ";" + t.name + ";"),
+			excludedTags: tagsFilters.filter((t) => t.filterType == "!=").map((t) => ";" + t.name + ";")
+		};
+	}
 	async function applyFiltersForLeanTable() {
 		let table = document.querySelector("table.leanPrList");
-		let tagsFilters = getTagsFilters();
-		let textFilter = getTextFilter();
-		let selectedTags = tagsFilters.filter((t) => t.filterType == "==").map((t) => ";" + t.name + ";");
-		let excludedTags = tagsFilters.filter((t) => t.filterType == "!=").map((t) => ";" + t.name + ";");
+		let { textFilter, selectedTags, excludedTags } = getPrFilterStrings();
 		let prMetas = (await getLocalCache()).PrMetas;
 		await filterTable(table, {
 			context: {},
@@ -32739,10 +32747,10 @@ Total Duration: ${a - u}ms`);
 	function leanRowFilter(tr, selectedTags, excludedTags, textFilter, prMetas) {
 		let prId = tr.dataset.prId;
 		//! must be set
-		if (!matchText(tr, textFilter)) return false;
+		if (!matchText$1(tr, textFilter)) return false;
 		return matchTags(prId, selectedTags, excludedTags, tr.dataset.gringoTags);
 	}
-	function matchText(tr, textFilter) {
+	function matchText$1(tr, textFilter) {
 		if (!textFilter) return true;
 		return tr.innerText.toLowerCase().includes(textFilter);
 	}
@@ -32991,6 +32999,7 @@ Total Duration: ${a - u}ms`);
 			newTotal.style.display = "none";
 			gringo(`price is 0 for ${request.id}`, request, pr);
 		}
+		reqDiv.dataset.gringoTags = ";" + meta.tags.join(";") + ";";
 	}
 	let globalLastRequestTagsClicked = null;
 	function decoratePrWithMeta(request, meta, departments, tagsMap) {
@@ -32999,7 +33008,7 @@ Total Duration: ${a - u}ms`);
 		let divStatusContainer = reqDiv.querySelector("div.item-status-container");
 		if (!divStatusContainer) return;
 		divStatusContainer = divStatusContainer.parentElement;
-		let metaWrapper = displayMetaFields(divStatusContainer, meta, departments, tagsMap);
+		let metaWrapper = displayMetaFields(divStatusContainer, meta, departments, tagsMap, (meta) => decorateRowWithMeta(reqDiv, meta));
 		metaWrapper.onmousedown = metaWrapper.onmouseup = metaWrapper.onclick = (ev) => {
 			ev.stopPropagation();
 		};
@@ -33017,7 +33026,23 @@ Total Duration: ${a - u}ms`);
 		helpPopup.style.display = "none";
 	}
 	async function applyFilters(requests) {
+		applyFiltersForAribaTable(requests);
 		if (options.showLeanRequests) await applyFiltersForLeanTable();
+	}
+	function applyFiltersForAribaTable(requests) {
+		if (!requests) requests = scrapePRs();
+		let { textFilter, selectedTags, excludedTags } = getPrFilterStrings();
+		for (let request of requests) {
+			let reqDiv = document.getElementById("request-" + request.id);
+			if (!reqDiv) continue;
+			let matchingTags = matchTags(request.id, selectedTags, excludedTags, reqDiv.dataset.gringoTags);
+			let matchingText = matchText(reqDiv, textFilter);
+			reqDiv.classList.toggle("hidden", !(matchingTags && matchingText));
+		}
+	}
+	function matchText(reqDiv, textFilter) {
+		if (!textFilter) return true;
+		return reqDiv.innerText.toLowerCase().includes(textFilter.toLowerCase());
 	}
 	//#endregion
 	//#region typescript/main.ts
