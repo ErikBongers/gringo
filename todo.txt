@@ -1,10 +1,10 @@
-* Convert totalsTab to use Idb data instead of json data.
-
 * Save overview and totals of prs in FireStore so management can see them.
   > Generate overview and totals solely from fireStore?
     > at startup, update fireStore.
       > Have a more prominent "Data updating" indicator
   > add Totals in page where management can access them.
+
+* Remove metas from cloud: keep Firestore only.
 
 * new PRs do not appear in the lean list
 
