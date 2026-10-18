@@ -2,6 +2,7 @@
   > Generate overview and totals solely from fireStore?
     > at startup, update fireStore.
       > Have a more prominent "Data updating" indicator
+  > add Totals in page where management can access them.
 
 * new PRs do not appear in the lean list
 
