@@ -1,37 +1,25 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {emmet} from "../../libs/Emmeter";
 import {addButtonClickNoPropagation, formatPrice, getOptions, gringo} from "../globals";
-import {fetchPr} from "../sap/api";
-import {createCompactPr} from "../aanvraag/observer";
 import {
-    calcPrTotal, ExpandedPrListData,
+    ExpandedPrListData,
     fetchChangedMetas,
     fetchFullRequest,
     FetchListContext,
     fetchMetaCached,
     fetchRequestList,
-    fetchRequestListAndDetails, getGlobalTags,
-    getPrDataList, PrListPrData,
-    PrMeta, TagDef
+    fetchRequestListAndDetails,
+    getGlobalTags,
+    getPrDataList,
+    PrMeta,
+    TagDef
 } from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
-import {createExpandedCompactPr} from "../aanvraag/expand";
 import {getLocalCache, LocalDb} from "../db/idb/localDb";
-import {
-    applyFiltersForLeanTable,
-    createLeanListTable,
-    decorateRowWithMeta
-} from "./leanTable";
+import {applyFiltersForLeanTable, createLeanListTable, decorateRowWithMeta} from "./leanTable";
 import {displayMetaFields} from "./metaBlock";
-import {
-    createSearchPanel,
-    getPrFilterStrings,
-    getTagsFilters,
-    getTextFilter,
-    matchTags,
-    rowFilter
-} from "./searchPanel";
+import {createRowFilter, createSearchPanel, getPrFilterStrings,} from "./searchPanel";
 import {RequestBasicInfo, scrapePRs} from "./scrape";
 import {getGlobalSettingsCached, options} from "../plugin_options/options";
 import {Repository} from "../db/idb/repository";
@@ -393,11 +381,14 @@ export async function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
         requests = scrapePRs();
     let filterDef = getPrFilterStrings();
     let prMetas = (await getLocalCache()).PrMetas;
+    let rowFilterDef = createRowFilter<HTMLDivElement>(filterDef, prMetas, (div) => {
+        return {rowText: div.innerText, tagString: div.dataset.gringoTags!};
+    });
     for (let request of requests) {
-        let reqDiv = document.getElementById("request-" + request.id);
+        let reqDiv = document.getElementById("request-" + request.id) as HTMLDivElement | null;
         if (!reqDiv)
             continue;
-        let match = rowFilter(reqDiv.innerText.toLowerCase(), filterDef, prMetas, reqDiv.dataset.gringoTags!);
+        let match = rowFilterDef.rowFilter(rowFilterDef.rowConverter(reqDiv), rowFilterDef.context);
         reqDiv.classList.toggle("hidden", !match);
     }
 }

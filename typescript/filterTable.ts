@@ -1,13 +1,17 @@
 import {ElementOrSelector, getElement} from "./globals";
 
-export interface RowFilter {
-    context: any,
-    rowFilter: (tr: HTMLTableRowElement, context: any) => boolean
+export interface RowFilter<Context, SourceRow, RowType> {
+    context: Context,
+    rowConverter: (row: SourceRow) => RowType,
+    rowFilter: (row: RowType, context: Context) => boolean
 }
 
-export async function filterTable(table: ElementOrSelector<HTMLTableElement>, rowFilter: RowFilter) {
+export async function filterTable<Context, RowType>(
+    table: ElementOrSelector<HTMLTableElement>,
+    rowFilter: RowFilter<Context, HTMLTableRowElement, RowType>,
+) {
     table = getElement(table);
     for (let tr of table.tBodies[0].rows) {
-        tr.classList.toggle("hidden", !rowFilter.rowFilter(tr, rowFilter.context));
+        tr.classList.toggle("hidden", !rowFilter.rowFilter(rowFilter.rowConverter(tr), rowFilter.context));
     }
 }

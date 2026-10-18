@@ -1,9 +1,9 @@
 import {ExpandedPrListData, getGlobalTags, PrMeta} from "./requests";
 import {emmet} from "../../libs/Emmeter";
-import {acronym, formatShortDate, formatPrice, gringo} from "../globals";
+import {acronym, formatPrice, formatShortDate, gringo} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
-import {filterTable, RowFilter} from "../filterTable";
-import {getPrFilterStrings, rowFilter} from "./searchPanel";
+import {filterTable} from "../filterTable";
+import {createRowFilter, getPrFilterStrings} from "./searchPanel";
 import {getLocalCache} from "../db/idb/localDb";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {DropDownMenu} from "../utils/dropDownMenus";
@@ -126,14 +126,10 @@ function createPoUrl(uniqueName: string) {
 
 export async function applyFiltersForLeanTable() {
     let table = document.querySelector("table.leanPrList") as HTMLTableElement;
-    //todo: next 3 lines are duplicate with ariba filter function.
     let filterDef = getPrFilterStrings();
     let prMetas = (await getLocalCache()).PrMetas;
-    let rowFilterDef: RowFilter = {
-        context: {},
-        rowFilter: (tr: HTMLTableRowElement)=>
-            rowFilter(tr.innerText.toLowerCase(), filterDef, prMetas, tr.dataset.gringoTags!)
-    }
+    let rowFilterDef = createRowFilter<HTMLTableRowElement>(filterDef, prMetas, (tr) => {
+        return {rowText: tr.innerText, tagString: tr.dataset.gringoTags!};
+    });
     await filterTable(table, rowFilterDef);
 }
-

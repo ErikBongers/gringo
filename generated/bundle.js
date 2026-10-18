@@ -31239,11 +31239,9 @@ Total Duration: ${a - u}ms`);
 			if (requestList2.requestList.length == 0) break;
 			requestList.requestList.push(...requestList2.requestList);
 		}
-		let prIds = /* @__PURE__ */ new Set();
-		for (let pr of requestList.requestList) {
-			if (prIds.has(pr.reqUniqueName)) gringo(`gringo: duplicate prId ${pr.reqUniqueName}`);
-			prIds.add(pr.reqUniqueName);
-		}
+		let uniqueRequests = [];
+		for (let pr of requestList.requestList) if (!uniqueRequests.some((p) => p.reqUniqueName == pr.reqUniqueName)) uniqueRequests.push(pr);
+		requestList.requestList = uniqueRequests;
 		return requestList;
 	}
 	async function fetchFullRequest(prId, ctx) {
@@ -31931,7 +31929,7 @@ Total Duration: ${a - u}ms`);
 	//#region typescript/filterTable.ts
 	async function filterTable(table, rowFilter) {
 		table = getElement(table);
-		for (let tr of table.tBodies[0].rows) tr.classList.toggle("hidden", !rowFilter.rowFilter(tr, rowFilter.context));
+		for (let tr of table.tBodies[0].rows) tr.classList.toggle("hidden", !rowFilter.rowFilter(rowFilter.rowConverter(tr), rowFilter.context));
 	}
 	//#endregion
 	//#region typescript/utils/searchField.ts
@@ -32094,11 +32092,33 @@ Total Duration: ${a - u}ms`);
 		if (!selectedTags.every((t) => tagString.includes(t))) return false;
 		return excludedTags.every((t) => !tagString.includes(t));
 	}
-	function rowFilter(text, filterDef, prMetas, tagsString) {
-		let matchingText = matchText(text, filterDef.textFilter.text);
+	function createRowFilter(filterDef, prMetas, rowConverter) {
+		let textFilterContainsUpperCase = filterDef.textFilter.text != filterDef.textFilter.text.toLowerCase();
+		let preparedFilterText = filterDef.textFilter.text;
+		if (!textFilterContainsUpperCase) preparedFilterText = filterDef.textFilter.text.toLowerCase();
+		let context = {
+			preparedFilterText,
+			filterDef,
+			prMetas
+		};
+		let rowFilter;
+		if (textFilterContainsUpperCase) rowFilter = (row, ctx) => {
+			return rowFilterFunc(row, ctx, row.rowText);
+		};
+		else rowFilter = (row, ctx) => {
+			return rowFilterFunc(row, ctx, row.rowText.toLowerCase());
+		};
+		return {
+			context,
+			rowConverter,
+			rowFilter
+		};
+	}
+	function rowFilterFunc(row, ctx, rowText) {
+		let matchingText = matchText(rowText, ctx.preparedFilterText);
 		if (!matchingText) return false;
-		if (filterDef.textFilter.solo && filterDef.textFilter.text) return matchingText;
-		return matchTags(filterDef.selectedTags, filterDef.excludedTags, tagsString);
+		if (ctx.filterDef.textFilter.solo && ctx.filterDef.textFilter.text) return matchingText;
+		return matchTags(ctx.filterDef.selectedTags, ctx.filterDef.excludedTags, row.tagString);
 	}
 	function matchText(text, textFilter) {
 		if (!textFilter) return true;
@@ -32471,10 +32491,12 @@ Total Duration: ${a - u}ms`);
 		let table = document.querySelector("table.leanPrList");
 		let filterDef = getPrFilterStrings();
 		let prMetas = (await getLocalCache()).PrMetas;
-		await filterTable(table, {
-			context: {},
-			rowFilter: (tr) => rowFilter(tr.innerText.toLowerCase(), filterDef, prMetas, tr.dataset.gringoTags)
-		});
+		await filterTable(table, createRowFilter(filterDef, prMetas, (tr) => {
+			return {
+				rowText: tr.innerText,
+				tagString: tr.dataset.gringoTags
+			};
+		}));
 	}
 	//#endregion
 	//#region typescript/aanvragen/scrape.ts
@@ -32724,10 +32746,16 @@ Total Duration: ${a - u}ms`);
 		if (!requests) requests = scrapePRs();
 		let filterDef = getPrFilterStrings();
 		let prMetas = (await getLocalCache()).PrMetas;
+		let rowFilterDef = createRowFilter(filterDef, prMetas, (div) => {
+			return {
+				rowText: div.innerText,
+				tagString: div.dataset.gringoTags
+			};
+		});
 		for (let request of requests) {
 			let reqDiv = document.getElementById("request-" + request.id);
 			if (!reqDiv) continue;
-			let match = rowFilter(reqDiv.innerText.toLowerCase(), filterDef, prMetas, reqDiv.dataset.gringoTags);
+			let match = rowFilterDef.rowFilter(rowFilterDef.rowConverter(reqDiv), rowFilterDef.context);
 			reqDiv.classList.toggle("hidden", !match);
 		}
 	}

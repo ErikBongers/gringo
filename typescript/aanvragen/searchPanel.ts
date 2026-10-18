@@ -4,6 +4,7 @@ import {paintTag} from "../globals";
 import {LocalDb} from "../db/idb/localDb";
 import {Repository} from "../db/idb/repository";
 import {createSearchField} from "../utils/searchField";
+import {RowFilter} from "../filterTable";
 
 export type FilterType = "==" | "!=";
 
@@ -180,13 +181,52 @@ export type FilterDef = {
     excludedTags: string[]
 }
 
-export function rowFilter(text: string, filterDef: FilterDef, prMetas: Repository<LocalDb, "PrMetas">, tagsString: string) {
-    let matchingText = matchText(text, filterDef.textFilter.text);
+export interface FilterContext {
+    preparedFilterText: string,
+    filterDef: FilterDef,
+    prMetas: Repository<LocalDb, "PrMetas">
+}
+
+export interface PrRowType {
+    rowText: string,
+    tagString: string,
+}
+
+export function createRowFilter<SourceRow>(filterDef: FilterDef, prMetas: Repository<LocalDb, "PrMetas">, rowConverter: (row: SourceRow) => PrRowType) {
+    let textFilterContainsUpperCase = filterDef.textFilter.text != filterDef.textFilter.text.toLowerCase();
+    let preparedFilterText = filterDef.textFilter.text;
+    if(!textFilterContainsUpperCase)
+        preparedFilterText = filterDef.textFilter.text.toLowerCase();
+    let context: FilterContext = {
+        preparedFilterText,
+        filterDef,
+        prMetas
+    }
+    let rowFilter;
+    if (textFilterContainsUpperCase) {
+        rowFilter = (row: PrRowType, ctx: FilterContext) => {
+            return rowFilterFunc(row, ctx, row.rowText);
+        }
+    } else {
+        rowFilter = (row: PrRowType, ctx: FilterContext) => {
+            return rowFilterFunc(row, ctx, row.rowText.toLowerCase());
+        }
+    }
+    let rowFilterDef: RowFilter<FilterContext, SourceRow, PrRowType> = {
+        context,
+        rowConverter,
+        rowFilter
+    }
+    return rowFilterDef;
+}
+
+export function rowFilterFunc(row: PrRowType, ctx: FilterContext, rowText: string) {
+    let matchingText = matchText(rowText, ctx.preparedFilterText);
     if (!matchingText)
         return false;
-    if (filterDef.textFilter.solo && filterDef.textFilter.text)
+    if (ctx.filterDef.textFilter.solo && ctx.filterDef.textFilter.text)
         return matchingText;
-    return matchTags(filterDef.selectedTags, filterDef.excludedTags, tagsString);
+    return matchTags(ctx.filterDef.selectedTags, ctx.filterDef.excludedTags, row.tagString);
 }
 
 export function matchText(text: string, textFilter: string) {
