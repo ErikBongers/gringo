@@ -68,10 +68,19 @@ export interface ExpandedPr {
     items: ExpandedPrItem[];
 }
 
+export interface PoData {
+    orderId: string; //for display
+    uniqueName: string; //for url
+}
+
 export interface PrListPrData {
     prId: string;
+    title: string;
+    preparer: string;
+    status: string;
     changed_date: string;
     items: PrListItemData[];
+    poData: PoData[];
 }
 
 export interface PrListItemData {
@@ -346,11 +355,24 @@ async function convertPrToListData(request: RequestListItem, pr: PurchaseRequisi
     for(let item of pr.lineItems??[]){
         listItemDatas.push(await convertPrListItemData(item));
     }
+    let poData: PoData[] = request.gbPurchaseOrderList
+        ?.map(po => { return { uniqueName: po.uniqueName, orderId: po.orderId} })??[];
     return {
         prId: pr.reqId,
+        title: request.reqTitle??"",
+        preparer: request.preparer,
+        status: request.status,
         items: listItemDatas,
-        changed_date: request.timeUpdated
+        changed_date: request.timeUpdated,
+        poData
     };
+}
+
+function getPoListData(request: RequestListItem): PoData[] {
+    return request.gbPurchaseOrderList
+        ?.map(po => {
+            return {uniqueName: po.uniqueName, orderId: po.orderId}
+        })??[];
 }
 
 export async function getPrDataList(){
@@ -362,7 +384,9 @@ export async function getPrDataList(){
     infoBlock.progressBar.start(requests.requestList.length);
     for(let request of requests.requestList){
         let prListData: PrListPrData | undefined = await cache.PrListData.get(request.reqUniqueName);
-        if(prListData && prListData.changed_date == request.timeUpdated) {
+        let poList = getPoListData(request);
+
+        if(prListData && isPrDataUpToDate(request, prListData)) {
             prListDatas.push(prListData);
             continue;
         }
@@ -377,8 +401,13 @@ export async function getPrDataList(){
     return mergeRequestsAndData(prListDatas, requests);
 }
 
+function isPrDataUpToDate(request: RequestListItem, prListData: PrListPrData) {
+    if(prListData.changed_date != request.timeUpdated)
+        return false;
+    return getPoListData(request).join() == prListData.poData.join();
+}
+
 export interface ExpandedPrListData {
-    request: RequestListItem;
     prListData: PrListPrData;
     meta: PrMeta;
     netto: number;
@@ -405,7 +434,7 @@ async function mergeRequestsAndData(prListDatas: PrListPrData[], requests: Reque
         }
         let netto = prListData.items.reduce((acc, item) => acc + item.netto, 0);
         let bruto = prListData.items.reduce((acc, item) => acc + item.bruto, 0);
-        expandedPrListData.push({ request, prListData, meta, netto, bruto });
+        expandedPrListData.push({ prListData, meta, netto, bruto });
     }
     return expandedPrListData
         .filter(item => item !== undefined) as ExpandedPrListData[];

@@ -54,7 +54,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement, prLi
     let tagsMap = await getGlobalTags();
     gringo("LEAN: create rows...");
     for (let pr of prListData) {
-        let poAnchorList = pr.request.gbPurchaseOrderList
+        let poAnchorList = pr.prListData.poData
             ?.map(po => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
         let tr = emmet.indent.appendChild(tbody, `
             tr
@@ -66,11 +66,11 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement, prLi
                         i.far.fa-copy
                     div.menuContainer
                 td
-                    a{${pr.request.reqTitle ?? ""}}
+                    a{${pr.prListData.title}}
                 td{${pr.prListData.items.map(item => sliceSupplierName(item.supplier)).join(", ")}}
-                td{${acronym(pr.request.preparer)}}
+                td{${acronym(pr.prListData.preparer)}}
                 td{${formatShortDate(pr.prListData.changed_date)}}
-                td{${pr.request.status}}
+                td{${pr.prListData.status}}
                 td.netto{${formatPrice(pr.netto)}}
                 td.bruto{${formatPrice(pr.bruto)}}
                 td.departmentBlock
@@ -83,7 +83,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement, prLi
         let button = tr.querySelector("button");
         let container = tr.querySelector("div.menuContainer") as HTMLDivElement;
         button?.addEventListener("click", () => {
-            showPrCopyMenu(container, button, pr.prListData.prId, pr.request.gbPurchaseOrderList?.map(po => po.orderId)??[]);
+            showPrCopyMenu(container, button, pr.prListData.prId, pr.prListData.poData?.map(po => po.orderId)??[]);
         });
     }
     return table;

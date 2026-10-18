@@ -30704,7 +30704,7 @@ Total Duration: ${a - u}ms`);
 	};
 	//#endregion
 	//#region typescript/db/idb/localDb.ts
-	const DB_VERSION = 11;
+	const DB_VERSION = 12;
 	const LOCAL_DB_PREFIX = "LocalGringoDb";
 	let cacheMap = /* @__PURE__ */ new Map();
 	async function getLocalCache(schoolId = "Berchem") {
@@ -30745,14 +30745,18 @@ Total Duration: ${a - u}ms`);
 					db.createObjectStore("PrMetas", { keyPath: "prId" });
 				}
 				if (oldVersion < 2) db.createObjectStore("PrListData", { keyPath: "prId" });
-				if (oldVersion < 11) await invalidatePrs(transaction, (prData) => true);
+				if (oldVersion < 12) await upgradeTo12(transaction, (prData) => true);
 			} }));
 		}
 	};
-	async function invalidatePrs(transaction, isInvalid) {
+	async function upgradeTo12(transaction, isInvalid) {
 		let prDatas = await transaction.objectStore("PrListData").getAll();
 		for (const prData of prDatas) {
 			if (!isInvalid(prData)) continue;
+			prData.status = "";
+			prData.poData = [];
+			prData.preparer = "";
+			prData.title = "";
 			prData.changed_date = "0";
 			await transaction.objectStore("PrListData").put(prData);
 		}
@@ -31393,11 +31397,29 @@ Total Duration: ${a - u}ms`);
 	async function convertPrToListData(request, pr) {
 		let listItemDatas = [];
 		for (let item of pr.lineItems ?? []) listItemDatas.push(await convertPrListItemData(item));
+		let poData = request.gbPurchaseOrderList?.map((po) => {
+			return {
+				uniqueName: po.uniqueName,
+				orderId: po.orderId
+			};
+		}) ?? [];
 		return {
 			prId: pr.reqId,
+			title: request.reqTitle ?? "",
+			preparer: request.preparer,
+			status: request.status,
 			items: listItemDatas,
-			changed_date: request.timeUpdated
+			changed_date: request.timeUpdated,
+			poData
 		};
+	}
+	function getPoListData(request) {
+		return request.gbPurchaseOrderList?.map((po) => {
+			return {
+				uniqueName: po.uniqueName,
+				orderId: po.orderId
+			};
+		}) ?? [];
 	}
 	async function getPrDataList() {
 		let infoBlock = getInfoBlockForCurrentPage();
@@ -31408,7 +31430,8 @@ Total Duration: ${a - u}ms`);
 		infoBlock.progressBar.start(requests.requestList.length);
 		for (let request of requests.requestList) {
 			let prListData = await cache.PrListData.get(request.reqUniqueName);
-			if (prListData && prListData.changed_date == request.timeUpdated) {
+			getPoListData(request);
+			if (prListData && isPrDataUpToDate(request, prListData)) {
 				prListDatas.push(prListData);
 				continue;
 			}
@@ -31420,6 +31443,10 @@ Total Duration: ${a - u}ms`);
 		infoBlock.infoBar.setInfoLine("");
 		infoBlock.progressBar.stop();
 		return mergeRequestsAndData(prListDatas, requests);
+	}
+	function isPrDataUpToDate(request, prListData) {
+		if (prListData.changed_date != request.timeUpdated) return false;
+		return getPoListData(request).join() == prListData.poData.join();
 	}
 	async function mergeRequestsAndData(prListDatas, requests) {
 		let cache = await getLocalCache();
@@ -31440,7 +31467,6 @@ Total Duration: ${a - u}ms`);
 			let netto = prListData.items.reduce((acc, item) => acc + item.netto, 0);
 			let bruto = prListData.items.reduce((acc, item) => acc + item.bruto, 0);
 			expandedPrListData.push({
-				request,
 				prListData,
 				meta,
 				netto,
@@ -32426,7 +32452,7 @@ Total Duration: ${a - u}ms`);
 		let tagsMap = await getGlobalTags();
 		gringo("LEAN: create rows...");
 		for (let pr of prListData) {
-			let poAnchorList = pr.request.gbPurchaseOrderList?.map((po) => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
+			let poAnchorList = pr.prListData.poData?.map((po) => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
 			let tr = emmet.indent.appendChild(tbody, `
             tr
                 td
@@ -32437,11 +32463,11 @@ Total Duration: ${a - u}ms`);
                         i.far.fa-copy
                     div.menuContainer
                 td
-                    a{${pr.request.reqTitle ?? ""}}
+                    a{${pr.prListData.title}}
                 td{${pr.prListData.items.map((item) => sliceSupplierName(item.supplier)).join(", ")}}
-                td{${acronym(pr.request.preparer)}}
+                td{${acronym(pr.prListData.preparer)}}
                 td{${formatShortDate(pr.prListData.changed_date)}}
-                td{${pr.request.status}}
+                td{${pr.prListData.status}}
                 td.netto{${formatPrice(pr.netto)}}
                 td.bruto{${formatPrice(pr.bruto)}}
                 td.departmentBlock
@@ -32454,7 +32480,7 @@ Total Duration: ${a - u}ms`);
 			let button = tr.querySelector("button");
 			let container = tr.querySelector("div.menuContainer");
 			button?.addEventListener("click", () => {
-				showPrCopyMenu(container, button, pr.prListData.prId, pr.request.gbPurchaseOrderList?.map((po) => po.orderId) ?? []);
+				showPrCopyMenu(container, button, pr.prListData.prId, pr.prListData.poData?.map((po) => po.orderId) ?? []);
 			});
 		}
 		return table;
