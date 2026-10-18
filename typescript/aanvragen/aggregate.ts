@@ -145,7 +145,7 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
             let bruto = item.bruto;
             let tarif = (await getTarifDefCached(item.commodityCode))?.tarif;
             let title = pr.prListData.title;
-            let budget = item.commodityCode;
+            let budget = getBudgetCode(item.ledgerCode)?.budget ?? "";
             let grant = item.grantCode;
             jsonPrData.items.push({
                 prId,
@@ -172,14 +172,7 @@ export interface BudgetLevel {
 }
 
 export async function getExpenses(infoBlock: InfoBlock) {
-    let jsonPrData: JsonPrData;
-    let jsonPrDataStr = sessionStorage.getItem("jsonPrData");
-    if (jsonPrDataStr) {
-        jsonPrData = JSON.parse(jsonPrDataStr) as JsonPrData;
-    } else {
-        jsonPrData = await createJsonPrData(infoBlock);
-        sessionStorage.setItem("jsonPrData", JSON.stringify(jsonPrData));
-    }
+    let jsonPrData = await createJsonPrData(infoBlock);
     return jsonPrData.items
         .filter(item => !["In aanmaak", "Afgewezen"].includes(item.status))
         .filter(item => {
