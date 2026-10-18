@@ -247,11 +247,12 @@ export function getElement<T extends HTMLElement>(container: ElementOrSelector<T
     return typeof container == "string" ? document.querySelector(container) as T : container;
 }
 
-export function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean) {
+export function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: boolean, strikeThrough: boolean) {
     tagElement.innerText = tagDef.name;
     tagElement.classList.add("gringoTag");
     tagElement.style.color = tagDef.color != "" ? tagDef.color : "inherit";
     tagElement.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
     tagElement.title = tagDef.description;
     tagElement.classList.toggle("selected", selected);
+    tagElement.classList.toggle("strikeThrough", strikeThrough);
 }

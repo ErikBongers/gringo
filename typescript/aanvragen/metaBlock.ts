@@ -30,7 +30,7 @@ async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, a
             let tagButton = emmet.appendChild(container, `
                     button.naked.gringoTag{${tagDef.name}}
                 `).first as HTMLButtonElement;
-            paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
+            paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name), false);
             tagButton.onclick = async () => {
                 tagButton.classList.toggle("selected");
                 let selected = tagButton.classList.contains("selected");
@@ -130,7 +130,7 @@ function displayTags(tagsContainer: HTMLElement, meta: PrMeta, tagsMap: Map<stri
             let tagSpan = emmet.appendChild(tagsContainer, `
                 span    
             `).first as HTMLSpanElement;
-            paintTag(tagSpan, tagDef, true);
+            paintTag(tagSpan, tagDef, true, false);
         });
     let orphans = meta.tags.filter(tag => ![...tagsMap.values()].find(tagDef => tagDef.name == tag));
     if (orphans.length > 0) {

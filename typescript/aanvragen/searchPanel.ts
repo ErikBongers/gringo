@@ -17,8 +17,9 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
     let tagsCollapse = emmet.indent.appendChild(divSearchPanel, `
         details
             summary
-                div.flexRow
+                div.flexRow.centerV
                     span{Filter}
+                    span.filterDesc.scale07
                     div.flexRight.searchTextWrapper
             table#tagsFilterTable
                 tbody
@@ -47,13 +48,31 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
         applyFilters();
     });
 
-    updateFilters();
+    await updateSearchPanel();
     return tagsCollapse;
 }
 
-function updateFilters() {
-    updateTagsFilters(getTagsFilters());
+async function updateFilterDescription(tagFilters: TagsFilter[]) {
+    let filterDescSpan = document.querySelector(".filterDesc") as HTMLSpanElement;
+    filterDescSpan.innerText = "";
+    filterDescSpan.appendChild(await tagFiltersToDesc(tagFilters));
+}
+
+async function updateSearchPanel() {
+    let tagFilters = getTagsFilters();
+    updateTagsFilters(tagFilters);
     updateTextFilter(getTextFilter());
+    await updateFilterDescription(tagFilters);
+}
+
+async function tagFiltersToDesc(tagFilters: TagsFilter[]) {
+    let wrapper = document.createElement("span");
+    let globalTags = await getGlobalTags();
+    for(let filter of tagFilters) {
+        let tagSpan = wrapper.appendChild(document.createElement("span"));
+        paintTag(tagSpan, globalTags.get(filter.name)!, true, filter.filterType == "!=");
+    }
+    return wrapper;
 }
 
 function updateTagsFilters(filters: TagsFilter[]) {
@@ -94,7 +113,7 @@ function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef, appl
                 )
             `);
     let tagSpan = tr.querySelector("span")!;
-    paintTag(tagSpan, tagDef, true);
+    paintTag(tagSpan, tagDef, true, false);
     let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
     filterButton.onclick = async () => {
         let filters = getTagsFilters();
@@ -113,6 +132,7 @@ function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef, appl
         }
         saveTagsFilters(filters);
         updateTagsFilters(filters);
+        await updateFilterDescription(filters);
         await applyFilters();
     };
 }

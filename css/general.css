@@ -545,3 +545,21 @@ button.toggle {
     text-box-trim: trim-both;
     text-box-edge: cap alphabetic;
 }
+
+.strikeThrough {
+    text-decoration: line-through;
+}
+
+.scale07 {
+    transform: scale(0.7);
+}
+
+.centerV {
+    align-items: center;
+}
+
+.filterDesc{
+    padding: .5ch;
+    background: #f0f0f0;
+    border-radius: 999px;
+}

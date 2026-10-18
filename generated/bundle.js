@@ -700,13 +700,14 @@
 	function getElement(container) {
 		return typeof container == "string" ? document.querySelector(container) : container;
 	}
-	function paintTag(tagElement, tagDef, selected) {
+	function paintTag(tagElement, tagDef, selected, strikeThrough) {
 		tagElement.innerText = tagDef.name;
 		tagElement.classList.add("gringoTag");
 		tagElement.style.color = tagDef.color != "" ? tagDef.color : "inherit";
 		tagElement.style.backgroundColor = tagDef.bkgColor != "" ? tagDef.bkgColor : "inherit";
 		tagElement.title = tagDef.description;
 		tagElement.classList.toggle("selected", selected);
+		tagElement.classList.toggle("strikeThrough", strikeThrough);
 	}
 	//#endregion
 	//#region typescript/pageObserver.ts
@@ -31563,7 +31564,7 @@ Total Duration: ${a - u}ms`);
 			let tagButton = emmet.appendChild(container, `
                     button.naked.gringoTag{${tagDef.name}}
                 `).first;
-			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name));
+			paintTag(tagButton, tagDef, meta.tags.includes(tagDef.name), false);
 			tagButton.onclick = async () => {
 				tagButton.classList.toggle("selected");
 				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
@@ -31642,7 +31643,7 @@ Total Duration: ${a - u}ms`);
 			let tagSpan = emmet.appendChild(tagsContainer, `
                 span    
             `).first;
-			paintTag(tagSpan, tagDef, true);
+			paintTag(tagSpan, tagDef, true, false);
 		});
 		let orphans = meta.tags.filter((tag) => ![...tagsMap.values()].find((tagDef) => tagDef.name == tag));
 		if (orphans.length > 0) emmet.appendChild(tagsContainer, orphans.map((tag) => `span.gringoTag{${tag}}`).join("+"));
@@ -31895,7 +31896,7 @@ Total Duration: ${a - u}ms`);
                     )
                 )
             `);
-		paintTag(tr.querySelector("span"), tagDef, true);
+		paintTag(tr.querySelector("span"), tagDef, true, false);
 		let filterButton = tr.querySelector("button.filter");
 		filterButton.onclick = async (ev) => {
 			let groupings = storage.local.getBudgetSubGroupings();
@@ -32000,8 +32001,9 @@ Total Duration: ${a - u}ms`);
 		let tagsCollapse = emmet.indent.appendChild(divSearchPanel, `
         details
             summary
-                div.flexRow
+                div.flexRow.centerV
                     span{Filter}
+                    span.filterDesc.scale07
                     div.flexRight.searchTextWrapper
             table#tagsFilterTable
                 tbody
@@ -32031,12 +32033,25 @@ Total Duration: ${a - u}ms`);
 			});
 			applyFilters();
 		});
-		updateFilters();
+		await updateSearchPanel();
 		return tagsCollapse;
 	}
-	function updateFilters() {
-		updateTagsFilters(getTagsFilters());
+	async function updateFilterDescription(tagFilters) {
+		let filterDescSpan = document.querySelector(".filterDesc");
+		filterDescSpan.innerText = "";
+		filterDescSpan.appendChild(await tagFiltersToDesc(tagFilters));
+	}
+	async function updateSearchPanel() {
+		let tagFilters = getTagsFilters();
+		updateTagsFilters(tagFilters);
 		updateTextFilter(getTextFilter());
+		await updateFilterDescription(tagFilters);
+	}
+	async function tagFiltersToDesc(tagFilters) {
+		let wrapper = document.createElement("span");
+		let globalTags = await getGlobalTags();
+		for (let filter of tagFilters) paintTag(wrapper.appendChild(document.createElement("span")), globalTags.get(filter.name), true, filter.filterType == "!=");
+		return wrapper;
 	}
 	function updateTagsFilters(filters) {
 		let table = document.getElementById("tagsFilterTable");
@@ -32072,7 +32087,7 @@ Total Duration: ${a - u}ms`);
                     )
                 )
             `);
-		paintTag(tr.querySelector("span"), tagDef, true);
+		paintTag(tr.querySelector("span"), tagDef, true, false);
 		let filterButton = tr.querySelector("button.filter");
 		filterButton.onclick = async () => {
 			let filters = getTagsFilters();
@@ -32087,6 +32102,7 @@ Total Duration: ${a - u}ms`);
 			else filters = filters.filter((f) => f.name != tagDef.name);
 			saveTagsFilters(filters);
 			updateTagsFilters(filters);
+			await updateFilterDescription(filters);
 			await applyFilters();
 		};
 	}

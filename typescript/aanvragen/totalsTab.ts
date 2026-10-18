@@ -321,7 +321,7 @@ async function createTagFilterRow(tbody: HTMLTableSectionElement, tagDef: TagDef
                 )
             `);
     let tagSpan = tr.querySelector("span")!;
-    paintTag(tagSpan, tagDef, true);
+    paintTag(tagSpan, tagDef, true, false);
     let filterButton = tr.querySelector("button.filter") as HTMLButtonElement;
     filterButton.onclick = async (ev) => {
         let groupings = storage.local.getBudgetSubGroupings();
