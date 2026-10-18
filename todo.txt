@@ -1,3 +1,8 @@
+* Save overview and totals of prs in FireStore so management can see them.
+  > Generate overview and totals solely from fireStore?
+    > at startup, update fireStore.
+      > Have a more prominent "Data updating" indicator
+
 * new PRs do not appear in the lean list
 
 * Filter: refresh (re-apply) button

@@ -31239,6 +31239,11 @@ Total Duration: ${a - u}ms`);
 			if (requestList2.requestList.length == 0) break;
 			requestList.requestList.push(...requestList2.requestList);
 		}
+		let prIds = /* @__PURE__ */ new Set();
+		for (let pr of requestList.requestList) {
+			if (prIds.has(pr.reqUniqueName)) gringo(`gringo: duplicate prId ${pr.reqUniqueName}`);
+			prIds.add(pr.reqUniqueName);
+		}
 		return requestList;
 	}
 	async function fetchFullRequest(prId, ctx) {

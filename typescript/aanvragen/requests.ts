@@ -155,6 +155,14 @@ export async function fetchRequestList() {
             requestList.requestList.push(...requestList2.requestList);
         }
     }
+    //Keep the order:
+    let uniqueRequests: RequestListItem[] = []
+    for(let pr of requestList.requestList) {
+        if(!uniqueRequests.some(p => p.reqUniqueName == pr.reqUniqueName)) {
+            uniqueRequests.push(pr);
+        }
+    }
+    requestList.requestList = uniqueRequests;
     return requestList
 }
 
