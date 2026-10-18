@@ -611,17 +611,6 @@
 		observers.push(observer);
 		if (observers.length > 20) console.error("Too many observers!");
 	}
-	function createHtmlTable(headers, cols) {
-		let tmpDiv = document.createElement("div");
-		let { first: tmpTable, last: tmpThead } = emmet.appendChild(tmpDiv, "table>thead");
-		for (let th of headers) emmet.appendChild(tmpThead, `th{${th}}`);
-		let tmpTbody = tmpTable.appendChild(document.createElement("tbody"));
-		for (let tr of cols) {
-			let tmpTr = tmpTbody.appendChild(document.createElement("tr"));
-			for (let cell of tr) emmet.appendChild(tmpTr, `td{${cell}}`);
-		}
-		return tmpTable;
-	}
 	async function getOptions() {
 		let items = await chrome.storage.sync.get(null);
 		Object.assign(options, items);
@@ -30810,40 +30799,6 @@ Total Duration: ${a - u}ms`);
 		return groupMap;
 	}
 	//! just created in map if it was missing.
-	async function exportPrItemsToExcel(infoBlock) {
-		let jsonPrData = await createJsonPrData(infoBlock);
-		let headers = [
-			"prId",
-			"status",
-			"itemNo",
-			"bruto",
-			"tarif",
-			"project",
-			"tags",
-			"title",
-			"budget"
-		];
-		let rows = [];
-		let prMetas = (await getLocalCache()).PrMetas;
-		for (let item of jsonPrData.items) {
-			let meta = await fetchMetaCached(item.prId, prMetas);
-			let row = [];
-			row.push(item.prId);
-			row.push(item.status);
-			row.push(item.itemNo);
-			row.push(item.bruto.toString());
-			row.push(item.tarif);
-			row.push(meta.project ?? "");
-			row.push(meta.tags.join(","));
-			row.push(item.title);
-			row.push(item.budget);
-			rows.push(row);
-		}
-		let table = createHtmlTable(headers, rows);
-		sessionStorage.setItem("PrItemTable", table.outerHTML);
-		await navigator.clipboard.writeText(table.outerHTML);
-		console.log("CIOPIED.");
-	}
 	async function createJsonPrData(infoBlock) {
 		let prs = await getExtendedRequests(infoBlock);
 		let jsonPrData = { items: [] };
@@ -32688,39 +32643,11 @@ Total Duration: ${a - u}ms`);
 		document.querySelector("main").classList.add("hide");
 		fillTotalsTab();
 	}
-	function addTestButtons(tagsCollapse, infoBlock) {
-		let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last;
-		let ctx = {
-			counter: 0,
-			infoBlock
-		};
-		btnTestFetch.onclick = async (ev) => {
-			if (globalLastRequestTagsClicked) await fetchFullRequest(globalLastRequestTagsClicked.id, ctx);
-		};
-		let btnTestRequestList = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch all}`).last;
-		btnTestRequestList.onclick = async (ev) => {
-			await fetchRequestList();
-		};
-		let btnTestListData = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestList{TEST Fetch list data}`).last;
-		btnTestListData.onclick = async (ev) => {
-			let list = await getPrDataList();
-			gringo("lizst");
-			console.log(list);
-		};
-		let btnTestRequestListAndDetails = emmet.appendChild(tagsCollapse, `div>button#btnTestRequestListAndDetails{TEST Fetch all with details}`).last;
-		btnTestRequestListAndDetails.onclick = async (ev) => {
-			await fetchRequestListAndDetails(infoBlock);
-		};
-		let btnTestExportToExcel = emmet.appendChild(tagsCollapse, `div>button#btnTestExportToExcel{TEST Export to Excel}`).last;
-		btnTestExportToExcel.onclick = async (ev) => {
-			await exportPrItemsToExcel(infoBlock);
-		};
-	}
 	async function decorateSearchPanel() {
 		let requestSearchPanel = document.querySelector(".request-search-panel");
 		let divSearchPanel = document.querySelector(`div.gringo.gringoSearchPanel`);
 		if (!divSearchPanel) divSearchPanel = emmet.insertAfter(requestSearchPanel, `div.gringo.gringoSearchPanel+div.gringoLeanListPanel`).first;
-		addTestButtons(await createSearchPanel(divSearchPanel, applyFilters), getInfoBlock(divSearchPanel));
+		await createSearchPanel(divSearchPanel, applyFilters);
 		function onAribaFilterButton() {
 			let inputCurrentPage = getListTabDecoratedElement();
 			if (!inputCurrentPage) return;
@@ -32760,7 +32687,6 @@ Total Duration: ${a - u}ms`);
 		newTotal.style.display = "block";
 		reqDiv.dataset.gringoTags = ";" + meta.tags.join(";") + ";";
 	}
-	let globalLastRequestTagsClicked = null;
 	function decoratePrWithMeta(request, meta, departments, tagsMap) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;

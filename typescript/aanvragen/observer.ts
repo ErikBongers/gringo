@@ -255,7 +255,8 @@ function onTabButtonClick(tabContainer: HTMLDivElement) {
     fillTotalsTab();
 }
 
-function addTestButtons(tagsCollapse: HTMLDetailsElement, infoBlock: InfoBlock) {
+function addTestButtons(tagsCollapse: HTMLDetailsElement) {
+    let infoBlock: InfoBlock = getInfoBlock(tagsCollapse);
     let btnTestFetch = emmet.appendChild(tagsCollapse, `div>button#btnTestFetch{TEST Fetch last clicked}`).last as HTMLButtonElement;
     let ctx: FetchListContext = {
         counter: 0,
@@ -292,9 +293,8 @@ async function decorateSearchPanel() {
         let result = emmet.insertAfter(requestSearchPanel, `div.gringo.gringoSearchPanel+div.gringoLeanListPanel`);
         divSearchPanel = result.first as HTMLDivElement;
     }
-    let tagsCollapse = await createSearchPanel(divSearchPanel, applyFilters);
-    let infoBlock = getInfoBlock(divSearchPanel);
-    addTestButtons(tagsCollapse, infoBlock);
+    await createSearchPanel(divSearchPanel, applyFilters);
+    // addTestButtons(tagsCollapse);
 
     function onAribaFilterButton() {
         let inputCurrentPage = getListTabDecoratedElement();
