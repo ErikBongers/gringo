@@ -11,10 +11,11 @@ import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {savePrMetaToFireStore} from "../db/fireStore";
 import {getLocalCache, LocalDb} from "../db/idb/localDb";
-import {getTarifDefCached} from "../sessionCache";
+import {getTarifDefCached, sessionCache} from "../sessionCache";
 import {Repository} from "../db/idb/repository";
 import {getInfoBlockForCurrentPage, InfoBlock} from "../infoBlock/infoBlock";
 import {gringo} from "../globals";
+import {getBudgetCode} from "./aggregate";
 
 export interface BaseLineItem {
     tarif: TarifDef | null;
@@ -87,6 +88,8 @@ export interface PrListItemData {
     index: number;
     supplier: string;
     commodityCode: string;
+    grantCode: string;
+    ledgerCode: string;
     netto: number;
     bruto: number;
     currency: string;
@@ -340,13 +343,21 @@ async function convertToBaseLineItem(item: SapLineItem): Promise<BaseLineItem> {
 }
 
 async function convertPrListItemData(item: SapLineItem): Promise<PrListItemData> {
+    let commodityCode = getPrItemCommodity(item)?.code??"";
+    let grantCode = getPrItemGrant(item)?.code??"";
+    let ledgerCode = getPrItemLedger(item)?.code;
+    if (!ledgerCode)
+        ledgerCode = getPrItemAsset(item)?.code??"";
+
     return {
         index: parseInt(item.lineNumber),
         netto: item.quantity.value,
         bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
-        commodityCode: getPrItemCommodity(item)?.code??"",
+        commodityCode,
         currency: item.price.currency??"",
-        supplier: item.supplier.value??""
+        supplier: item.supplier.value??"",
+        grantCode,
+        ledgerCode
     };
 }
 

@@ -1,10 +1,18 @@
 import {createCompactReqItem} from "../aanvraag/observer";
-import {calcBrutoLinePrice, ExpandedPr, ExpandedPrItem, fetchMetaCached, fetchRequestListAndDetails} from "./requests";
+import {
+    calcBrutoLinePrice,
+    ExpandedPr,
+    ExpandedPrItem,
+    fetchMetaCached,
+    fetchRequestListAndDetails,
+    getPrDataList
+} from "./requests";
 import {createHtmlTable} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
 import {createExpandedCompactPrItem, createExpandedPr} from "../aanvraag/expand";
 import {getLocalCache} from "../db/idb/localDb";
 import {InfoBlock} from "../infoBlock/infoBlock";
+import {getTarifDefCached} from "../sessionCache";
 
 let _budgetMap: Map<string, LedgerToBudgetCode> | null = null;
 export function getBudgetCode(ledger: string) {
@@ -122,37 +130,36 @@ export interface JsonPrData {
 }
 
 export async function createJsonPrData(infoBlock: InfoBlock) {
-    let prs = await getExtendedRequests(infoBlock);
+    let prs = await getPrDataList();
     let jsonPrData: JsonPrData = {
         items: []
     };
+    infoBlock.progressBar.start(prs.length);
     for(let pr of prs) {
-        for (const item of pr.items) {
-            const index = pr.items.indexOf(item);
-            let prId = pr.pr.reqId;
-            let status = pr.pr.status;
+        infoBlock.progressBar.next();
+        for (const item of pr.prListData.items) {
+            const index = item.index;
+            let prId = pr.prListData.prId;
+            let status = pr.prListData.status;
             let itemNo = index.toString();
-            let bruto = 0;
-            bruto = calcBrutoLinePrice(await createExpandedCompactPrItem(createCompactReqItem(item.item)));
-            let tarif = item.tarif?.tarif ? item.tarif?.tarif.toString() : "";
-            let meta = await fetchMetaCached(pr.pr.reqId, (await getLocalCache()).PrMetas);
-            let project = meta.project??"";
-            let tags = meta.tags.join(",");
-            let title = pr.pr.title.value;
-            let budget = item.budget?.budget??"";
-            let grant = item.grant?.code??"";
+            let bruto = item.bruto;
+            let tarif = (await getTarifDefCached(item.commodityCode))?.tarif;
+            let title = pr.prListData.title;
+            let budget = item.commodityCode;
+            let grant = item.grantCode;
             jsonPrData.items.push({
                 prId,
                 status,
                 itemNo,
                 bruto,
-                tarif,
+                tarif: tarif ? tarif.toString() : "",
                 title,
                 budget,
                 grant,
             });
         }
     }
+    infoBlock.progressBar.stop();
     return jsonPrData;
 }
 

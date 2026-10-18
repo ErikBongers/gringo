@@ -2,7 +2,7 @@ import {DBSchema, IDBPDatabase, IDBPTransaction, openDB} from 'idb';
 import {Repository} from "./repository";
 import {getSuppliers, PrListPrData, PrMeta} from "../../aanvragen/requests";
 
-const DB_VERSION = 12;
+const DB_VERSION = 13;
 const LOCAL_DB_PREFIX = 'LocalGringoDb';
 
 export interface LocalDb extends DBSchema {
@@ -70,15 +70,15 @@ export class LocalCache {
                 if (oldVersion < 2) {
                     db.createObjectStore("PrListData", {keyPath: "prId"});
                 }
-                if (oldVersion < 12) {
-                    await upgradeTo12(transaction, (prData: PrListPrData) => true);
+                if (oldVersion < 13) {
+                    await upgradeTo13(transaction, (prData: PrListPrData) => true);
                 }
             },
         }));
     }
 }
 
-async function upgradeTo12(
+async function upgradeTo13(
     transaction: IDBPTransaction<LocalDb, ["KeyValues", "PrMetas", "PrListData"], "versionchange">,
     isInvalid: (prData: PrListPrData) => boolean
 ) {
@@ -89,10 +89,10 @@ async function upgradeTo12(
             continue;
 
         //populate new fields
-        prData.status = "";
-        prData.poData = [];
-        prData.preparer = "";
-        prData.title = "";
+        for(let item of prData.items) {
+            item.grantCode = "";
+            item.ledgerCode = "";
+        }
         prData.changed_date = "0"; //force re-fetch
         await transaction.objectStore("PrListData").put(prData);
     }
