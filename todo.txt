@@ -4,8 +4,6 @@
       > Have a more prominent "Data updating" indicator
   > add Totals in page where management can access them.
 
-* Remove metas from cloud: keep Firestore only.
-
 * new PRs do not appear in the lean list
 
 * Filter: refresh (re-apply) button

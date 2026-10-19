@@ -10,7 +10,6 @@ import {
     QueryDocumentSnapshot,
     where
 } from "firebase/firestore";
-import {gringo} from "../globals";
 import {PrMeta, TarifDef} from "../aanvragen/requests";
 
 const firebaseConfig = {
@@ -21,11 +20,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, "gringo-store");
 
 const prMetaConverter: FirestoreDataConverter<PrMeta> = {
-    // mapping data going TO the database (handled by your cloud function, but required for the interface type)
     toFirestore(prMeta: PrMeta) {
         return prMeta;
     },
-    // mapping data coming FROM the database
     fromFirestore(snapshot: QueryDocumentSnapshot): PrMeta {
         const data = snapshot.data();
         return {
@@ -53,21 +50,12 @@ const tarifDefConverter: FirestoreDataConverter<TarifDef> = {
 
 async function fetchSinglePrMeta(id: string): Promise<PrMeta | null> {
     try {
-        // Apply '.withConverter' directly to the document path layout
         const docRef = doc(db, "pr_meta", id).withConverter(prMetaConverter);
-
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            // 🎉 docSnap.data() is now strictly typed as PrMeta!
-            const data: PrMeta = docSnap.data();
-
-            gringo(data.prId); // Safe & autocompleted
-            gringo(data.tags); // Safe & autocompleted
-
-            return data;
+            return docSnap.data();
         } else {
-            gringo(`No document found with ID: ${id}`);
             return null;
         }
     } catch (error) {
@@ -75,17 +63,6 @@ async function fetchSinglePrMeta(id: string): Promise<PrMeta | null> {
         throw error;
     }
 }
-
-export async function testIt() {
-    // gringo("Fetching all metas...");
-    // let metas = await fetchPrMetas(null);
-    // gringo("Done fetching all metas.");
-    // await (await getLocalCache()).PrMetas.bulkPut(metas);
-    // gringo("Done saving metas locally.");
-    // await copyCloudtoFireStore();
-    // await copyTarifDefsCloudtoFireStore();
-}
-
 
 export async function fetchPrMetas(changedDateZ: string | null) {
     const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
@@ -114,34 +91,30 @@ export async function fetchTarifDefs(): Promise<TarifDef[]> {
     return tarifDefs;
 }
 
-export async function savePrMetaToFireStore(prMeta: PrMeta) {
-    prMeta.changed_date = new Date().toISOString();
-    let url = "https://europe-west1-ebo-tain.cloudfunctions.net/save_pr_meta";
-    let data = {
-        id: prMeta.prId,
-        meta: prMeta,
+async function saveToFireStore(functionName: string, id: string, data: any) {
+    let url = `https://europe-west1-ebo-tain.cloudfunctions.net/${functionName}`;
+    let body = {
+        id,
+        data,
     };
-    const response = await fetch(url, {
+    await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
     });
+}
+
+export async function savePrMetaToFireStore(prMeta: PrMeta) {
+    prMeta.changed_date = new Date().toISOString();
+    await saveToFireStore("save_pr_meta", prMeta.prId, prMeta);
 }
 
 export async function saveTarifDefToFireStore(tarifDef: TarifDef) {
-    let url = "https://europe-west1-ebo-tain.cloudfunctions.net/save_tarif_def";
-    let data = {
-        id: tarifDef.commodityCode,
-        def: tarifDef,
-    };
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-    });
+    await saveToFireStore("save_tarif_def", tarifDef.commodityCode, tarifDef);
 }
 
+export async function saveKeyValueToFireStore(key: string, value: any) {
+    await saveToFireStore("save_key_value", key, value);
+}

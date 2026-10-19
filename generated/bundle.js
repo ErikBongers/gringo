@@ -29759,30 +29759,23 @@ Total Duration: ${a - u}ms`);
 		});
 		return tarifDefs;
 	}
-	async function savePrMetaToFireStore(prMeta) {
-		prMeta.changed_date = (/* @__PURE__ */ new Date()).toISOString();
-		let url = "https://europe-west1-ebo-tain.cloudfunctions.net/save_pr_meta";
-		let data = {
-			id: prMeta.prId,
-			meta: prMeta
-		};
+	async function saveToFireStore(functionName, id, data) {
+		let url = `https://europe-west1-ebo-tain.cloudfunctions.net/${functionName}`;
 		await fetch(url, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(data)
+			body: JSON.stringify({
+				id,
+				data
+			})
 		});
 	}
+	async function savePrMetaToFireStore(prMeta) {
+		prMeta.changed_date = (/* @__PURE__ */ new Date()).toISOString();
+		await saveToFireStore("save_pr_meta", prMeta.prId, prMeta);
+	}
 	async function saveTarifDefToFireStore(tarifDef) {
-		let url = "https://europe-west1-ebo-tain.cloudfunctions.net/save_tarif_def";
-		let data = {
-			id: tarifDef.commodityCode,
-			def: tarifDef
-		};
-		await fetch(url, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(data)
-		});
+		await saveToFireStore("save_tarif_def", tarifDef.commodityCode, tarifDef);
 	}
 	//#endregion
 	//#region typescript/sessionCache.ts
