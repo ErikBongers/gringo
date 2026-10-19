@@ -69,7 +69,8 @@ async function fetchPrMeta(id: string): Promise<PrMeta | null> {
 }
 
 async function fetchKeyValue(key: string): Promise<string | null> {
-    return fetchAny<string>("key_values", key);
+    let data = await fetchAny<{value: string}>("key_values", key);
+    return data?.value??null;
 }
 
 async function fetchPrMetas(changedDateZ: string | null) {

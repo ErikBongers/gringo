@@ -168,7 +168,7 @@ async function updateRequestsInFirestore(requestList: RequestListItem[]) {
     }
     infoBlock.progressBar.stop();
 
-    //todo: await firestore.saveKeyValue("last_changed", newChangeDate);
+    await firestore.saveKeyValue("last_changed", newChangeDate);
 }
 
 export async function fetchRequestList() {
@@ -196,7 +196,7 @@ export async function fetchRequestList() {
         }
     }
     requestList.requestList = uniqueRequests;
-    //todo TEST  await updateRequestsInFirestore(requestList.requestList); //todo: do this in background? Service worker?
+    await updateRequestsInFirestore(requestList.requestList); //todo: do this in background? Service worker?
     return requestList
 }
 

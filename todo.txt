@@ -1,3 +1,10 @@
+* update PrData in fireStore
+  > based on last_changed date in fireStore?
+    > is this safe enough?
+    > only if data is retrieved from Ariba and immediately updated to fireStore.
+    > if a pr is missed, will it be updated on the next run?
+      > yes...I think so...the next read will get it from Ariba with the new date.
+
 * Save PrData to fireStore
   > when?
     > always when requests are retrieved (unless a flag dontUpdateFireStore) is set.

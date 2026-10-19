@@ -31562,6 +31562,22 @@ Total Duration: ${a - u}ms`);
 		});
 		return await chain.getJson();
 	}
+	async function updateRequestsInFirestore(requestList) {
+		let last_changed = await firestore.fetchKeyValue("last_changed");
+		if (last_changed == null) last_changed = "0";
+		let newChangeDate = (/* @__PURE__ */ new Date()).toISOString();
+		let sessionCache = await getSessionCache();
+		let changedReqs = requestList.filter((request) => request.lastModifiedDate > last_changed);
+		let infoBlock = getInfoBlockForCurrentPage();
+		infoBlock.progressBar.start(changedReqs.length);
+		for (const request of changedReqs) {
+			let prData = convertPrToListData(request, await fetchPr(request.reqUniqueName), sessionCache);
+			await firestore.savePrData(prData);
+			infoBlock.progressBar.next();
+		}
+		infoBlock.progressBar.stop();
+		await firestore.saveKeyValue("last_changed", newChangeDate);
+	}
 	async function fetchRequestList() {
 		let chain = new FetchChain();
 		await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false");
@@ -31576,6 +31592,7 @@ Total Duration: ${a - u}ms`);
 		let uniqueRequests = [];
 		for (let pr of requestList.requestList) if (!uniqueRequests.some((p) => p.reqUniqueName == pr.reqUniqueName)) uniqueRequests.push(pr);
 		requestList.requestList = uniqueRequests;
+		await updateRequestsInFirestore(requestList.requestList);
 		return requestList;
 	}
 	async function saveMeta(meta) {
