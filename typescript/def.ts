@@ -1,6 +1,5 @@
 export const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
 export const JSON_SINCE_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json-since";
-export const KEY_LAST_FETCHED_METAS = "gringo.lastFetchedMetas";
 export const KEY_CLOUD_GRINGO_FOLDER = "gringo/";
 export const KEY_CLOUD_PR_FOLDER = KEY_CLOUD_GRINGO_FOLDER + "pr/";
 export const BTW_TARIFS_FILENAME = KEY_CLOUD_GRINGO_FOLDER + "btwTarifs.json";

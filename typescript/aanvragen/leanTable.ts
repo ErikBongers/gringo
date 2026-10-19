@@ -132,8 +132,7 @@ function createPoUrl(uniqueName: string) {
 export async function applyFiltersForLeanTable() {
     let table = document.querySelector("table.leanPrList") as HTMLTableElement;
     let filterDef = getPrFilterStrings();
-    let prMetas = (await getLocalCache()).PrMetas;
-    let rowFilterDef = createRowFilter<HTMLTableRowElement>(filterDef, prMetas, (tr) => {
+    let rowFilterDef = createRowFilter<HTMLTableRowElement>(filterDef, (tr) => {
         return {rowText: tr.innerText, tagString: tr.dataset.gringoTags!};
     });
     await filterTable(table, rowFilterDef);

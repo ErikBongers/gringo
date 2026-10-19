@@ -184,7 +184,6 @@ export type FilterDef = {
 export interface FilterContext {
     preparedFilterText: string,
     filterDef: FilterDef,
-    prMetas: Repository<LocalDb, "PrMetas">
 }
 
 export interface PrRowType {
@@ -192,7 +191,7 @@ export interface PrRowType {
     tagString: string,
 }
 
-export function createRowFilter<SourceRow>(filterDef: FilterDef, prMetas: Repository<LocalDb, "PrMetas">, rowConverter: (row: SourceRow) => PrRowType) {
+export function createRowFilter<SourceRow>(filterDef: FilterDef, rowConverter: (row: SourceRow) => PrRowType) {
     let textFilterContainsUpperCase = filterDef.textFilter.text != filterDef.textFilter.text.toLowerCase();
     let preparedFilterText = filterDef.textFilter.text;
     if(!textFilterContainsUpperCase)
@@ -200,7 +199,6 @@ export function createRowFilter<SourceRow>(filterDef: FilterDef, prMetas: Reposi
     let context: FilterContext = {
         preparedFilterText,
         filterDef,
-        prMetas
     }
     let rowFilter;
     if (textFilterContainsUpperCase) {

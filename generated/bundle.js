@@ -544,9 +544,7 @@
 	//#endregion
 	//#region typescript/def.ts
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
-	const KEY_LAST_FETCHED_METAS = "gringo.lastFetchedMetas";
 	const GLOBAL_SETTINGS_FILENAME = "gringo/gringo_global_settings.json";
-	const KEY_CLOUD_METAS_FOLDER = "gringo/pr/meta/";
 	//#endregion
 	//#region typescript/cloud.ts
 	let cloud = { json: {
@@ -15415,6 +15413,9 @@
 			t += e.length + __PRIVATE_estimateByteSize(n);
 		})), t;
 	}
+	function __PRIVATE_refValue(e, t) {
+		return { referenceValue: `projects/${e.projectId}/databases/${e.database}/documents/${t.path.canonicalString()}` };
+	}
 	/** Returns true if `value` is an BooleanValue . */
 	/** Returns true if `value` is an IntegerValue . */
 	function __PRIVATE_isIntegerValue(e) {
@@ -16630,6 +16631,10 @@
 			const n = e.endAt ? new Bound(e.endAt.position, e.endAt.inclusive) : null, r = e.startAt ? new Bound(e.startAt.position, e.startAt.inclusive) : null;
 			return __PRIVATE_newTarget(e.path, e.collectionGroup, t, e.filters, e.limit, n, r);
 		}
+	}
+	function __PRIVATE_queryWithAddedFilter(e, t) {
+		const n = e.filters.concat([t]);
+		return new __PRIVATE_QueryImpl(e.path, e.collectionGroup, e.explicitOrderBy.slice(), n, e.limit, e.limitType, e.startAt, e.endAt);
 	}
 	function __PRIVATE_queryWithLimit(e, t, n) {
 		return new __PRIVATE_QueryImpl(e.path, e.collectionGroup, e.explicitOrderBy.slice(), e.filters.slice(), t, n, e.startAt, e.endAt);
@@ -20209,6 +20214,7 @@ Total Duration: ${a - u}ms`);
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
+	const on = /^__.*__$/;
 	function __PRIVATE_isWrite(e) {
 		switch (e) {
 			case 0:
@@ -20218,6 +20224,105 @@ Total Duration: ${a - u}ms`);
 			case 4: return false;
 			default: throw l(40011, { dataSource: e });
 		}
+	}
+	/** A "context" object passed around while parsing user data. */ var ParseContextImpl = class ParseContextImpl {
+		/**
+		* Initializes a ParseContext with the given source and path.
+		*
+		* @param settings - The settings for the parser.
+		* @param databaseId - The database ID of the Firestore instance.
+		* @param serializer - The serializer to use to generate the Value proto.
+		* @param ignoreUndefinedProperties - Whether to ignore undefined properties
+		* rather than throw.
+		* @param fieldTransforms - A mutable list of field transforms encountered
+		* while parsing the data.
+		* @param fieldMask - A mutable list of field paths encountered while parsing
+		* the data.
+		*
+		* TODO(b/34871131): We don't support array paths right now, so path can be
+		* null to indicate the context represents any location within an array (in
+		* which case certain features will not work and errors will be somewhat
+		* compromised).
+		*/
+		constructor(e, t, n, r, i, s) {
+			this.settings = e, this.databaseId = t, this.serializer = n, this.ignoreUndefinedProperties = r, void 0 === i && this.validatePath(), this.fieldTransforms = i || [], this.fieldMask = s || [];
+		}
+		get path() {
+			return this.settings.path;
+		}
+		get dataSource() {
+			return this.settings.dataSource;
+		}
+		/** Returns a new context with the specified settings overwritten. */ contextWith(e) {
+			return new ParseContextImpl({
+				...this.settings,
+				...e
+			}, this.databaseId, this.serializer, this.ignoreUndefinedProperties, this.fieldTransforms, this.fieldMask);
+		}
+		childContextForField(e) {
+			const t = this.path?.child(e), n = this.contextWith({
+				path: t,
+				arrayElement: false
+			});
+			return n.validatePathSegment(e), n;
+		}
+		childContextForFieldPath(e) {
+			const t = this.path?.child(e), n = this.contextWith({
+				path: t,
+				arrayElement: false
+			});
+			return n.validatePath(), n;
+		}
+		childContextForArray(e) {
+			return this.contextWith({
+				path: void 0,
+				arrayElement: true
+			});
+		}
+		createError(e) {
+			return createError(e, this.settings.methodName, this.settings.hasConverter || false, this.path, this.settings.targetDoc);
+		}
+		/** Returns 'true' if 'fieldPath' was traversed when creating this context. */ contains(e) {
+			return void 0 !== this.fieldMask.find(((t) => e.isPrefixOf(t))) || void 0 !== this.fieldTransforms.find(((t) => e.isPrefixOf(t.field)));
+		}
+		validatePath() {
+			if (this.path) for (let e = 0; e < this.path.length; e++) this.validatePathSegment(this.path.get(e));
+		}
+		validatePathSegment(e) {
+			if (0 === e.length) throw this.createError("Document fields must not be empty");
+			if (__PRIVATE_isWrite(this.dataSource) && on.test(e)) throw this.createError("Document fields cannot begin and end with \"__\"");
+		}
+	};
+	/**
+	* Helper for parsing raw user input (provided via the API) into internal model
+	* classes.
+	*/ var UserDataReader = class {
+		constructor(e, t, n) {
+			this.databaseId = e, this.ignoreUndefinedProperties = t, this.serializer = n || __PRIVATE_newSerializer(e);
+		}
+		/** Creates a new top-level parse context. */ createContext(e, t, n, r = false) {
+			return new ParseContextImpl({
+				dataSource: e,
+				methodName: t,
+				targetDoc: n,
+				path: Me$1.emptyPath(),
+				arrayElement: false,
+				hasConverter: r
+			}, this.databaseId, this.serializer, this.ignoreUndefinedProperties);
+		}
+	};
+	function la(e) {
+		const t = e._freezeSettings(), n = __PRIVATE_newSerializer(e._databaseId);
+		return new UserDataReader(e._databaseId, !!t.ignoreUndefinedProperties, n);
+	}
+	/**
+	* Parse a "query value" (e.g. value in a where filter or a value in a cursor
+	* bound).
+	*
+	* @param allowArrays - Whether the query value is an array that may directly
+	* contain additional arrays (e.g. the operand of an `in` query).
+	*/ function __PRIVATE_parseQueryValue(e, t, n, r = false) {
+		return __PRIVATE_parseData(n, e.createContext(r ? 4 : 3, t));
 	}
 	/**
 	* Parses user data to Protobuf Values.
@@ -29215,21 +29320,169 @@ Total Duration: ${a - u}ms`);
 		if ("L" === e$1.limitType && 0 === e$1.explicitOrderBy.length) throw new e(ta.UNIMPLEMENTED, "limitToLast() queries require specifying at least one orderBy() clause");
 	}
 	/**
-	* @license
-	* Copyright 2022 Google LLC
+	* An `AppliableConstraint` is an abstraction of a constraint that can be applied
+	* to a Firestore query.
+	*/ var AppliableConstraint = class {};
+	/**
+	* A `QueryConstraint` is used to narrow the set of documents returned by a
+	* Firestore query. `QueryConstraint`s are created by invoking {@link where},
+	* {@link orderBy}, {@link (startAt:1)}, {@link (startAfter:1)}, {@link
+	* (endBefore:1)}, {@link (endAt:1)}, {@link limit}, {@link limitToLast} and
+	* can then be passed to {@link (query:1)} to create a new query instance that
+	* also contains this `QueryConstraint`.
+	*/ var QueryConstraint = class extends AppliableConstraint {};
+	function query(e$1, t, ...n) {
+		let r = [];
+		t instanceof AppliableConstraint && r.push(t), r = r.concat(n), function __PRIVATE_validateQueryConstraintArray(e$1) {
+			const t = e$1.filter(((e) => e instanceof QueryCompositeFilterConstraint)).length, n = e$1.filter(((e) => e instanceof QueryFieldFilterConstraint)).length;
+			if (t > 1 || t > 0 && n > 0) throw new e(ta.INVALID_ARGUMENT, "InvalidQuery. When using composite filters, you cannot use more than one filter at the top level. Consider nesting the multiple filters within an `and(...)` statement. For example: change `query(query, where(...), or(...))` to `query(query, and(where(...), or(...)))`.");
+		}(r);
+		/**
+		* @license
+		* Copyright 2022 Google LLC
+		*
+		* Licensed under the Apache License, Version 2.0 (the "License");
+		* you may not use this file except in compliance with the License.
+		* You may obtain a copy of the License at
+		*
+		*   http://www.apache.org/licenses/LICENSE-2.0
+		*
+		* Unless required by applicable law or agreed to in writing, software
+		* distributed under the License is distributed on an "AS IS" BASIS,
+		* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+		* See the License for the specific language governing permissions and
+		* limitations under the License.
+		*/
+		for (const t of r) e$1 = t._apply(e$1);
+		return e$1;
+	}
+	/**
+	* A `QueryFieldFilterConstraint` is used to narrow the set of documents returned by
+	* a Firestore query by filtering on one or more document fields.
+	* `QueryFieldFilterConstraint`s are created by invoking {@link where} and can then
+	* be passed to {@link (query:1)} to create a new query instance that also contains
+	* this `QueryFieldFilterConstraint`.
+	*/ var QueryFieldFilterConstraint = class QueryFieldFilterConstraint extends QueryConstraint {
+		/**
+		* @internal
+		*/
+		constructor(e, t, n) {
+			super(), this._field = e, this._op = t, this._value = n, this.type = "where";
+		}
+		static _create(e, t, n) {
+			return new QueryFieldFilterConstraint(e, t, n);
+		}
+		_apply(e) {
+			const t = this._parse(e);
+			return __PRIVATE_validateNewFieldFilter(e._query, t), new Query(e.firestore, e.converter, __PRIVATE_queryWithAddedFilter(e._query, t));
+		}
+		_parse(e$1) {
+			const t = la(e$1.firestore);
+			return function __PRIVATE_newQueryFilter(e$1, t, n, r, s, a, o) {
+				let i;
+				if (function __PRIVATE_validateQueryOperator(e, t) {
+					if ("number" == typeof e && isNaN(e) && "==" !== t && "!=" !== t && "array-contains" !== t) throw new Error("Invalid query. You can only perform '==' and '!=' comparisons on NaN.");
+					if (null === e && "==" !== t && "!=" !== t && "array-contains" !== t) throw new Error("Invalid query. You can only perform '==' and '!=' comparisons on Null.");
+				}(o, a), s.isKeyField()) {
+					if ("array-contains" === a || "array-contains-any" === a) throw new e(ta.INVALID_ARGUMENT, `Invalid Query. You can't perform '${a}' queries on documentId().`);
+					if ("in" === a || "not-in" === a) {
+						__PRIVATE_validateDisjunctiveFilterElements(o, a);
+						const t = [];
+						for (const n of o) t.push(__PRIVATE_parseDocumentIdValue(r, e$1, n));
+						i = { arrayValue: { values: t } };
+					} else i = __PRIVATE_parseDocumentIdValue(r, e$1, o);
+				} else "in" !== a && "not-in" !== a && "array-contains-any" !== a || __PRIVATE_validateDisjunctiveFilterElements(o, a), i = __PRIVATE_parseQueryValue(n, t, o, "in" === a || "not-in" === a);
+				return FieldFilter.create(s, a, i);
+			}(e$1._query, "where", t, e$1.firestore._databaseId, this._field, this._op, this._value);
+		}
+	};
+	/**
+	* Creates a {@link QueryFieldFilterConstraint} that enforces that documents
+	* must contain the specified field and that the value should satisfy the
+	* relation constraint provided.
 	*
-	* Licensed under the Apache License, Version 2.0 (the "License");
-	* you may not use this file except in compliance with the License.
-	* You may obtain a copy of the License at
-	*
-	*   http://www.apache.org/licenses/LICENSE-2.0
-	*
-	* Unless required by applicable law or agreed to in writing, software
-	* distributed under the License is distributed on an "AS IS" BASIS,
-	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	* See the License for the specific language governing permissions and
-	* limitations under the License.
-	*/
+	* @param fieldPath - The path to compare
+	* @param opStr - The operation string (e.g "&lt;", "&lt;=", "==", "&lt;",
+	*   "&lt;=", "!=").
+	* @param value - The value for comparison
+	* @returns The created {@link QueryFieldFilterConstraint}.
+	*/ function where(e, t, n) {
+		const r = t, s = K("where", e);
+		return QueryFieldFilterConstraint._create(s, r, n);
+	}
+	/**
+	* A `QueryCompositeFilterConstraint` is used to narrow the set of documents
+	* returned by a Firestore query by performing the logical OR or AND of multiple
+	* {@link QueryFieldFilterConstraint}s or {@link QueryCompositeFilterConstraint}s.
+	* `QueryCompositeFilterConstraint`s are created by invoking {@link or} or
+	* {@link and} and can then be passed to {@link (query:1)} to create a new query
+	* instance that also contains the `QueryCompositeFilterConstraint`.
+	*/ var QueryCompositeFilterConstraint = class QueryCompositeFilterConstraint extends AppliableConstraint {
+		/**
+		* @internal
+		*/
+		constructor(e, t) {
+			super(), this.type = e, this._queryConstraints = t;
+		}
+		static _create(e, t) {
+			return new QueryCompositeFilterConstraint(e, t);
+		}
+		_parse(e) {
+			const t = this._queryConstraints.map(((t) => t._parse(e))).filter(((e) => e.getFilters().length > 0));
+			return 1 === t.length ? t[0] : CompositeFilter.create(t, this._getOperator());
+		}
+		_apply(e) {
+			const t = this._parse(e);
+			return 0 === t.getFilters().length ? e : (function __PRIVATE_validateNewFilter(e, t) {
+				let n = e;
+				const r = t.getFlattenedFilters();
+				for (const e of r) __PRIVATE_validateNewFieldFilter(n, e), n = __PRIVATE_queryWithAddedFilter(n, e);
+			}(e._query, t), new Query(e.firestore, e.converter, __PRIVATE_queryWithAddedFilter(e._query, t)));
+		}
+		_getQueryConstraints() {
+			return this._queryConstraints;
+		}
+		_getOperator() {
+			return "and" === this.type ? "and" : "or";
+		}
+	};
+	function __PRIVATE_parseDocumentIdValue(e$1, t, n) {
+		if ("string" == typeof (n = getModularInstance(n))) {
+			if ("" === n) throw new e(ta.INVALID_ARGUMENT, "Invalid query. When querying with documentId(), you must provide a valid document ID, but it was an empty string.");
+			if (!__PRIVATE_isCollectionGroupQuery(t) && -1 !== n.indexOf("/")) throw new e(ta.INVALID_ARGUMENT, `Invalid query. When querying a collection by documentId(), you must provide a plain document ID, but '${n}' contains a '/' character.`);
+			const r = t.path.child(ResourcePath.fromString(n));
+			if (!DocumentKey.isDocumentKey(r)) throw new e(ta.INVALID_ARGUMENT, `Invalid query. When querying a collection group by documentId(), the value provided must result in a valid document path, but '${r}' is not because it has an odd number of segments (${r.length}).`);
+			return __PRIVATE_refValue(e$1, new DocumentKey(r));
+		}
+		if (n instanceof aa) return __PRIVATE_refValue(e$1, n._key);
+		throw new e(ta.INVALID_ARGUMENT, `Invalid query. When querying with documentId(), you must provide a valid string or a DocumentReference, but it was: ${__PRIVATE_valueDescription(n)}.`);
+	}
+	/**
+	* Validates that the value passed into a disjunctive filter satisfies all
+	* array requirements.
+	*/ function __PRIVATE_validateDisjunctiveFilterElements(e$1, t) {
+		if (!Array.isArray(e$1) || 0 === e$1.length) throw new e(ta.INVALID_ARGUMENT, `Invalid Query. A non-empty array is required for '${t.toString()}' filters.`);
+	}
+	function __PRIVATE_validateNewFieldFilter(e$1, t) {
+		const n = function __PRIVATE_findOpInsideFilters(e, t) {
+			for (const n of e) for (const e of n.getFlattenedFilters()) if (t.indexOf(e.op) >= 0) return e.op;
+			return null;
+		}(e$1.filters, function __PRIVATE_conflictingOps(e) {
+			switch (e) {
+				case "!=": return ["!=", "not-in"];
+				case "array-contains-any":
+				case "in": return ["not-in"];
+				case "not-in": return [
+					"array-contains-any",
+					"in",
+					"not-in",
+					"!="
+				];
+				default: return [];
+			}
+		}(t.op));
+		if (null !== n) throw n === t.op ? new e(ta.INVALID_ARGUMENT, `Invalid query. You cannot use more than one '${t.op.toString()}' filter.`) : new e(ta.INVALID_ARGUMENT, `Invalid query. You cannot use '${t.op.toString()}' filters with '${n.toString()}' filters.`);
+	}
 	/**
 	* @license
 	* Copyright 2017 Google LLC
@@ -29460,6 +29713,20 @@ Total Duration: ${a - u}ms`);
 		}), "PUBLIC").setMultipleInstances(true)), registerVersion(Me, Le, s), registerVersion(Me, Le, "esm2020");
 	})();
 	const db = getFirestore(initializeApp({ projectId: "ebo-tain" }), "gringo-store");
+	const prMetaConverter = {
+		toFirestore(prMeta) {
+			return prMeta;
+		},
+		fromFirestore(snapshot) {
+			const data = snapshot.data();
+			return {
+				prId: data.prId,
+				tags: data.tags || [],
+				project: data.project,
+				changed_date: data.changed_date
+			};
+		}
+	};
 	const tarifDefConverter = {
 		toFirestore(tarifDef) {
 			return tarifDef;
@@ -29473,6 +29740,17 @@ Total Duration: ${a - u}ms`);
 			};
 		}
 	};
+	async function fetchPrMetas(changedDateZ) {
+		const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
+		let querySnapshot;
+		if (changedDateZ) querySnapshot = await getDocs(query(prMetaRef, where("changed_date", ">=", changedDateZ)));
+		else querySnapshot = await getDocs(prMetaRef);
+		let metas = [];
+		querySnapshot.forEach((doc) => {
+			metas.push(doc.data());
+		});
+		return metas;
+	}
 	async function fetchTarifDefs() {
 		const querySnapshot = await getDocs(collection(db, "tarif_defs").withConverter(tarifDefConverter));
 		let tarifDefs = [];
@@ -30461,306 +30739,28 @@ Total Duration: ${a - u}ms`);
 		["24200000", "Muziekinstrumenten"]
 	];
 	//#endregion
-	//#region node_modules/idb/build/index.js
-	const instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
-	let idbProxyableTypes;
-	let cursorAdvanceMethods;
-	function getIdbProxyableTypes() {
-		return idbProxyableTypes || (idbProxyableTypes = [
-			IDBIndex,
-			IDBObjectStore,
-			IDBCursor,
-			IDBDatabase,
-			IDBTransaction
-		]);
+	//#region typescript/db/metaCache.ts
+	let prMetasCache = null;
+	async function getMetaCache() {
+		if (!prMetasCache) {
+			let prMetas = await fetchPrMetas(null);
+			prMetasCache = new Map(prMetas.map((m) => [m.prId, m]));
+		}
+		return { get: fetchMetaCached };
 	}
-	function getCursorAdvanceMethods() {
-		return cursorAdvanceMethods || (cursorAdvanceMethods = [
-			"advance",
-			"continue",
-			"continuePrimaryKey"
-		].map((method) => IDBCursor.prototype[method]));
-	}
-	const transactionDoneMap = /* @__PURE__ */ new WeakMap();
-	const transformCache = /* @__PURE__ */ new WeakMap();
-	const reverseTransformCache = /* @__PURE__ */ new WeakMap();
-	function promisifyRequest(request) {
-		const promise = new Promise((resolve, reject) => {
-			const unlisten = () => {
-				request.removeEventListener("success", success);
-				request.removeEventListener("error", error);
+	async function fetchMetaCached(prId) {
+		let meta = prMetasCache.get(prId);
+		//! only accessed via getMetaCache
+		if (!meta) {
+			meta = {
+				prId,
+				tags: []
 			};
-			const success = () => {
-				resolve(wrap(request.result));
-				unlisten();
-			};
-			const error = () => {
-				reject(request.error);
-				unlisten();
-			};
-			request.addEventListener("success", success);
-			request.addEventListener("error", error);
-		});
-		reverseTransformCache.set(promise, request);
-		return promise;
-	}
-	function cacheDonePromiseForTransaction(tx) {
-		if (transactionDoneMap.has(tx)) return;
-		const done = new Promise((resolve, reject) => {
-			const unlisten = () => {
-				tx.removeEventListener("complete", complete);
-				tx.removeEventListener("error", error);
-				tx.removeEventListener("abort", error);
-			};
-			const complete = () => {
-				resolve();
-				unlisten();
-			};
-			const error = () => {
-				reject(tx.error || new DOMException("AbortError", "AbortError"));
-				unlisten();
-			};
-			tx.addEventListener("complete", complete);
-			tx.addEventListener("error", error);
-			tx.addEventListener("abort", error);
-		});
-		transactionDoneMap.set(tx, done);
-	}
-	let idbProxyTraps = {
-		get(target, prop, receiver) {
-			if (target instanceof IDBTransaction) {
-				if (prop === "done") return transactionDoneMap.get(target);
-				if (prop === "store") return receiver.objectStoreNames[1] ? void 0 : receiver.objectStore(receiver.objectStoreNames[0]);
-			}
-			return wrap(target[prop]);
-		},
-		set(target, prop, value) {
-			target[prop] = value;
-			return true;
-		},
-		has(target, prop) {
-			if (target instanceof IDBTransaction && (prop === "done" || prop === "store")) return true;
-			return prop in target;
+			await saveMeta(meta);
+			prMetasCache.set(prId, meta);
+			//! only accessed via getMetaCache
 		}
-	};
-	function replaceTraps(callback) {
-		idbProxyTraps = callback(idbProxyTraps);
-	}
-	function wrapFunction(func) {
-		if (getCursorAdvanceMethods().includes(func)) return function(...args) {
-			func.apply(unwrap(this), args);
-			return wrap(this.request);
-		};
-		return function(...args) {
-			return wrap(func.apply(unwrap(this), args));
-		};
-	}
-	function transformCachableValue(value) {
-		if (typeof value === "function") return wrapFunction(value);
-		if (value instanceof IDBTransaction) cacheDonePromiseForTransaction(value);
-		if (instanceOfAny(value, getIdbProxyableTypes())) return new Proxy(value, idbProxyTraps);
-		return value;
-	}
-	function wrap(value) {
-		if (value instanceof IDBRequest) return promisifyRequest(value);
-		if (transformCache.has(value)) return transformCache.get(value);
-		const newValue = transformCachableValue(value);
-		if (!Object.is(newValue, value)) {
-			transformCache.set(value, newValue);
-			reverseTransformCache.set(newValue, value);
-		}
-		return newValue;
-	}
-	const unwrap = (value) => reverseTransformCache.get(value);
-	/**
-	* Open a database.
-	*
-	* @param name Name of the database.
-	* @param version Schema version.
-	* @param callbacks Additional callbacks.
-	*/
-	function openDB(name, version, { blocked, upgrade, blocking, terminated } = {}) {
-		const request = indexedDB.open(name, version);
-		const openPromise = wrap(request);
-		if (upgrade) request.addEventListener("upgradeneeded", (event) => {
-			upgrade(wrap(request.result), event.oldVersion, event.newVersion, wrap(request.transaction), event);
-		});
-		if (blocked) request.addEventListener("blocked", (event) => blocked(event.oldVersion, event.newVersion, event));
-		openPromise.then((db) => {
-			if (terminated) db.addEventListener("close", () => terminated());
-			if (blocking) db.addEventListener("versionchange", (event) => blocking(event.oldVersion, event.newVersion, event));
-		}).catch(() => {});
-		return openPromise;
-	}
-	const readMethods = [
-		"get",
-		"getKey",
-		"getAll",
-		"getAllKeys",
-		"count"
-	];
-	const writeMethods = [
-		"put",
-		"add",
-		"delete",
-		"clear"
-	];
-	const cachedMethods = {};
-	function getMethod(target, prop) {
-		if (!(target instanceof IDBDatabase && !(prop in target) && typeof prop === "string")) return;
-		if (cachedMethods[prop]) return cachedMethods[prop];
-		const targetFuncName = prop.replace(/FromIndex$/, "");
-		const useIndex = prop !== targetFuncName;
-		const isWrite = writeMethods.includes(targetFuncName);
-		if (!(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) || !(isWrite || readMethods.includes(targetFuncName))) return;
-		const method = async function(storeName, ...args) {
-			const tx = this.transaction(storeName, isWrite ? "readwrite" : "readonly");
-			let target = tx.store;
-			if (useIndex) target = target.index(args.shift());
-			return (await Promise.all([target[targetFuncName](...args), isWrite && tx.done]))[0];
-		};
-		return cachedMethods[prop] = method;
-	}
-	replaceTraps((oldTraps) => ({
-		...oldTraps,
-		get: (target, prop, receiver) => getMethod(target, prop) || oldTraps.get(target, prop, receiver),
-		has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop)
-	}));
-	const advanceMethodProps = [
-		"advance",
-		"continue",
-		"continuePrimaryKey"
-	];
-	const methodMap = {};
-	const advanceResults = /* @__PURE__ */ new WeakMap();
-	const ittrProxiedCursorToOriginalProxy = /* @__PURE__ */ new WeakMap();
-	const cursorIteratorTraps = { get(target, prop) {
-		if (!advanceMethodProps.includes(prop)) return target[prop];
-		let cachedFunc = methodMap[prop];
-		if (!cachedFunc) cachedFunc = methodMap[prop] = function(...args) {
-			advanceResults.set(this, ittrProxiedCursorToOriginalProxy.get(this)[prop](...args));
-		};
-		return cachedFunc;
-	} };
-	async function* iterate(...args) {
-		let cursor = this;
-		if (!(cursor instanceof IDBCursor)) cursor = await cursor.openCursor(...args);
-		if (!cursor) return;
-		cursor = cursor;
-		const proxiedCursor = new Proxy(cursor, cursorIteratorTraps);
-		ittrProxiedCursorToOriginalProxy.set(proxiedCursor, cursor);
-		reverseTransformCache.set(proxiedCursor, unwrap(cursor));
-		while (cursor) {
-			yield proxiedCursor;
-			cursor = await (advanceResults.get(proxiedCursor) || cursor.continue());
-			advanceResults.delete(proxiedCursor);
-		}
-	}
-	function isIteratorProp(target, prop) {
-		return prop === Symbol.asyncIterator && instanceOfAny(target, [
-			IDBIndex,
-			IDBObjectStore,
-			IDBCursor
-		]) || prop === "iterate" && instanceOfAny(target, [IDBIndex, IDBObjectStore]);
-	}
-	replaceTraps((oldTraps) => ({
-		...oldTraps,
-		get(target, prop, receiver) {
-			if (isIteratorProp(target, prop)) return iterate;
-			return oldTraps.get(target, prop, receiver);
-		},
-		has(target, prop) {
-			return isIteratorProp(target, prop) || oldTraps.has(target, prop);
-		}
-	}));
-	//#endregion
-	//#region typescript/db/idb/repository.ts
-	var Repository = class {
-		db;
-		storeName;
-		constructor(db, storeName) {
-			this.db = db;
-			this.storeName = storeName;
-		}
-		async get(id) {
-			return this.db.get(this.storeName, id);
-		}
-		async getAll() {
-			return this.db.getAll(this.storeName);
-		}
-		async put(data, key) {
-			return this.db.put(this.storeName, data, key);
-		}
-		async clear() {
-			return this.db.clear(this.storeName);
-		}
-		async bulkPut(items) {
-			let tx = this.db.transaction(this.storeName, "readwrite");
-			let putPromises = items.map((item) => tx.store.put(item));
-			await Promise.all([...putPromises, tx.done]);
-		}
-		async findMatches(match) {
-			return (await this.db.getAll(this.storeName)).filter(match);
-		}
-	};
-	//#endregion
-	//#region typescript/db/idb/localDb.ts
-	const DB_VERSION = 13;
-	const LOCAL_DB_PREFIX = "LocalGringoDb";
-	let cacheMap = /* @__PURE__ */ new Map();
-	async function getLocalCache(schoolId = "Berchem") {
-		let cache = cacheMap.get(schoolId);
-		if (!cache) {
-			cache = await LocalCache.get(schoolId);
-			cacheMap.set(schoolId, cache);
-		}
-		return cache;
-	}
-	var LocalCache = class LocalCache {
-		db;
-		get PrMetas() {
-			return this._PrMetas;
-		}
-		get KeyValues() {
-			return this._KeyValues;
-		}
-		get PrListData() {
-			return this._PrListData;
-		}
-		_KeyValues;
-		_PrMetas;
-		_PrListData;
-		constructor(db) {
-			this.db = db;
-			this._KeyValues = new Repository(this.db, "KeyValues");
-			this._PrMetas = new Repository(this.db, "PrMetas");
-			this._PrListData = new Repository(this.db, "PrListData");
-		}
-		static getDbName(schoolId) {
-			return `${LOCAL_DB_PREFIX}_${schoolId}`;
-		}
-		static async get(schoolId) {
-			return new LocalCache(await openDB(LocalCache.getDbName(schoolId), DB_VERSION, { async upgrade(db, oldVersion, newVersion, transaction) {
-				if (oldVersion < 1) {
-					db.createObjectStore("KeyValues", { keyPath: "key" });
-					db.createObjectStore("PrMetas", { keyPath: "prId" });
-				}
-				if (oldVersion < 2) db.createObjectStore("PrListData", { keyPath: "prId" });
-				if (oldVersion < 13) await upgradeTo13(transaction, (prData) => true);
-			} }));
-		}
-	};
-	async function upgradeTo13(transaction, isInvalid) {
-		let prDatas = await transaction.objectStore("PrListData").getAll();
-		for (const prData of prDatas) {
-			if (!isInvalid(prData)) continue;
-			for (let item of prData.items) {
-				item.grantCode = "";
-				item.ledgerCode = "";
-			}
-			prData.changed_date = "0";
-			await transaction.objectStore("PrListData").put(prData);
-		}
+		return meta;
 	}
 	//#endregion
 	//#region typescript/aanvragen/aggregate.ts
@@ -31039,6 +31039,301 @@ Total Duration: ${a - u}ms`);
 		priceBlock.updateOtherFields();
 	}
 	//#endregion
+	//#region node_modules/idb/build/index.js
+	const instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
+	let idbProxyableTypes;
+	let cursorAdvanceMethods;
+	function getIdbProxyableTypes() {
+		return idbProxyableTypes || (idbProxyableTypes = [
+			IDBIndex,
+			IDBObjectStore,
+			IDBCursor,
+			IDBDatabase,
+			IDBTransaction
+		]);
+	}
+	function getCursorAdvanceMethods() {
+		return cursorAdvanceMethods || (cursorAdvanceMethods = [
+			"advance",
+			"continue",
+			"continuePrimaryKey"
+		].map((method) => IDBCursor.prototype[method]));
+	}
+	const transactionDoneMap = /* @__PURE__ */ new WeakMap();
+	const transformCache = /* @__PURE__ */ new WeakMap();
+	const reverseTransformCache = /* @__PURE__ */ new WeakMap();
+	function promisifyRequest(request) {
+		const promise = new Promise((resolve, reject) => {
+			const unlisten = () => {
+				request.removeEventListener("success", success);
+				request.removeEventListener("error", error);
+			};
+			const success = () => {
+				resolve(wrap(request.result));
+				unlisten();
+			};
+			const error = () => {
+				reject(request.error);
+				unlisten();
+			};
+			request.addEventListener("success", success);
+			request.addEventListener("error", error);
+		});
+		reverseTransformCache.set(promise, request);
+		return promise;
+	}
+	function cacheDonePromiseForTransaction(tx) {
+		if (transactionDoneMap.has(tx)) return;
+		const done = new Promise((resolve, reject) => {
+			const unlisten = () => {
+				tx.removeEventListener("complete", complete);
+				tx.removeEventListener("error", error);
+				tx.removeEventListener("abort", error);
+			};
+			const complete = () => {
+				resolve();
+				unlisten();
+			};
+			const error = () => {
+				reject(tx.error || new DOMException("AbortError", "AbortError"));
+				unlisten();
+			};
+			tx.addEventListener("complete", complete);
+			tx.addEventListener("error", error);
+			tx.addEventListener("abort", error);
+		});
+		transactionDoneMap.set(tx, done);
+	}
+	let idbProxyTraps = {
+		get(target, prop, receiver) {
+			if (target instanceof IDBTransaction) {
+				if (prop === "done") return transactionDoneMap.get(target);
+				if (prop === "store") return receiver.objectStoreNames[1] ? void 0 : receiver.objectStore(receiver.objectStoreNames[0]);
+			}
+			return wrap(target[prop]);
+		},
+		set(target, prop, value) {
+			target[prop] = value;
+			return true;
+		},
+		has(target, prop) {
+			if (target instanceof IDBTransaction && (prop === "done" || prop === "store")) return true;
+			return prop in target;
+		}
+	};
+	function replaceTraps(callback) {
+		idbProxyTraps = callback(idbProxyTraps);
+	}
+	function wrapFunction(func) {
+		if (getCursorAdvanceMethods().includes(func)) return function(...args) {
+			func.apply(unwrap(this), args);
+			return wrap(this.request);
+		};
+		return function(...args) {
+			return wrap(func.apply(unwrap(this), args));
+		};
+	}
+	function transformCachableValue(value) {
+		if (typeof value === "function") return wrapFunction(value);
+		if (value instanceof IDBTransaction) cacheDonePromiseForTransaction(value);
+		if (instanceOfAny(value, getIdbProxyableTypes())) return new Proxy(value, idbProxyTraps);
+		return value;
+	}
+	function wrap(value) {
+		if (value instanceof IDBRequest) return promisifyRequest(value);
+		if (transformCache.has(value)) return transformCache.get(value);
+		const newValue = transformCachableValue(value);
+		if (!Object.is(newValue, value)) {
+			transformCache.set(value, newValue);
+			reverseTransformCache.set(newValue, value);
+		}
+		return newValue;
+	}
+	const unwrap = (value) => reverseTransformCache.get(value);
+	/**
+	* Open a database.
+	*
+	* @param name Name of the database.
+	* @param version Schema version.
+	* @param callbacks Additional callbacks.
+	*/
+	function openDB(name, version, { blocked, upgrade, blocking, terminated } = {}) {
+		const request = indexedDB.open(name, version);
+		const openPromise = wrap(request);
+		if (upgrade) request.addEventListener("upgradeneeded", (event) => {
+			upgrade(wrap(request.result), event.oldVersion, event.newVersion, wrap(request.transaction), event);
+		});
+		if (blocked) request.addEventListener("blocked", (event) => blocked(event.oldVersion, event.newVersion, event));
+		openPromise.then((db) => {
+			if (terminated) db.addEventListener("close", () => terminated());
+			if (blocking) db.addEventListener("versionchange", (event) => blocking(event.oldVersion, event.newVersion, event));
+		}).catch(() => {});
+		return openPromise;
+	}
+	const readMethods = [
+		"get",
+		"getKey",
+		"getAll",
+		"getAllKeys",
+		"count"
+	];
+	const writeMethods = [
+		"put",
+		"add",
+		"delete",
+		"clear"
+	];
+	const cachedMethods = {};
+	function getMethod(target, prop) {
+		if (!(target instanceof IDBDatabase && !(prop in target) && typeof prop === "string")) return;
+		if (cachedMethods[prop]) return cachedMethods[prop];
+		const targetFuncName = prop.replace(/FromIndex$/, "");
+		const useIndex = prop !== targetFuncName;
+		const isWrite = writeMethods.includes(targetFuncName);
+		if (!(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) || !(isWrite || readMethods.includes(targetFuncName))) return;
+		const method = async function(storeName, ...args) {
+			const tx = this.transaction(storeName, isWrite ? "readwrite" : "readonly");
+			let target = tx.store;
+			if (useIndex) target = target.index(args.shift());
+			return (await Promise.all([target[targetFuncName](...args), isWrite && tx.done]))[0];
+		};
+		return cachedMethods[prop] = method;
+	}
+	replaceTraps((oldTraps) => ({
+		...oldTraps,
+		get: (target, prop, receiver) => getMethod(target, prop) || oldTraps.get(target, prop, receiver),
+		has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop)
+	}));
+	const advanceMethodProps = [
+		"advance",
+		"continue",
+		"continuePrimaryKey"
+	];
+	const methodMap = {};
+	const advanceResults = /* @__PURE__ */ new WeakMap();
+	const ittrProxiedCursorToOriginalProxy = /* @__PURE__ */ new WeakMap();
+	const cursorIteratorTraps = { get(target, prop) {
+		if (!advanceMethodProps.includes(prop)) return target[prop];
+		let cachedFunc = methodMap[prop];
+		if (!cachedFunc) cachedFunc = methodMap[prop] = function(...args) {
+			advanceResults.set(this, ittrProxiedCursorToOriginalProxy.get(this)[prop](...args));
+		};
+		return cachedFunc;
+	} };
+	async function* iterate(...args) {
+		let cursor = this;
+		if (!(cursor instanceof IDBCursor)) cursor = await cursor.openCursor(...args);
+		if (!cursor) return;
+		cursor = cursor;
+		const proxiedCursor = new Proxy(cursor, cursorIteratorTraps);
+		ittrProxiedCursorToOriginalProxy.set(proxiedCursor, cursor);
+		reverseTransformCache.set(proxiedCursor, unwrap(cursor));
+		while (cursor) {
+			yield proxiedCursor;
+			cursor = await (advanceResults.get(proxiedCursor) || cursor.continue());
+			advanceResults.delete(proxiedCursor);
+		}
+	}
+	function isIteratorProp(target, prop) {
+		return prop === Symbol.asyncIterator && instanceOfAny(target, [
+			IDBIndex,
+			IDBObjectStore,
+			IDBCursor
+		]) || prop === "iterate" && instanceOfAny(target, [IDBIndex, IDBObjectStore]);
+	}
+	replaceTraps((oldTraps) => ({
+		...oldTraps,
+		get(target, prop, receiver) {
+			if (isIteratorProp(target, prop)) return iterate;
+			return oldTraps.get(target, prop, receiver);
+		},
+		has(target, prop) {
+			return isIteratorProp(target, prop) || oldTraps.has(target, prop);
+		}
+	}));
+	//#endregion
+	//#region typescript/db/idb/repository.ts
+	var Repository = class {
+		db;
+		storeName;
+		constructor(db, storeName) {
+			this.db = db;
+			this.storeName = storeName;
+		}
+		async get(id) {
+			return this.db.get(this.storeName, id);
+		}
+		async getAll() {
+			return this.db.getAll(this.storeName);
+		}
+		async put(data, key) {
+			return this.db.put(this.storeName, data, key);
+		}
+		async clear() {
+			return this.db.clear(this.storeName);
+		}
+		async bulkPut(items) {
+			let tx = this.db.transaction(this.storeName, "readwrite");
+			let putPromises = items.map((item) => tx.store.put(item));
+			await Promise.all([...putPromises, tx.done]);
+		}
+		async findMatches(match) {
+			return (await this.db.getAll(this.storeName)).filter(match);
+		}
+	};
+	//#endregion
+	//#region typescript/db/idb/localDb.ts
+	const DB_VERSION = 14;
+	const LOCAL_DB_PREFIX = "LocalGringoDb";
+	let cacheMap = /* @__PURE__ */ new Map();
+	async function getLocalCache(schoolId = "Berchem") {
+		let cache = cacheMap.get(schoolId);
+		if (!cache) {
+			cache = await LocalCache.get(schoolId);
+			cacheMap.set(schoolId, cache);
+		}
+		return cache;
+	}
+	var LocalCache = class LocalCache {
+		db;
+		get KeyValues() {
+			return this._KeyValues;
+		}
+		get PrListData() {
+			return this._PrListData;
+		}
+		_KeyValues;
+		_PrListData;
+		constructor(db) {
+			this.db = db;
+			this._KeyValues = new Repository(this.db, "KeyValues");
+			this._PrListData = new Repository(this.db, "PrListData");
+		}
+		static getDbName(schoolId) {
+			return `${LOCAL_DB_PREFIX}_${schoolId}`;
+		}
+		static async get(schoolId) {
+			return new LocalCache(await openDB(LocalCache.getDbName(schoolId), DB_VERSION, { async upgrade(db, oldVersion, newVersion, transaction) {
+				if (oldVersion < 1) db.createObjectStore("KeyValues", { keyPath: "key" });
+				if (oldVersion < 2) db.createObjectStore("PrListData", { keyPath: "prId" });
+				if (oldVersion < 13) await upgradeTo13(transaction, (prData) => true);
+				if (oldVersion < 14) db.deleteObjectStore("PrMetas");
+			} }));
+		}
+	};
+	async function upgradeTo13(transaction, isInvalid) {
+		let prDatas = await transaction.objectStore("PrListData").getAll();
+		for (const prData of prDatas) {
+			if (!isInvalid(prData)) continue;
+			for (let item of prData.items) {
+				item.grantCode = "";
+				item.ledgerCode = "";
+			}
+			prData.changed_date = "0";
+			await transaction.objectStore("PrListData").put(prData);
+		}
+	}
+	//#endregion
 	//#region typescript/infoBlock/infoBar.ts
 	var InfoBar = class InfoBar {
 		parent;
@@ -31209,40 +31504,7 @@ Total Duration: ${a - u}ms`);
 		requestList.requestList = uniqueRequests;
 		return requestList;
 	}
-	async function fetchChangedMetas() {
-		let changedMetas;
-		let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
-		if (!zSince) {
-			await (await getLocalCache()).PrMetas.clear();
-			changedMetas = [];
-		} else changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
-		let fetchedDate = /* @__PURE__ */ new Date();
-		fetchedDate = /* @__PURE__ */ new Date(fetchedDate.getTime() - 3e5);
-		let zFetchedDate = fetchedDate.toISOString();
-		localStorage.setItem(KEY_LAST_FETCHED_METAS, zFetchedDate);
-		return changedMetas;
-	}
-	async function fetchMetaCached(prId, prMetas) {
-		if (!prMetas) prMetas = (await getLocalCache()).PrMetas;
-		let localMeta = await prMetas.get(prId);
-		if (localMeta) return localMeta;
-		gringo("Meta not in cache. Fetching meta from cloud for PR " + prId + "...");
-		let meta = {
-			prId,
-			tags: []
-		};
-		try {
-			meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
-		} catch {
-			await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
-		}
-		await (await getLocalCache()).PrMetas.put(meta);
-		await savePrMetaToFireStore(meta);
-		return meta;
-	}
-	async function saveMeta(prId, meta, what) {
-		if (what == "localStorage and cloud") await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
-		await (await getLocalCache()).PrMetas.put(meta);
+	async function saveMeta(meta) {
 		await savePrMetaToFireStore(meta);
 	}
 	function getAccountingField(prItem, idIncludes) {
@@ -31381,7 +31643,7 @@ Total Duration: ${a - u}ms`);
 		return getPoListData(request).join() == prListData.poData.join();
 	}
 	async function mergeRequestsAndData(prListDatas, requests) {
-		let cache = await getLocalCache();
+		let metaCache = await getMetaCache();
 		let dataSet = /* @__PURE__ */ new Map();
 		for (let prListData of prListDatas) dataSet.set(prListData.prId, prListData);
 		let expandedPrListData = [];
@@ -31391,7 +31653,7 @@ Total Duration: ${a - u}ms`);
 				console.error(`Could not find prListData for request ${request.reqUniqueName}`);
 				continue;
 			}
-			let meta = await cache.PrMetas.get(prListData.prId);
+			let meta = await metaCache.get(prListData.prId);
 			if (!meta) {
 				console.error(`Could not find meta for pr ${prListData.prId}`);
 				continue;
@@ -31485,7 +31747,7 @@ Total Duration: ${a - u}ms`);
 				tagButton.classList.toggle("selected");
 				if (tagButton.classList.contains("selected")) meta.tags.push(tagDef.name);
 				else meta.tags = meta.tags.filter((t) => t != tagDef.name);
-				await saveMeta(meta.prId, meta, "localStorage and cloud");
+				await saveMeta(meta);
 				await afterMetaChange(meta);
 			};
 		});
@@ -31548,7 +31810,7 @@ Total Duration: ${a - u}ms`);
 	}
 	async function onSelectDepartmentClick(meta, select, departments) {
 		meta.project = select.value;
-		await saveMeta(meta.prId, meta, "localStorage and cloud");
+		await saveMeta(meta);
 		updateDepartmentBlock(select.closest(".deptWrapper"), meta, departments);
 	}
 	function displayTags(tagsContainer, meta, tagsMap) {
@@ -31651,9 +31913,9 @@ Total Duration: ${a - u}ms`);
 	}
 	async function onCopyToClipboardClicked(ev) {}
 	async function createProjectItemGroups(expenses) {
-		let prMetas = (await getLocalCache()).PrMetas;
+		let metaCache = await getMetaCache();
 		return [...(await getItemsPerGroup(expenses, async (item) => {
-			return (await fetchMetaCached(item.prId, prMetas)).project ?? "";
+			return (await metaCache.get(item.prId)).project ?? "";
 		}, (await getGlobalSettingsCached()).projects)).entries()].map((mappedItem) => {
 			let groupId = mappedItem[0];
 			let items = mappedItem[1].map((item) => {
@@ -31705,11 +31967,12 @@ Total Duration: ${a - u}ms`);
 	}
 	async function createBudgetSubGroupings(items, groupSettings) {
 		let tagSet = new Set(groupSettings.filter((group) => group.groupingType == "tag").map((group) => group.name));
+		let metaCache = await getMetaCache();
 		for (let groupTag of tagSet.values()) {
 			let groupItems = [];
 			for (let item of items.items) {
 				if (!item.tags) {
-					let meta = await fetchMetaCached(item.item.prId, (await getLocalCache()).PrMetas);
+					let meta = await metaCache.get(item.item.prId);
 					item.tags = new Set(meta.tags);
 				}
 				let matchingTags = tagSet.intersection(item.tags);
@@ -31734,7 +31997,7 @@ Total Duration: ${a - u}ms`);
 		let popover = showPopover("totalsPrPopover", anchorTo);
 		popover.innerHTML = "";
 		popover.classList.add("gringoPopover", "popoverPosBottomLeft");
-		let meta = await fetchMetaCached(item.prId, (await getLocalCache()).PrMetas);
+		let meta = await (await getMetaCache()).get(item.prId);
 		emmet.indent.appendChild(popover, `
             div.content
                 button.naked.goto{${item.prId}}
@@ -32050,14 +32313,13 @@ Total Duration: ${a - u}ms`);
 		if (!selectedTags.every((t) => tagString.includes(t))) return false;
 		return excludedTags.every((t) => !tagString.includes(t));
 	}
-	function createRowFilter(filterDef, prMetas, rowConverter) {
+	function createRowFilter(filterDef, rowConverter) {
 		let textFilterContainsUpperCase = filterDef.textFilter.text != filterDef.textFilter.text.toLowerCase();
 		let preparedFilterText = filterDef.textFilter.text;
 		if (!textFilterContainsUpperCase) preparedFilterText = filterDef.textFilter.text.toLowerCase();
 		let context = {
 			preparedFilterText,
-			filterDef,
-			prMetas
+			filterDef
 		};
 		let rowFilter;
 		if (textFilterContainsUpperCase) rowFilter = (row, ctx) => {
@@ -32448,10 +32710,7 @@ Total Duration: ${a - u}ms`);
 		return `/gb/purchase-order/${uniqueName}`;
 	}
 	async function applyFiltersForLeanTable() {
-		let table = document.querySelector("table.leanPrList");
-		let filterDef = getPrFilterStrings();
-		let prMetas = (await getLocalCache()).PrMetas;
-		await filterTable(table, createRowFilter(filterDef, prMetas, (tr) => {
+		await filterTable(document.querySelector("table.leanPrList"), createRowFilter(getPrFilterStrings(), (tr) => {
 			return {
 				rowText: tr.innerText,
 				tagString: tr.dataset.gringoTags
@@ -32570,7 +32829,6 @@ Total Duration: ${a - u}ms`);
 		let requests = scrapePRs();
 		gringo("LEAN: getPrDataList()");
 		let prDataList = await getPrDataList();
-		let changedFiles = await fetchChangedMetas();
 		if ((await getOptions()).showLeanRequests) {
 			let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`);
 			if (!divLeanListPanel) {
@@ -32579,15 +32837,12 @@ Total Duration: ${a - u}ms`);
 			}
 			await createLeanListTable(divLeanListPanel, prDataList);
 		}
-		gringo("Saving changed metas...");
-		await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map((f) => f.data));
 		let departments = (await getGlobalSettingsCached()).projects;
 		let tagsMap = await getGlobalTags();
-		let prMetas = (await getLocalCache()).PrMetas;
 		gringo("Decorating requests...");
 		let prDataMap = /* @__PURE__ */ new Map();
 		for (let pr of prDataList) prDataMap.set(pr.prListData.prId, pr);
-		for (const r of requests) await decoratePr(r, departments, tagsMap, prMetas, prDataMap.get(r.id));
+		for (const r of requests) await decoratePr(r, departments, tagsMap, prDataMap.get(r.id));
 		await applyFilters(requests);
 		gringo("Done.");
 	}
@@ -32655,13 +32910,13 @@ Total Duration: ${a - u}ms`);
 			});
 		});
 	}
-	async function decoratePr(request, departments, tagsMap, prMetas, prData) {
+	async function decoratePr(request, departments, tagsMap, prData) {
 		let reqDiv = document.getElementById("request-" + request.id);
 		if (!reqDiv) return;
 		if (reqDiv.dataset.gringo == "decorated") return;
 		reqDiv.dataset.gringo = "decorated";
 		addOrderCopyButton(request);
-		let meta = await fetchMetaCached(request.id, prMetas);
+		let meta = await (await getMetaCache()).get(request.id);
 		decoratePrWithMeta(request, meta, departments, tagsMap);
 		updatePrLine(request, meta, prData);
 	}
@@ -32705,8 +32960,8 @@ Total Duration: ${a - u}ms`);
 	async function applyFiltersForAribaTable(requests) {
 		if (!requests) requests = scrapePRs();
 		let filterDef = getPrFilterStrings();
-		let prMetas = (await getLocalCache()).PrMetas;
-		let rowFilterDef = createRowFilter(filterDef, prMetas, (div) => {
+		await getLocalCache();
+		let rowFilterDef = createRowFilter(filterDef, (div) => {
 			return {
 				rowText: div.innerText,
 				tagString: div.dataset.gringoTags

@@ -2,7 +2,7 @@ import {FetchChain} from "../utils/fetchChain";
 import {UserInfo} from "../sap/SapUserInfo";
 import {RequestListItem, RequestListResponse} from "../sap/RequestListResponse";
 import {fetchPr} from "../sap/api";
-import {KEY_ALL_PRS_FILENAME_NOEXT, KEY_CLOUD_METAS_FOLDER, KEY_LAST_FETCHED_METAS} from "../def";
+import {KEY_ALL_PRS_FILENAME_NOEXT} from "../def";
 import {cloud} from "../cloud";
 import {PurchaseRequisition, SapField, SapLineItem} from "../sap/SapPrInfo";
 import {getGlobalSettingsCached} from "../plugin_options/options";
@@ -10,12 +10,10 @@ import {LedgerToBudgetCode} from "./budgetCodes";
 import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {savePrMetaToFireStore} from "../db/fireStore";
-import {getLocalCache, LocalDb} from "../db/idb/localDb";
-import {getTarifDefCached, sessionCache} from "../sessionCache";
-import {Repository} from "../db/idb/repository";
+import {getLocalCache} from "../db/idb/localDb";
+import {getTarifDefCached} from "../sessionCache";
 import {getInfoBlockForCurrentPage, InfoBlock} from "../infoBlock/infoBlock";
-import {gringo} from "../globals";
-import {getBudgetCode} from "./aggregate";
+import {getMetaCache} from "../db/metaCache";
 
 export interface BaseLineItem {
     tarif: TarifDef | null;
@@ -221,46 +219,7 @@ export async function fetchRequestListAndDetails(infoBlock: InfoBlock) {
     return detailsList;
 }
 
-export async function fetchChangedMetas() {
-    let changedMetas: ChangedFile<PrMeta>[];
-    let zSince = localStorage.getItem(KEY_LAST_FETCHED_METAS);
-    if (!zSince) {
-        await (await getLocalCache()).PrMetas.clear(); //clear, since we have no idea if they are up-to-date.
-        changedMetas = [];
-    } else {
-        changedMetas = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, zSince);
-    }
-    let fetchedDate = new Date();
-    fetchedDate = new Date(fetchedDate.getTime() - 5 * 60 * 1000);
-    let zFetchedDate = fetchedDate.toISOString();
-    localStorage.setItem(KEY_LAST_FETCHED_METAS, zFetchedDate);
-    return changedMetas;
-}
-
-export async function fetchMetaCached(prId: string, prMetas?: Repository<LocalDb, "PrMetas">) {
-    if(!prMetas)
-        prMetas = (await getLocalCache()).PrMetas;
-
-    let localMeta = await prMetas.get(prId);
-    if (localMeta)
-        return localMeta;
-
-    gringo("Meta not in cache. Fetching meta from cloud for PR " + prId + "...");
-    let meta: PrMeta = {prId, tags: []};
-    try {
-        meta = await cloud.json.fetch(KEY_CLOUD_METAS_FOLDER + prId);
-    } catch {
-        await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
-    }
-    await (await getLocalCache()).PrMetas.put(meta);
-    await savePrMetaToFireStore(meta);
-    return meta;
-}
-
-export async function saveMeta(prId: string, meta: PrMeta, what: "localStorage" | "localStorage and cloud") {
-    if (what == "localStorage and cloud")
-        await cloud.json.upload(KEY_CLOUD_METAS_FOLDER + prId, meta);
-    await (await getLocalCache()).PrMetas.put(meta);
+export async function saveMeta(meta: PrMeta) {
     await savePrMetaToFireStore(meta);
 }
 
@@ -426,7 +385,7 @@ export interface ExpandedPrListData {
 }
 
 async function mergeRequestsAndData(prListDatas: PrListPrData[], requests: RequestListResponse) {
-    let cache = await getLocalCache();
+    let metaCache = await getMetaCache();
     let dataSet = new Map<string, PrListPrData>();
     for(let prListData of prListDatas){
         dataSet.set(prListData.prId, prListData);
@@ -438,7 +397,7 @@ async function mergeRequestsAndData(prListDatas: PrListPrData[], requests: Reque
             console.error(`Could not find prListData for request ${request.reqUniqueName}`);
             continue;
         }
-        let meta = await cache.PrMetas.get(prListData.prId);
+        let meta = await metaCache.get(prListData.prId);
         if(!meta){
             console.error(`Could not find meta for pr ${prListData.prId}`);
             continue;

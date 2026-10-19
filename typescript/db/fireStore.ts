@@ -90,7 +90,7 @@ export async function testIt() {
 }
 
 
-async function fetchPrMetas(changedDateZ: string | null) {
+export async function fetchPrMetas(changedDateZ: string | null) {
     const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
 
     let querySnapshot;
@@ -146,23 +146,5 @@ export async function saveTarifDefToFireStore(tarifDef: TarifDef) {
         },
         body: JSON.stringify(data),
     });
-}
-
-async function copyPrMetasCloudtoFireStore() {
-    let changedMetas: ChangedFile<PrMeta>[] = await cloud.json.fetchSince(KEY_CLOUD_METAS_FOLDER, "2000-01-01T00:00:00Z");
-    gringo(`Found ${changedMetas.length} changed metas`);
-    for(const changedMeta of changedMetas) {
-        gringo(`Saving `);
-        changedMeta.data.changed_date = (new Date()).toISOString();
-        await savePrMetaToFireStore(changedMeta.data);
-    }
-}
-
-async function copyTarifDefsCloudtoFireStore() {
-    let tarifDefs = await cloud.json.fetch(BTW_TARIFS_FILENAME) as TarifDefs;
-    for(const tarifDef of tarifDefs.tarifs) {
-        gringo(`Saving tarifDef ${tarifDef.commodityCode}`);
-        await saveTarifDefToFireStore(tarifDef);
-    }
 }
 

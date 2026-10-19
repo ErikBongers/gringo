@@ -3,10 +3,8 @@ import {emmet} from "../../libs/Emmeter";
 import {addButtonClickNoPropagation, formatPrice, getOptions, gringo} from "../globals";
 import {
     ExpandedPrListData,
-    fetchChangedMetas,
     fetchFullRequest,
     FetchListContext,
-    fetchMetaCached,
     fetchRequestList,
     fetchRequestListAndDetails,
     getGlobalTags,
@@ -16,14 +14,14 @@ import {
 } from "./requests";
 import {exportPrItemsToExcel} from "./aggregate";
 import {fillTotalsTab} from "./totalsTab";
-import {getLocalCache, LocalDb} from "../db/idb/localDb";
+import {getLocalCache} from "../db/idb/localDb";
 import {applyFiltersForLeanTable, createLeanListTable, decorateRowWithMeta} from "./leanTable";
 import {displayMetaFields} from "./metaBlock";
 import {createRowFilter, createSearchPanel, getPrFilterStrings,} from "./searchPanel";
 import {RequestBasicInfo, scrapePRs} from "./scrape";
 import {getGlobalSettingsCached, options} from "../plugin_options/options";
-import {Repository} from "../db/idb/repository";
 import {getInfoBlock, InfoBlock} from "../infoBlock/infoBlock";
+import {getMetaCache} from "../db/metaCache";
 
 class AanvragenObserver extends PartialUrlObserver {
     constructor() {
@@ -164,7 +162,6 @@ async function decoratePagination() {
 
     gringo("LEAN: getPrDataList()");
     let prDataList = await getPrDataList();
-    let changedFiles = await fetchChangedMetas();
     let options = await getOptions();
     if(options.showLeanRequests) {
         let divLeanListPanel = document.querySelector(`div.gringoLeanListPanel`) as HTMLDivElement | null;
@@ -175,11 +172,8 @@ async function decoratePagination() {
         await createLeanListTable(divLeanListPanel, prDataList);
     }
 
-    gringo("Saving changed metas...");
-    await (await getLocalCache()).PrMetas.bulkPut(changedFiles.map(f => f.data));
     let departments = (await getGlobalSettingsCached()).projects;
     let tagsMap = await getGlobalTags();
-    let prMetas = (await getLocalCache()).PrMetas;
 
     gringo("Decorating requests...");
     let prDataMap: Map<string, ExpandedPrListData> = new Map();
@@ -187,7 +181,7 @@ async function decoratePagination() {
         prDataMap.set(pr.prListData.prId, pr);
     }
     for (const r of requests) {
-        await decoratePr(r, departments, tagsMap, prMetas, prDataMap.get(r.id));
+        await decoratePr(r, departments, tagsMap, prDataMap.get(r.id));
     }
 
     await applyFilters(requests);
@@ -309,7 +303,7 @@ function addOrderCopyButton(request: RequestBasicInfo) {
     });
 }
 
-async function decoratePr(request: RequestBasicInfo, departments: string[], tagsMap: Map<string, TagDef>, prMetas: Repository<LocalDb, "PrMetas">, prData: ExpandedPrListData | undefined) {
+async function decoratePr(request: RequestBasicInfo, departments: string[], tagsMap: Map<string, TagDef>, prData: ExpandedPrListData | undefined) {
     let reqDiv = document.getElementById("request-" + request.id);
     if(!reqDiv)
         return;
@@ -317,7 +311,7 @@ async function decoratePr(request: RequestBasicInfo, departments: string[], tags
         return;
     reqDiv.dataset.gringo = "decorated";
     addOrderCopyButton(request);
-    let meta = await fetchMetaCached(request.id, prMetas);
+    let meta = await (await getMetaCache()).get(request.id);
     decoratePrWithMeta(request, meta, departments, tagsMap);
     updatePrLine(request, meta, prData);
 }
@@ -380,8 +374,8 @@ export async function applyFiltersForAribaTable(requests?: RequestBasicInfo[]) {
     if(!requests)
         requests = scrapePRs();
     let filterDef = getPrFilterStrings();
-    let prMetas = (await getLocalCache()).PrMetas;
-    let rowFilterDef = createRowFilter<HTMLDivElement>(filterDef, prMetas, (div) => {
+    let prMetas = await getLocalCache();
+    let rowFilterDef = createRowFilter<HTMLDivElement>(filterDef, (div) => {
         return {rowText: div.innerText, tagString: div.dataset.gringoTags!};
     });
     for (let request of requests) {

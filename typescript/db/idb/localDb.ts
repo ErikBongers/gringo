@@ -2,18 +2,13 @@ import {DBSchema, IDBPDatabase, IDBPTransaction, openDB} from 'idb';
 import {Repository} from "./repository";
 import {getSuppliers, PrListPrData, PrMeta} from "../../aanvragen/requests";
 
-const DB_VERSION = 13;
+const DB_VERSION = 14;
 const LOCAL_DB_PREFIX = 'LocalGringoDb';
 
 export interface LocalDb extends DBSchema {
     KeyValues: {
         key: string;
         value: boolean;
-        indexes: {};
-    },
-    PrMetas: {
-        key: string;
-        value: PrMeta;
         indexes: {};
     },
     PrListData: {
@@ -36,9 +31,6 @@ export async function getLocalCache(schoolId: string = "Berchem") {
 
 
 export class LocalCache {
-    get PrMetas(): Repository<LocalDb, "PrMetas"> {
-        return this._PrMetas;
-    }
     get KeyValues(): Repository<LocalDb, "KeyValues"> {
         return this._KeyValues;
     }
@@ -47,12 +39,10 @@ export class LocalCache {
     }
 
     private readonly _KeyValues: Repository<LocalDb, "KeyValues">;
-    private readonly _PrMetas: Repository<LocalDb, "PrMetas">;
     private readonly _PrListData: Repository<LocalDb, "PrListData">;
 
     constructor(private db: IDBPDatabase<LocalDb>) {
         this._KeyValues = new Repository<LocalDb, "KeyValues">(this.db, 'KeyValues');
-        this._PrMetas = new Repository<LocalDb, "PrMetas">(this.db, 'PrMetas');
         this._PrListData = new Repository<LocalDb, "PrListData">(this.db, 'PrListData');
     }
 
@@ -65,7 +55,6 @@ export class LocalCache {
             async upgrade(db, oldVersion, newVersion: number, transaction) {
                 if (oldVersion < 1) {
                     db.createObjectStore("KeyValues", {keyPath: "key"});
-                    db.createObjectStore("PrMetas", {keyPath: "prId"});
                 }
                 if (oldVersion < 2) {
                     db.createObjectStore("PrListData", {keyPath: "prId"});
@@ -73,13 +62,17 @@ export class LocalCache {
                 if (oldVersion < 13) {
                     await upgradeTo13(transaction, (prData: PrListPrData) => true);
                 }
+                if (oldVersion < 14) {
+                    //@ts-ignore
+                    db.deleteObjectStore("PrMetas");
+                }
             },
         }));
     }
 }
 
 async function upgradeTo13(
-    transaction: IDBPTransaction<LocalDb, ["KeyValues", "PrMetas", "PrListData"], "versionchange">,
+    transaction: IDBPTransaction<LocalDb, ["KeyValues", "PrListData"], "versionchange">,
     isInvalid: (prData: PrListPrData) => boolean
 ) {
     let prDatas = await transaction.objectStore("PrListData").getAll();

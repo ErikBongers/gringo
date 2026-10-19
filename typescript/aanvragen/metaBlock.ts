@@ -38,7 +38,7 @@ async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, a
                     meta.tags.push(tagDef.name);
                 else
                     meta.tags = meta.tags.filter(t => t != tagDef.name);
-                await saveMeta(meta.prId, meta, "localStorage and cloud");
+                await saveMeta(meta);
                 await afterMetaChange(meta);
             };
         });
@@ -114,7 +114,7 @@ function cloneDeptSelectTemplate(departments: string[]) {
 
 async function onSelectDepartmentClick(meta: PrMeta, select: HTMLSelectElement, departments: string[]) {
     meta.project = select.value;
-    await saveMeta(meta.prId, meta, "localStorage and cloud");
+    await saveMeta(meta);
     updateDepartmentBlock(select.closest(".deptWrapper")!, meta, departments);
 }
 

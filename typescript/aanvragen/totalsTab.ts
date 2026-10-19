@@ -4,13 +4,13 @@ import {getBudgetDscr, getExpenses, getItemsPerGroup, JsonPrItem} from "./aggreg
 import {hideFloatingHelp} from "./observer";
 import {Tabs} from "../tabs";
 import {getGlobalSettingsCached} from "../plugin_options/options";
-import {fetchMetaCached, getGlobalTags, TagDef} from "./requests";
+import {getGlobalTags, TagDef} from "./requests";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER} from "../def";
 import {BudgetGrouping, storage} from "../db/localStorage";
 import {displayMetaFields} from "./metaBlock";
-import {getLocalCache} from "../db/idb/localDb";
 import {getInfoBlock} from "../infoBlock/infoBlock";
+import {getMetaCache} from "../db/metaCache";
 
 export interface BudgetLine {
     budget: string,
@@ -105,9 +105,9 @@ async function onCopyToClipboardClicked(ev: PointerEvent) {
 }
 
 async function createProjectItemGroups(expenses: JsonPrItem[]) {
-    let prMetas = (await getLocalCache()).PrMetas;
+    let metaCache = await getMetaCache();
     let perProject = await getItemsPerGroup(expenses, async (item) => {
-        let meta = await fetchMetaCached(item.prId, prMetas);
+        let meta = await metaCache.get(item.prId);
         return meta.project ?? "";
     }, (await getGlobalSettingsCached()).projects);
 
@@ -170,11 +170,12 @@ async function createBudgetSubGroupings(items: PrItemGroup, groupSettings: Budge
         .filter(group => group.groupingType == "tag")
         .map(group => group.name));
 
+    let metaCache = await getMetaCache();
     for (let groupTag of tagSet.values()) {
         let groupItems: GroupItem[] = [];
         for (let item of items.items) {
             if(!item.tags) {
-                let meta = await fetchMetaCached(item.item.prId, (await getLocalCache()).PrMetas);
+                let meta = await metaCache.get(item.item.prId);
                 item.tags = new Set(meta.tags);
             }
             let matchingTags = tagSet.intersection(item.tags);
@@ -200,7 +201,7 @@ async function createAndShowPopover(item: JsonPrItem, anchorTo: HTMLElement) {
     let popover = showPopover("totalsPrPopover", anchorTo);
     popover.innerHTML = "";
     popover.classList.add("gringoPopover", "popoverPosBottomLeft");
-    let meta = await fetchMetaCached(item.prId, (await getLocalCache()).PrMetas);
+    let meta = await (await getMetaCache()).get(item.prId);
     emmet.indent.appendChild(popover, `
             div.content
                 button.naked.goto{${item.prId}}
