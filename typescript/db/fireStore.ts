@@ -11,10 +11,7 @@ import {
     where
 } from "firebase/firestore";
 import {gringo} from "../globals";
-import {ChangedFile, PrMeta, TarifDef, TarifDefs} from "../aanvragen/requests";
-import {cloud} from "../cloud";
-import {BTW_TARIFS_FILENAME, KEY_CLOUD_METAS_FOLDER} from "../def";
-import {getLocalCache} from "./idb/localDb";
+import {PrMeta, TarifDef} from "../aanvragen/requests";
 
 const firebaseConfig = {
     projectId: "ebo-tain",
