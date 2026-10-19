@@ -1,16 +1,26 @@
 import {TarifDef} from "./aanvragen/requests";
 import {firestore} from "./db/fireStore";
 
-export let sessionCache = {
-    getTarifDef: getTarifDefCached,
-    saveTarifDef: saveTarifDefCached,
+export type SessionCache = {
+    getTarifDef: (commodityCode: string) => TarifDef | null;
+    saveTarifDef: (tarifDef: TarifDef) => Promise<void>;
+}
+
+let sessionCache: SessionCache = {
+    getTarifDef,
+    saveTarifDef,
+}
+
+export async function getSessionCache() {
+    await createCache();
+    return sessionCache;
 }
 
 let globalBtwTarifs: Map<string, TarifDef> | null = null;
 
-export async function getBtwTarifsCachedInSession(): Promise<Map<string, TarifDef>> {
+async function createCache() {
     if (globalBtwTarifs)
-        return globalBtwTarifs;
+        return;
 
     globalBtwTarifs = new Map<string, TarifDef>();
     let tarifs: TarifDef[];
@@ -20,16 +30,13 @@ export async function getBtwTarifsCachedInSession(): Promise<Map<string, TarifDe
         tarifs = [];
     }
     tarifs.forEach(t => globalBtwTarifs!.set(t.commodityCode, t));
-    return globalBtwTarifs;
 }
 
-export async function getTarifDefCached(commodityCode: string) {
-    let tarifs = await getBtwTarifsCachedInSession();
-    return tarifs.get(commodityCode) ?? null;
+function getTarifDef(commodityCode: string) {
+    return globalBtwTarifs!.get(commodityCode) ?? null;
 }
 
-async function saveTarifDefCached(tarifDef: TarifDef) {
-    let tarifs = await getBtwTarifsCachedInSession();
-    tarifs.set(tarifDef.commodityCode, tarifDef);
+async function saveTarifDef(tarifDef: TarifDef) {
+    globalBtwTarifs!.set(tarifDef.commodityCode, tarifDef);
     await firestore.saveTarifDef(tarifDef);
 }

@@ -10,7 +10,7 @@ import {
     QueryDocumentSnapshot,
     where
 } from "firebase/firestore";
-import {PrMeta, TarifDef} from "../aanvragen/requests";
+import {PrListPrData, PrMeta, TarifDef} from "../aanvragen/requests";
 
 export let firestore = {
     savePrMeta,
@@ -21,7 +21,9 @@ export let firestore = {
     fetchTarifDefs,
 
     saveKeyValue,
-    fetchKeyValue
+    fetchKeyValue,
+
+    savePrData,
 }
 
 
@@ -31,21 +33,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, "gringo-store");
-
-const prMetaConverter: FirestoreDataConverter<PrMeta> = {
-    toFirestore(prMeta: PrMeta) {
-        return prMeta;
-    },
-    fromFirestore(snapshot: QueryDocumentSnapshot): PrMeta {
-        const data = snapshot.data();
-        return {
-            prId: data.prId,
-            tags: data.tags || [],
-            project: data.project,
-            changed_date: data.changed_date
-        };
-    }
-};
 
 const tarifDefConverter: FirestoreDataConverter<TarifDef> = {
     toFirestore(tarifDef: TarifDef) {
@@ -61,13 +48,13 @@ const tarifDefConverter: FirestoreDataConverter<TarifDef> = {
     }
 }
 
-async function fetchPrMeta(id: string): Promise<PrMeta | null> {
+async function fetchAny<T>(path: string, id: string): Promise<T | null> {
     try {
-        const docRef = doc(db, "pr_meta", id).withConverter(prMetaConverter);
+        const docRef = doc(db, path, id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            return docSnap.data();
+            return docSnap.data() as T;
         } else {
             return null;
         }
@@ -75,26 +62,18 @@ async function fetchPrMeta(id: string): Promise<PrMeta | null> {
         console.error("Error fetching document:", error);
         throw error;
     }
+}
+
+async function fetchPrMeta(id: string): Promise<PrMeta | null> {
+    return fetchAny<PrMeta>("pr_meta", id);
 }
 
 async function fetchKeyValue(key: string): Promise<string | null> {
-    try {
-        const docRef = doc(db, "key_values", key);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            return docSnap.get("value") as string;
-        } else {
-            return null;
-        }
-    } catch (error) {
-        console.error("Error fetching document:", error);
-        throw error;
-    }
+    return fetchAny<string>("key_values", key);
 }
 
 async function fetchPrMetas(changedDateZ: string | null) {
-    const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
+    const prMetaRef = collection(db, "pr_meta");
 
     let querySnapshot;
     if (changedDateZ) {
@@ -105,7 +84,7 @@ async function fetchPrMetas(changedDateZ: string | null) {
 
     let metas: PrMeta[] = [];
     querySnapshot.forEach((doc) => {
-        metas.push(doc.data());
+        metas.push(doc.data() as PrMeta);
     });
     return metas;
 }
@@ -146,4 +125,8 @@ async function saveTarifDef(tarifDef: TarifDef) {
 
 async function saveKeyValue(key: string, value: string) {
     await _save("save_key_value", key, {value});
+}
+
+async function savePrData(prData: PrListPrData) {
+    await _save("save_pr_data", prData.prId, prData);
 }

@@ -3,8 +3,8 @@ import {createHtmlTable} from "../globals";
 import {budgetDscrs, LedgerToBudgetCode, ledgerToBudgetCodes} from "./budgetCodes";
 import {createExpandedPr} from "../aanvraag/expand";
 import {InfoBlock} from "../infoBlock/infoBlock";
-import {getTarifDefCached} from "../sessionCache";
 import {getMetaCache} from "../db/metaCache";
+import {getSessionCache} from "../sessionCache";
 
 let _budgetMap: Map<string, LedgerToBudgetCode> | null = null;
 export function getBudgetCode(ledger: string) {
@@ -126,6 +126,7 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
     let jsonPrData: JsonPrData = {
         items: []
     };
+    let sessionCache = await getSessionCache();
     infoBlock.progressBar.start(prs.length);
     for(let pr of prs) {
         infoBlock.progressBar.next();
@@ -135,7 +136,7 @@ export async function createJsonPrData(infoBlock: InfoBlock) {
             let status = pr.prListData.status;
             let itemNo = index.toString();
             let bruto = item.bruto;
-            let tarif = (await getTarifDefCached(item.commodityCode))?.tarif;
+            let tarif = sessionCache.getTarifDef(item.commodityCode)?.tarif;
             let title = pr.prListData.title;
             let budget = getBudgetCode(item.ledgerCode)?.budget ?? "";
             let grant = item.grantCode;

@@ -29775,26 +29775,13 @@ Total Duration: ${a - u}ms`);
 		savePrMeta,
 		fetchPrMeta,
 		fetchPrMetas,
-		saveTarifDef,
+		saveTarifDef: saveTarifDef$1,
 		fetchTarifDefs,
 		saveKeyValue,
-		fetchKeyValue
+		fetchKeyValue,
+		savePrData
 	};
 	const db = getFirestore(initializeApp({ projectId: "ebo-tain" }), "gringo-store");
-	const prMetaConverter = {
-		toFirestore(prMeta) {
-			return prMeta;
-		},
-		fromFirestore(snapshot) {
-			const data = snapshot.data();
-			return {
-				prId: data.prId,
-				tags: data.tags || [],
-				project: data.project,
-				changed_date: data.changed_date
-			};
-		}
-	};
 	const tarifDefConverter = {
 		toFirestore(tarifDef) {
 			return tarifDef;
@@ -29808,9 +29795,9 @@ Total Duration: ${a - u}ms`);
 			};
 		}
 	};
-	async function fetchPrMeta(id) {
+	async function fetchAny(path, id) {
 		try {
-			const docSnap = await getDoc(doc(db, "pr_meta", id).withConverter(prMetaConverter));
+			const docSnap = await getDoc(doc(db, path, id));
 			if (docSnap.exists()) return docSnap.data();
 			else return null;
 		} catch (error) {
@@ -29818,18 +29805,14 @@ Total Duration: ${a - u}ms`);
 			throw error;
 		}
 	}
+	async function fetchPrMeta(id) {
+		return fetchAny("pr_meta", id);
+	}
 	async function fetchKeyValue(key) {
-		try {
-			const docSnap = await getDoc(doc(db, "key_values", key));
-			if (docSnap.exists()) return docSnap.get("value");
-			else return null;
-		} catch (error) {
-			console.error("Error fetching document:", error);
-			throw error;
-		}
+		return fetchAny("key_values", key);
 	}
 	async function fetchPrMetas(changedDateZ) {
-		const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
+		const prMetaRef = collection(db, "pr_meta");
 		let querySnapshot;
 		if (changedDateZ) querySnapshot = await getDocs(query(prMetaRef, where("changed_date", ">=", changedDateZ)));
 		else querySnapshot = await getDocs(prMetaRef);
@@ -29862,21 +29845,28 @@ Total Duration: ${a - u}ms`);
 		prMeta.changed_date = (/* @__PURE__ */ new Date()).toISOString();
 		await _save("save_pr_meta", prMeta.prId, prMeta);
 	}
-	async function saveTarifDef(tarifDef) {
+	async function saveTarifDef$1(tarifDef) {
 		await _save("save_tarif_def", tarifDef.commodityCode, tarifDef);
 	}
 	async function saveKeyValue(key, value) {
 		await _save("save_key_value", key, { value });
 	}
+	async function savePrData(prData) {
+		await _save("save_pr_data", prData.prId, prData);
+	}
 	//#endregion
 	//#region typescript/sessionCache.ts
 	let sessionCache = {
-		getTarifDef: getTarifDefCached,
-		saveTarifDef: saveTarifDefCached
+		getTarifDef,
+		saveTarifDef
 	};
+	async function getSessionCache() {
+		await createCache();
+		return sessionCache;
+	}
 	let globalBtwTarifs = null;
-	async function getBtwTarifsCachedInSession() {
-		if (globalBtwTarifs) return globalBtwTarifs;
+	async function createCache() {
+		if (globalBtwTarifs) return;
 		globalBtwTarifs = /* @__PURE__ */ new Map();
 		let tarifs;
 		try {
@@ -29885,13 +29875,12 @@ Total Duration: ${a - u}ms`);
 			tarifs = [];
 		}
 		tarifs.forEach((t) => globalBtwTarifs.set(t.commodityCode, t));
-		return globalBtwTarifs;
 	}
-	async function getTarifDefCached(commodityCode) {
-		return (await getBtwTarifsCachedInSession()).get(commodityCode) ?? null;
+	function getTarifDef(commodityCode) {
+		return globalBtwTarifs.get(commodityCode) ?? null;
 	}
-	async function saveTarifDefCached(tarifDef) {
-		(await getBtwTarifsCachedInSession()).set(tarifDef.commodityCode, tarifDef);
+	async function saveTarifDef(tarifDef) {
+		globalBtwTarifs.set(tarifDef.commodityCode, tarifDef);
 		await firestore.saveTarifDef(tarifDef);
 	}
 	//#endregion
@@ -30014,7 +30003,7 @@ Total Duration: ${a - u}ms`);
 			description: "",
 			tarif: parseInt(txtNewValue)
 		};
-		await sessionCache.saveTarifDef(newTarif);
+		await (await getSessionCache()).saveTarifDef(newTarif);
 		prItem.tarif = newTarif;
 		updateTarifDiv(container, prItem, entangledFields);
 		entangledFields.triggerRecalc();
@@ -30096,7 +30085,7 @@ Total Duration: ${a - u}ms`);
         div.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
     `).first;
 		let prForm = await fetchReqFormInfo();
-		let tarif = await sessionCache.getTarifDef(prForm.commodityCode);
+		let tarif = (await getSessionCache()).getTarifDef(prForm.commodityCode);
 		let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`);
 		let fieldUnitPrice = el.querySelector("div.field-money input");
 		let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`);
@@ -30885,6 +30874,7 @@ Total Duration: ${a - u}ms`);
 	async function createJsonPrData(infoBlock) {
 		let prs = await getPrDataList();
 		let jsonPrData = { items: [] };
+		let sessionCache = await getSessionCache();
 		infoBlock.progressBar.start(prs.length);
 		for (let pr of prs) {
 			infoBlock.progressBar.next();
@@ -30894,7 +30884,7 @@ Total Duration: ${a - u}ms`);
 				let status = pr.prListData.status;
 				let itemNo = index.toString();
 				let bruto = item.bruto;
-				let tarif = (await getTarifDefCached(item.commodityCode))?.tarif;
+				let tarif = sessionCache.getTarifDef(item.commodityCode)?.tarif;
 				let title = pr.prListData.title;
 				let budget = getBudgetCode(item.ledgerCode)?.budget ?? "";
 				let grant = item.grantCode;
@@ -30930,7 +30920,7 @@ Total Duration: ${a - u}ms`);
 	}
 	async function createExpandedCompactPrItem(item) {
 		let tarif = null;
-		tarif = await sessionCache.getTarifDef(item.commodityCode);
+		tarif = (await getSessionCache()).getTarifDef(item.commodityCode);
 		return {
 			item,
 			tarif,
@@ -31095,7 +31085,7 @@ Total Duration: ${a - u}ms`);
 		let calcFieldsContainer = emmet.appendChild(brutoRow, `
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first;
-		let priceBlock = new PriceBlock(1, null, (await sessionCache.getTarifDef(pr.items[index].commodityCode))?.tarif ?? null, calcFieldsContainer, pr.items[index]);
+		let priceBlock = new PriceBlock(1, null, (await getSessionCache()).getTarifDef(pr.items[index].commodityCode)?.tarif ?? null, calcFieldsContainer, pr.items[index]);
 		priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx) => {
 			updateTotalBrutoView(pr);
 		});
@@ -31646,9 +31636,9 @@ Total Duration: ${a - u}ms`);
 			currency: "EUR"
 		};
 	}
-	async function convertToBaseLineItem(item) {
+	function convertToBaseLineItem(item, sessionCache) {
 		let commodityCode = getPrItemCommodity(item)?.code ?? "";
-		let tarif = await getTarifDefCached(commodityCode);
+		let tarif = sessionCache.getTarifDef(commodityCode);
 		return {
 			commodityCode,
 			price: item.price.value.amount,
@@ -31656,7 +31646,7 @@ Total Duration: ${a - u}ms`);
 			tarif
 		};
 	}
-	async function convertPrListItemData(item) {
+	function convertPrListItemData(item, sessionCache) {
 		let commodityCode = getPrItemCommodity(item)?.code ?? "";
 		let grantCode = getPrItemGrant(item)?.code ?? "";
 		let ledgerCode = getPrItemLedger(item)?.code;
@@ -31664,7 +31654,7 @@ Total Duration: ${a - u}ms`);
 		return {
 			index: parseInt(item.lineNumber),
 			netto: item.quantity.value,
-			bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
+			bruto: calcBrutoLinePrice(convertToBaseLineItem(item, sessionCache)),
 			commodityCode,
 			currency: item.price.currency ?? "",
 			supplier: item.supplier.value ?? "",
@@ -31672,9 +31662,9 @@ Total Duration: ${a - u}ms`);
 			ledgerCode
 		};
 	}
-	async function convertPrToListData(request, pr) {
+	function convertPrToListData(request, pr, sessionCache) {
 		let listItemDatas = [];
-		for (let item of pr.lineItems ?? []) listItemDatas.push(await convertPrListItemData(item));
+		for (let item of pr.lineItems ?? []) listItemDatas.push(convertPrListItemData(item, sessionCache));
 		let poData = request.gbPurchaseOrderList?.map((po) => {
 			return {
 				uniqueName: po.uniqueName,
@@ -31706,14 +31696,14 @@ Total Duration: ${a - u}ms`);
 		let cache = await getLocalCache();
 		infoBlock.infoBar.setInfoLine("Ophalen gewijzigde PR's...");
 		infoBlock.progressBar.start(requests.requestList.length);
+		let sessionCache = await getSessionCache();
 		for (let request of requests.requestList) {
 			let prListData = await cache.PrListData.get(request.reqUniqueName);
-			getPoListData(request);
 			if (prListData && isPrDataUpToDate(request, prListData)) {
 				prListDatas.push(prListData);
 				continue;
 			}
-			let prData = await convertPrToListData(request, await fetchPr(request.reqUniqueName));
+			let prData = convertPrToListData(request, await fetchPr(request.reqUniqueName), sessionCache);
 			await cache.PrListData.put(prData);
 			prListDatas.push(prData);
 			infoBlock.progressBar.next();

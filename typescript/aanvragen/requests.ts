@@ -10,10 +10,10 @@ import {LedgerToBudgetCode} from "./budgetCodes";
 import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {getLocalCache} from "../db/idb/localDb";
-import {getTarifDefCached} from "../sessionCache";
-import {getInfoBlockForCurrentPage, InfoBlock} from "../infoBlock/infoBlock";
+import {getInfoBlock, getInfoBlockForCurrentPage, InfoBlock} from "../infoBlock/infoBlock";
 import {getMetaCache} from "../db/metaCache";
 import {firestore} from "../db/fireStore";
+import {getSessionCache, SessionCache} from "../sessionCache";
 
 export interface BaseLineItem {
     tarif: TarifDef | null;
@@ -148,6 +148,29 @@ async function fetchRequestListChunk(chain: FetchChain, userInfo: UserInfo, zSin
     return requestList;
 }
 
+async function updateRequestsInFirestore(requestList: RequestListItem[]) {
+    let last_changed = await firestore.fetchKeyValue("last_changed");
+    if (last_changed == null) {
+        last_changed = "0";
+    }
+    let newChangeDate = (new Date()).toISOString();
+    let sessionCache = await getSessionCache();
+
+    let changedReqs = requestList
+        .filter(request => request.lastModifiedDate > last_changed);
+    let infoBlock = getInfoBlockForCurrentPage();
+    infoBlock.progressBar.start(changedReqs.length);
+    for (const request of changedReqs) {
+        let pr = await fetchPr(request.reqUniqueName);
+        let prData: PrListPrData = convertPrToListData(request, pr, sessionCache);
+        await firestore.savePrData(prData);
+        infoBlock.progressBar.next();
+    }
+    infoBlock.progressBar.stop();
+
+    //todo: await firestore.saveKeyValue("last_changed", newChangeDate);
+}
+
 export async function fetchRequestList() {
     let chain = new FetchChain();
     await chain.fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false"); //todo: replace with getUserInfo()
@@ -173,6 +196,7 @@ export async function fetchRequestList() {
         }
     }
     requestList.requestList = uniqueRequests;
+    //todo TEST  await updateRequestsInFirestore(requestList.requestList); //todo: do this in background? Service worker?
     return requestList
 }
 
@@ -290,9 +314,9 @@ export function calcPrTotal(pr: ExpandedCompactPr) {
     return {total, currencySymbel, currency};
 }
 
-async function convertToBaseLineItem(item: SapLineItem): Promise<BaseLineItem> {
+function convertToBaseLineItem(item: SapLineItem, sessionCache: SessionCache): BaseLineItem {
     let commodityCode = getPrItemCommodity(item)?.code??"";
-    let tarif = await getTarifDefCached(commodityCode);
+    let tarif = sessionCache.getTarifDef(commodityCode);
     return {
         commodityCode,
         price: item.price.value.amount,
@@ -301,7 +325,7 @@ async function convertToBaseLineItem(item: SapLineItem): Promise<BaseLineItem> {
     };
 }
 
-async function convertPrListItemData(item: SapLineItem): Promise<PrListItemData> {
+function convertPrListItemData(item: SapLineItem, sessionCache: SessionCache): PrListItemData {
     let commodityCode = getPrItemCommodity(item)?.code??"";
     let grantCode = getPrItemGrant(item)?.code??"";
     let ledgerCode = getPrItemLedger(item)?.code;
@@ -311,7 +335,7 @@ async function convertPrListItemData(item: SapLineItem): Promise<PrListItemData>
     return {
         index: parseInt(item.lineNumber),
         netto: item.quantity.value,
-        bruto: calcBrutoLinePrice(await convertToBaseLineItem(item)),
+        bruto: calcBrutoLinePrice(convertToBaseLineItem(item, sessionCache)),
         commodityCode,
         currency: item.price.currency??"",
         supplier: item.supplier.value??"",
@@ -320,10 +344,10 @@ async function convertPrListItemData(item: SapLineItem): Promise<PrListItemData>
     };
 }
 
-async function convertPrToListData(request: RequestListItem, pr: PurchaseRequisition): Promise<PrListPrData> {
+function convertPrToListData(request: RequestListItem, pr: PurchaseRequisition, sessionCache: SessionCache): PrListPrData {
     let listItemDatas: PrListItemData[] = [];
     for(let item of pr.lineItems??[]){
-        listItemDatas.push(await convertPrListItemData(item));
+        listItemDatas.push(convertPrListItemData(item, sessionCache));
     }
     let poData: PoData[] = request.gbPurchaseOrderList
         ?.map(po => { return { uniqueName: po.uniqueName, orderId: po.orderId} })??[];
@@ -352,16 +376,16 @@ export async function getPrDataList(){
     let cache = await getLocalCache();
     infoBlock.infoBar.setInfoLine("Ophalen gewijzigde PR's...");
     infoBlock.progressBar.start(requests.requestList.length);
+    let sessionCache = await getSessionCache();
     for(let request of requests.requestList){
         let prListData: PrListPrData | undefined = await cache.PrListData.get(request.reqUniqueName);
-        let poList = getPoListData(request);
 
         if(prListData && isPrDataUpToDate(request, prListData)) {
             prListDatas.push(prListData);
             continue;
         }
         let pr = await fetchPr(request.reqUniqueName);
-        let prData = await convertPrToListData(request, pr);
+        let prData = convertPrToListData(request, pr, sessionCache);
         await cache.PrListData.put(prData);
         prListDatas.push(prData);
         infoBlock.progressBar.next();

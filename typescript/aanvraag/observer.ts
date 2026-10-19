@@ -16,8 +16,8 @@ import {Parser} from "../calculator/parser";
 import {PriceBlock} from "./priceBlock";
 import {createExpandedCompactPr} from "./expand";
 import {PriceDataModel} from "./priceDataModel";
-import {sessionCache} from "../sessionCache";
 import {debounce} from "../utils/debounce";
+import {getSessionCache} from "../sessionCache";
 
 class RequisitionObserver extends PartialUrlObserver {
     constructor() {
@@ -210,7 +210,8 @@ async function decoratePrItem(pr: ExpandedCompactPr, lineEl: HTMLElement, index:
         div.gringo.newBruto.flexRow.w100.blueBlock
     `).first as HTMLDivElement;
 
-    let tarifDef = await sessionCache.getTarifDef(pr.items[index].commodityCode);
+    let sessionCache = await getSessionCache();
+    let tarifDef = sessionCache.getTarifDef(pr.items[index].commodityCode);
     let priceBlock = new PriceBlock(1, null, tarifDef?.tarif??null, calcFieldsContainer, pr.items[index]);
     priceBlock.linkField(document.querySelector("div.newTotalBruto"), (ctx: PriceDataModel)=> {
         updateTotalBrutoView(pr);

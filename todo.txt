@@ -1,4 +1,6 @@
 * Save PrData to fireStore
+  > when?
+    > always when requests are retrieved (unless a flag dontUpdateFireStore) is set.
   - get last_saved from fireStore
   - get all prs
   - update/save the ones that are more recent.

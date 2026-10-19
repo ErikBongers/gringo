@@ -7,8 +7,8 @@ import {ExpandedProcurementForm} from "../aanvragen/requests";
 import {Parser} from "../calculator/parser";
 import {PriceBlock} from "../aanvraag/priceBlock";
 import {PriceDataModel} from "../aanvraag/priceDataModel";
-import {sessionCache} from "../sessionCache";
 import {debounce} from "../utils/debounce";
+import {getSessionCache} from "../sessionCache";
 
 class ReqFormObserver extends PartialUrlObserver {
     constructor() {
@@ -84,7 +84,8 @@ async function decoratePanel(el: HTMLElement) {
         div.adhoc-form-input-section.gringo.blueBlock.calcFieldContainer
     `).first as HTMLDivElement;
     let prForm = await fetchReqFormInfo();
-    let tarif =  await sessionCache.getTarifDef(prForm.commodityCode);
+    let sessionCache = await getSessionCache();
+    let tarif =  sessionCache.getTarifDef(prForm.commodityCode);
     let fieldUnitOfMeasure = el.querySelector(`field[ng-model="unitOfMeasureObject2"]`) as HTMLElement;
     let fieldUnitPrice = el.querySelector("div.field-money input") as HTMLInputElement;
     let btnUnitOfMeasure = fieldUnitOfMeasure.querySelector(`button[ng-class="{'field-button': showEmbargoedField}"]`) as HTMLButtonElement;

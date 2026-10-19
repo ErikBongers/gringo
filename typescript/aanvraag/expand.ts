@@ -13,10 +13,11 @@ import {
 } from "../aanvragen/requests";
 import {LedgerToBudgetCode} from "../aanvragen/budgetCodes";
 import {getBudgetCode} from "../aanvragen/aggregate";
-import {sessionCache} from "../sessionCache";
+import {getSessionCache} from "../sessionCache";
 
 export async function createExpandedPr(pr: PurchaseRequisition) {
     let items: ExpandedPrItem[] = [];
+    let sessionCache = await getSessionCache();
     if (pr.lineItems != null) {
         for (let item of pr.lineItems) {
             let tarif: TarifDef | null = null;
@@ -28,7 +29,7 @@ export async function createExpandedPr(pr: PurchaseRequisition) {
             let budget: LedgerToBudgetCode | null = null;
             if (ledger)
                 budget = getBudgetCode(ledger.code);
-            tarif = await sessionCache.getTarifDef(commodity?.code ?? '');
+            tarif = sessionCache.getTarifDef(commodity?.code ?? '');
             items.push({
                 pr,
                 item,
@@ -55,7 +56,8 @@ export async function createExpandedCompactPr(pr: CompactRequisition) {
 
 export async function createExpandedCompactPrItem(item: CompactReqItem): Promise<ExpandedCompactPrItem> {
     let tarif: TarifDef | null = null;
-    tarif = await sessionCache.getTarifDef(item.commodityCode);
+    let sessionCache = await getSessionCache();
+    tarif = sessionCache.getTarifDef(item.commodityCode);
     return {
         item,
         tarif,

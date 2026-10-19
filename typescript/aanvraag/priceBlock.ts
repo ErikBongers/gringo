@@ -4,7 +4,7 @@ import {BaseLineItem} from "../aanvragen/requests";
 import {emmet} from "../../libs/Emmeter";
 import {formatPrice, gringo} from "../globals";
 import {PriceDataModel} from "./priceDataModel";
-import {sessionCache} from "../sessionCache";
+import {getSessionCache} from "../sessionCache";
 
 export class PriceBlock {
     brutoCalcField: CalcField;
@@ -157,6 +157,7 @@ async function onClickCreateTarif(container: HTMLElement, select: HTMLSelectElem
         description: "",
         tarif: parseInt(txtNewValue)
     };
+    let sessionCache = await getSessionCache();
     await sessionCache.saveTarifDef(newTarif);
     prItem.tarif = newTarif;
     updateTarifDiv(container, prItem, entangledFields);
