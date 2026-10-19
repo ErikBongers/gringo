@@ -5,16 +5,19 @@ import {TagDef} from "../aanvragen/requests";
 export type Options = {
     showDebug: boolean;
     showLeanRequests: boolean;
+    openPrInNewTab: boolean;
 };
 
 export const options: Options = {
     showDebug: false,
     showLeanRequests: false,
+    openPrInNewTab: false,
 };
 
 export function defineHtmlOptions() {
     defineHtmlOption("showDebug", 'checked', "Show debug info in console.", "block3");
-    defineHtmlOption("showLeanRequests", 'checked', "Show lean requests.", "block3");
+    defineHtmlOption("showLeanRequests", 'checked', "Toon compacte PR lijst.", "block3");
+    defineHtmlOption("openPrInNewTab", 'checked', "Open PRs in nieuw tabblad.", "block3");
 }
 
 type OptionDef = {

@@ -1,11 +1,11 @@
 import {ExpandedPrListData, getGlobalTags, PrMeta} from "./requests";
 import {emmet} from "../../libs/Emmeter";
-import {acronym, formatPrice, formatShortDate, gringo} from "../globals";
+import {acronym, formatPrice, formatShortDate, getOptions, gringo} from "../globals";
 import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
 import {filterTable} from "../filterTable";
 import {createRowFilter, getPrFilterStrings} from "./searchPanel";
 import {getLocalCache} from "../db/idb/localDb";
-import {getGlobalSettingsCached} from "../plugin_options/options";
+import {getGlobalSettingsCached, options} from "../plugin_options/options";
 import {DropDownMenu} from "../utils/dropDownMenus";
 
 function sliceSupplierName(supplier: string) {
@@ -52,14 +52,19 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement, prLi
     gringo("LEAN: get extra data...");
     let departments = (await getGlobalSettingsCached()).projects;
     let tagsMap = await getGlobalTags();
+    let anchorTarget = "";
+    let options = await getOptions();
+    if (options.openPrInNewTab) {
+        anchorTarget = `target="_blank"`;
+    }
     gringo("LEAN: create rows...");
     for (let pr of prListData) {
         let poAnchorList = pr.prListData.poData
-            ?.map(po => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
+            ?.map(po => `a.op07[href="${createPoUrl(po.uniqueName)}" ${anchorTarget}]{ ${po.orderId} }`);
         let tr = emmet.indent.appendChild(tbody, `
             tr
                 td
-                    a.prId.op07[href="${createPrUrl(pr.prListData.prId)}"]{${pr.prListData.prId}}
+                    a.prId.op07[href="${createPrUrl(pr.prListData.prId)}" ${anchorTarget}]{${pr.prListData.prId}}
                     ${poAnchorList?.join("+")}
                 td
                     button.naked

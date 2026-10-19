@@ -569,11 +569,13 @@
 	//#region typescript/plugin_options/options.ts
 	const options = {
 		showDebug: false,
-		showLeanRequests: false
+		showLeanRequests: false,
+		openPrInNewTab: false
 	};
 	function defineHtmlOptions() {
 		defineHtmlOption("showDebug", "checked", "Show debug info in console.", "block3");
-		defineHtmlOption("showLeanRequests", "checked", "Show lean requests.", "block3");
+		defineHtmlOption("showLeanRequests", "checked", "Toon compacte PR lijst.", "block3");
+		defineHtmlOption("openPrInNewTab", "checked", "Open PRs in nieuw tabblad.", "block3");
 	}
 	let htmlOptionDefs = /* @__PURE__ */ new Map();
 	function defineHtmlOption(id, property, label, blockId) {

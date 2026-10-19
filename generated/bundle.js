@@ -571,7 +571,8 @@
 	//#region typescript/plugin_options/options.ts
 	const options = {
 		showDebug: false,
-		showLeanRequests: false
+		showLeanRequests: false,
+		openPrInNewTab: false
 	};
 	let defaultGlobalSettings = {
 		projects: [],
@@ -32381,13 +32382,15 @@ Total Duration: ${a - u}ms`);
 		gringo("LEAN: get extra data...");
 		let departments = (await getGlobalSettingsCached()).projects;
 		let tagsMap = await getGlobalTags();
+		let anchorTarget = "";
+		if ((await getOptions()).openPrInNewTab) anchorTarget = `target="_blank"`;
 		gringo("LEAN: create rows...");
 		for (let pr of prListData) {
-			let poAnchorList = pr.prListData.poData?.map((po) => `a.op07[href="${createPoUrl(po.uniqueName)}"]{ ${po.orderId} }`);
+			let poAnchorList = pr.prListData.poData?.map((po) => `a.op07[href="${createPoUrl(po.uniqueName)}" ${anchorTarget}]{ ${po.orderId} }`);
 			let tr = emmet.indent.appendChild(tbody, `
             tr
                 td
-                    a.prId.op07[href="${createPrUrl(pr.prListData.prId)}"]{${pr.prListData.prId}}
+                    a.prId.op07[href="${createPrUrl(pr.prListData.prId)}" ${anchorTarget}]{${pr.prListData.prId}}
                     ${poAnchorList?.join("+")}
                 td
                     button.naked
