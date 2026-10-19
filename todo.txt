@@ -1,3 +1,10 @@
+* Save PrData to fireStore
+  - get last_saved from fireStore
+  - get all prs
+  - update/save the ones that are more recent.
+    > use infoBlock
+    > use transaction?
+
 * Save overview and totals of prs in FireStore so management can see them.
   > Generate overview and totals solely from fireStore?
     > at startup, update fireStore.

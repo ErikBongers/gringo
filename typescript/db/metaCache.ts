@@ -1,5 +1,5 @@
-import {fetchPrMetas} from "./fireStore";
 import {PrMeta, saveMeta} from "../aanvragen/requests";
+import {firestore} from "./fireStore";
 
 let prMetasCache: Map<string, PrMeta> | null = null;
 
@@ -9,7 +9,7 @@ export interface MetaCache {
 
 export async function getMetaCache(): Promise<MetaCache> {
     if (!prMetasCache) {
-        let prMetas = await fetchPrMetas(null);
+        let prMetas = await firestore.fetchPrMetas(null);
         prMetasCache = new Map(prMetas.map(m => [m.prId, m]));
     }
 

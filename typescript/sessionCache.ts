@@ -1,5 +1,5 @@
 import {TarifDef} from "./aanvragen/requests";
-import {fetchTarifDefs, saveTarifDefToFireStore} from "./db/fireStore";
+import {firestore} from "./db/fireStore";
 
 export let sessionCache = {
     getTarifDef: getTarifDefCached,
@@ -15,7 +15,7 @@ export async function getBtwTarifsCachedInSession(): Promise<Map<string, TarifDe
     globalBtwTarifs = new Map<string, TarifDef>();
     let tarifs: TarifDef[];
     try {
-        tarifs = await fetchTarifDefs();
+        tarifs = await firestore.fetchTarifDefs();
     } catch {
         tarifs = [];
     }
@@ -31,5 +31,5 @@ export async function getTarifDefCached(commodityCode: string) {
 async function saveTarifDefCached(tarifDef: TarifDef) {
     let tarifs = await getBtwTarifsCachedInSession();
     tarifs.set(tarifDef.commodityCode, tarifDef);
-    await saveTarifDefToFireStore(tarifDef);
+    await firestore.saveTarifDef(tarifDef);
 }

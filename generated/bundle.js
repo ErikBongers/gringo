@@ -13832,6 +13832,12 @@
 		if (true === n && true === i) throw new e(ta.INVALID_ARGUMENT, `${t} and ${r} cannot be used together.`);
 	}
 	/**
+	* Validates that `path` refers to a document (indicated by the fact it contains
+	* an even numbers of segments).
+	*/ function __PRIVATE_validateDocumentPath(t) {
+		if (!DocumentKey.isDocumentKey(t)) throw new e(ta.INVALID_ARGUMENT, `Invalid document reference. Document references must have an even number of segments, but ${t} has ${t.length}.`);
+	}
+	/**
 	* Validates that `path` refers to a collection (indicated by the fact it
 	* contains an odd numbers of segments).
 	*/ function __PRIVATE_validateCollectionPath(t) {
@@ -20049,6 +20055,17 @@ Total Duration: ${a - u}ms`);
 			if (!(t instanceof aa || t instanceof na)) throw new e(ta.INVALID_ARGUMENT, "Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore");
 			const i = t._path.child(ResourcePath.fromString(n, ...r));
 			return __PRIVATE_validateCollectionPath(i), new na(t.firestore, null, i);
+		}
+	}
+	function doc(t, n, ...r) {
+		if (t = getModularInstance(t), 1 === arguments.length && (n = __PRIVATE_AutoId.newId()), __PRIVATE_validateNonEmptyArgument("doc", "path", n), t instanceof _n) {
+			const e = ResourcePath.fromString(n, ...r);
+			return __PRIVATE_validateDocumentPath(e), new aa(t, null, new DocumentKey(e));
+		}
+		{
+			if (!(t instanceof aa || t instanceof na)) throw new e(ta.INVALID_ARGUMENT, "Expected first argument to doc() to be a CollectionReference, a DocumentReference or FirebaseFirestore");
+			const i = t._path.child(ResourcePath.fromString(n, ...r));
+			return __PRIVATE_validateDocumentPath(i), new aa(t.firestore, t instanceof na ? t.converter : null, new DocumentKey(i));
 		}
 	}
 	/**
@@ -28489,6 +28506,23 @@ Total Duration: ${a - u}ms`);
 		const t = await __PRIVATE_ensureOnlineComponents(e), n = t.eventManager;
 		return n.onListen = __PRIVATE_syncEngineListen.bind(null, t.syncEngine), n.onUnlisten = __PRIVATE_syncEngineUnlisten.bind(null, t.syncEngine), n.onFirstRemoteStoreListen = __PRIVATE_triggerRemoteStoreListen.bind(null, t.syncEngine), n.onLastRemoteStoreUnlisten = __PRIVATE_triggerRemoteStoreUnlisten.bind(null, t.syncEngine), n;
 	}
+	function __PRIVATE_firestoreClientGetDocumentViaSnapshotListener(t, n, r = {}) {
+		const i = new __PRIVATE_Deferred();
+		return t.asyncQueue.enqueueAndForget((async () => function __PRIVATE_readDocumentViaSnapshotListener(t, n, r, i, s) {
+			const _ = new __PRIVATE_AsyncObserver({
+				next: (a) => {
+					_.Mu(), n.enqueueAndForget((() => __PRIVATE_eventManagerUnlisten(t, o)));
+					const u = a.docs.has(r);
+					!u && a.fromCache ? s.reject(new e(ta.UNAVAILABLE, "Failed to get document because the client is offline.")) : u && a.fromCache && i && "server" === i.source ? s.reject(new e(ta.UNAVAILABLE, "Failed to get document from server. (However, this document does exist in the local cache. Run again without setting source to \"server\" to retrieve the cached document.)")) : s.resolve(a);
+				},
+				error: (e) => s.reject(e)
+			}), o = new __PRIVATE_QueryListener(__PRIVATE_newQueryForPath(r.path), _, {
+				includeMetadataChanges: true,
+				waitForSyncWhenOnline: true
+			});
+			return __PRIVATE_eventManagerListen(t, o);
+		}(await __PRIVATE_getEventManager(t), t.asyncQueue, n, r, i))), i.promise;
+	}
 	function __PRIVATE_firestoreClientGetDocumentsViaSnapshotListener(t, n, r = {}) {
 		const i = new __PRIVATE_Deferred();
 		return t.asyncQueue.enqueueAndForget((async () => function __PRIVATE_executeQueryViaSnapshotListener(t, n, r, i, s) {
@@ -29611,6 +29645,22 @@ Total Duration: ${a - u}ms`);
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
+	/**
+	* Reads the document referred to by this `DocumentReference`.
+	*
+	* Note: `getDoc()` attempts to provide up-to-date data when possible by waiting
+	* for data from the server, but it may return cached data or fail if you are
+	* offline and the server cannot be reached. To specify this behavior, invoke
+	* {@link getDocFromCache} or {@link getDocFromServer}.
+	*
+	* @param reference - The reference of the document to fetch.
+	* @returns A `Promise` that resolves with a `DocumentSnapshot` containing the
+	* document contents.
+	*/ function getDoc(e) {
+		e = ra(e, aa);
+		const t = ra(e.firestore, da);
+		return __PRIVATE_firestoreClientGetDocumentViaSnapshotListener(oa(t), e._key).then(((n) => __PRIVATE_convertToDocSnapshot(t, e, n)));
+	}
 	function getDocs(e) {
 		e = ra(e, Query);
 		const t = ra(e.firestore, da), n = oa(t), r = new ua(t);
@@ -29632,6 +29682,13 @@ Total Duration: ${a - u}ms`);
 	* See the License for the specific language governing permissions and
 	* limitations under the License.
 	*/
+	/**
+	* Converts a {@link ViewSnapshot} that contains the single document specified by `ref`
+	* to a {@link DocumentSnapshot}.
+	*/ function __PRIVATE_convertToDocSnapshot(e, t, n) {
+		const r = n.docs.get(t._key);
+		return new DocumentSnapshot(e, new ua(e), t._key, r, new SnapshotMetadata(n.hasPendingWrites, n.fromCache), t.converter);
+	}
 	/**
 	* @license
 	* Copyright 2021 Google LLC
@@ -29712,6 +29769,17 @@ Total Duration: ${a - u}ms`);
 			}, s._setSettings(n), s;
 		}), "PUBLIC").setMultipleInstances(true)), registerVersion(Me, Le, s), registerVersion(Me, Le, "esm2020");
 	})();
+	//#endregion
+	//#region typescript/db/fireStore.ts
+	let firestore = {
+		savePrMeta,
+		fetchPrMeta,
+		fetchPrMetas,
+		saveTarifDef,
+		fetchTarifDefs,
+		saveKeyValue,
+		fetchKeyValue
+	};
 	const db = getFirestore(initializeApp({ projectId: "ebo-tain" }), "gringo-store");
 	const prMetaConverter = {
 		toFirestore(prMeta) {
@@ -29740,6 +29808,26 @@ Total Duration: ${a - u}ms`);
 			};
 		}
 	};
+	async function fetchPrMeta(id) {
+		try {
+			const docSnap = await getDoc(doc(db, "pr_meta", id).withConverter(prMetaConverter));
+			if (docSnap.exists()) return docSnap.data();
+			else return null;
+		} catch (error) {
+			console.error("Error fetching document:", error);
+			throw error;
+		}
+	}
+	async function fetchKeyValue(key) {
+		try {
+			const docSnap = await getDoc(doc(db, "key_values", key));
+			if (docSnap.exists()) return docSnap.get("value");
+			else return null;
+		} catch (error) {
+			console.error("Error fetching document:", error);
+			throw error;
+		}
+	}
 	async function fetchPrMetas(changedDateZ) {
 		const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
 		let querySnapshot;
@@ -29759,7 +29847,7 @@ Total Duration: ${a - u}ms`);
 		});
 		return tarifDefs;
 	}
-	async function saveToFireStore(functionName, id, data) {
+	async function _save(functionName, id, data) {
 		let url = `https://europe-west1-ebo-tain.cloudfunctions.net/${functionName}`;
 		await fetch(url, {
 			method: "POST",
@@ -29770,12 +29858,15 @@ Total Duration: ${a - u}ms`);
 			})
 		});
 	}
-	async function savePrMetaToFireStore(prMeta) {
+	async function savePrMeta(prMeta) {
 		prMeta.changed_date = (/* @__PURE__ */ new Date()).toISOString();
-		await saveToFireStore("save_pr_meta", prMeta.prId, prMeta);
+		await _save("save_pr_meta", prMeta.prId, prMeta);
 	}
-	async function saveTarifDefToFireStore(tarifDef) {
-		await saveToFireStore("save_tarif_def", tarifDef.commodityCode, tarifDef);
+	async function saveTarifDef(tarifDef) {
+		await _save("save_tarif_def", tarifDef.commodityCode, tarifDef);
+	}
+	async function saveKeyValue(key, value) {
+		await _save("save_key_value", key, { value });
 	}
 	//#endregion
 	//#region typescript/sessionCache.ts
@@ -29789,7 +29880,7 @@ Total Duration: ${a - u}ms`);
 		globalBtwTarifs = /* @__PURE__ */ new Map();
 		let tarifs;
 		try {
-			tarifs = await fetchTarifDefs();
+			tarifs = await firestore.fetchTarifDefs();
 		} catch {
 			tarifs = [];
 		}
@@ -29801,7 +29892,7 @@ Total Duration: ${a - u}ms`);
 	}
 	async function saveTarifDefCached(tarifDef) {
 		(await getBtwTarifsCachedInSession()).set(tarifDef.commodityCode, tarifDef);
-		await saveTarifDefToFireStore(tarifDef);
+		await firestore.saveTarifDef(tarifDef);
 	}
 	//#endregion
 	//#region typescript/aanvraag/priceBlock.ts
@@ -30736,7 +30827,7 @@ Total Duration: ${a - u}ms`);
 	let prMetasCache = null;
 	async function getMetaCache() {
 		if (!prMetasCache) {
-			let prMetas = await fetchPrMetas(null);
+			let prMetas = await firestore.fetchPrMetas(null);
 			prMetasCache = new Map(prMetas.map((m) => [m.prId, m]));
 		}
 		return { get: fetchMetaCached };
@@ -31498,7 +31589,7 @@ Total Duration: ${a - u}ms`);
 		return requestList;
 	}
 	async function saveMeta(meta) {
-		await savePrMetaToFireStore(meta);
+		await firestore.savePrMeta(meta);
 	}
 	function getAccountingField(prItem, idIncludes) {
 		let field = prItem.accounting.fields?.find((f) => f.id.endsWith(idIncludes));

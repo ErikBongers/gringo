@@ -9,11 +9,11 @@ import {getGlobalSettingsCached} from "../plugin_options/options";
 import {LedgerToBudgetCode} from "./budgetCodes";
 import {createCompactReqItem} from "../aanvraag/observer";
 import {ProcurementForm} from "../sap/ProcurementForm";
-import {savePrMetaToFireStore} from "../db/fireStore";
 import {getLocalCache} from "../db/idb/localDb";
 import {getTarifDefCached} from "../sessionCache";
 import {getInfoBlockForCurrentPage, InfoBlock} from "../infoBlock/infoBlock";
 import {getMetaCache} from "../db/metaCache";
+import {firestore} from "../db/fireStore";
 
 export interface BaseLineItem {
     tarif: TarifDef | null;
@@ -220,7 +220,7 @@ export async function fetchRequestListAndDetails(infoBlock: InfoBlock) {
 }
 
 export async function saveMeta(meta: PrMeta) {
-    await savePrMetaToFireStore(meta);
+    await firestore.savePrMeta(meta);
 }
 
 function getAccountingField(prItem: SapLineItem, idIncludes: string) {

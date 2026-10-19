@@ -12,6 +12,19 @@ import {
 } from "firebase/firestore";
 import {PrMeta, TarifDef} from "../aanvragen/requests";
 
+export let firestore = {
+    savePrMeta,
+    fetchPrMeta,
+    fetchPrMetas,
+
+    saveTarifDef,
+    fetchTarifDefs,
+
+    saveKeyValue,
+    fetchKeyValue
+}
+
+
 const firebaseConfig = {
     projectId: "ebo-tain",
 };
@@ -48,7 +61,7 @@ const tarifDefConverter: FirestoreDataConverter<TarifDef> = {
     }
 }
 
-async function fetchSinglePrMeta(id: string): Promise<PrMeta | null> {
+async function fetchPrMeta(id: string): Promise<PrMeta | null> {
     try {
         const docRef = doc(db, "pr_meta", id).withConverter(prMetaConverter);
         const docSnap = await getDoc(docRef);
@@ -64,7 +77,23 @@ async function fetchSinglePrMeta(id: string): Promise<PrMeta | null> {
     }
 }
 
-export async function fetchPrMetas(changedDateZ: string | null) {
+async function fetchKeyValue(key: string): Promise<string | null> {
+    try {
+        const docRef = doc(db, "key_values", key);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            return docSnap.get("value") as string;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching document:", error);
+        throw error;
+    }
+}
+
+async function fetchPrMetas(changedDateZ: string | null) {
     const prMetaRef = collection(db, "pr_meta").withConverter(prMetaConverter);
 
     let querySnapshot;
@@ -81,7 +110,7 @@ export async function fetchPrMetas(changedDateZ: string | null) {
     return metas;
 }
 
-export async function fetchTarifDefs(): Promise<TarifDef[]> {
+async function fetchTarifDefs(): Promise<TarifDef[]> {
     const tarifDefRef = collection(db, "tarif_defs").withConverter(tarifDefConverter);
     const querySnapshot = await getDocs(tarifDefRef);
     let tarifDefs: TarifDef[] = [];
@@ -91,7 +120,7 @@ export async function fetchTarifDefs(): Promise<TarifDef[]> {
     return tarifDefs;
 }
 
-async function saveToFireStore(functionName: string, id: string, data: any) {
+async function _save(functionName: string, id: string, data: any) {
     let url = `https://europe-west1-ebo-tain.cloudfunctions.net/${functionName}`;
     let body = {
         id,
@@ -106,15 +135,15 @@ async function saveToFireStore(functionName: string, id: string, data: any) {
     });
 }
 
-export async function savePrMetaToFireStore(prMeta: PrMeta) {
+async function savePrMeta(prMeta: PrMeta) {
     prMeta.changed_date = new Date().toISOString();
-    await saveToFireStore("save_pr_meta", prMeta.prId, prMeta);
+    await _save("save_pr_meta", prMeta.prId, prMeta);
 }
 
-export async function saveTarifDefToFireStore(tarifDef: TarifDef) {
-    await saveToFireStore("save_tarif_def", tarifDef.commodityCode, tarifDef);
+async function saveTarifDef(tarifDef: TarifDef) {
+    await _save("save_tarif_def", tarifDef.commodityCode, tarifDef);
 }
 
-export async function saveKeyValueToFireStore(key: string, value: any) {
-    await saveToFireStore("save_key_value", key, value);
+async function saveKeyValue(key: string, value: string) {
+    await _save("save_key_value", key, {value});
 }
