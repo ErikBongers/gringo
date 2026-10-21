@@ -29809,7 +29809,7 @@ Total Duration: ${a - u}ms`);
 		return fetchAny("pr_meta", id);
 	}
 	async function fetchKeyValue(key) {
-		return fetchAny("key_values", key);
+		return (await fetchAny("key_values", key))?.value ?? null;
 	}
 	async function fetchPrMetas(changedDateZ) {
 		const prMetaRef = collection(db, "pr_meta");
@@ -30023,25 +30023,25 @@ Total Duration: ${a - u}ms`);
 	//#region typescript/reqForm/observer.ts
 	var ReqFormObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("reqform", onMutation$2, false, onPageRefreshed$2);
+			super("reqform", onMutation$3, false, onPageRefreshed$3);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded$2();
+			return isPageProbablyLoaded$3();
 		}
 	};
 	var observer_default$1 = new ReqFormObserver();
-	function onPageRefreshed$2() {
+	function onPageRefreshed$3() {
 		gringo("Reqform page refreshed!");
-		checkDecorations$1();
+		checkDecorations$2();
 	}
-	function isPageProbablyLoaded$2() {
+	function isPageProbablyLoaded$3() {
 		return true;
 	}
-	function onMutation$2(mutation) {
-		checkDecorations$1();
+	function onMutation$3(mutation) {
+		checkDecorations$2();
 		return false;
 	}
-	function checkDecorations$1() {
+	function checkDecorations$2() {
 		checkAndSetDecoration(document.querySelector("div.req-form-panel"), decoratePanel);
 	}
 	function scanAndSelectPerEenheid(ulUnitOfMeasure) {
@@ -30933,10 +30933,10 @@ Total Duration: ${a - u}ms`);
 	//#region typescript/aanvraag/observer.ts
 	var RequisitionObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("requisition", onMutation$1, false, onReqPageRefreshed);
+			super("requisition", onMutation$2, false, onReqPageRefreshed);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded$1();
+			return isPageProbablyLoaded$2();
 		}
 	};
 	var ViewReqObserver = class extends PartialUrlObserver {
@@ -30944,7 +30944,7 @@ Total Duration: ${a - u}ms`);
 			super("viewRequisition", onViewMutation, false, onViewReqPageRefreshed);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded$1();
+			return isPageProbablyLoaded$2();
 		}
 	};
 	var observer_default = {
@@ -30957,10 +30957,10 @@ Total Duration: ${a - u}ms`);
 	function onViewReqPageRefreshed() {
 		decorateReqPage(getCompactPrFromViewReq);
 	}
-	function isPageProbablyLoaded$1() {
+	function isPageProbablyLoaded$2() {
 		return true;
 	}
-	function onMutation$1(mutation) {
+	function onMutation$2(mutation) {
 		decorateReqPage(getCompactPrFromReq).then(() => {});
 		return false;
 	}
@@ -32830,10 +32830,10 @@ Total Duration: ${a - u}ms`);
 	//#region typescript/aanvragen/observer.ts
 	var AanvragenObserver = class extends PartialUrlObserver {
 		constructor() {
-			super("request-info-list/requisition", onMutation, false, onPageRefreshed$1);
+			super("request-info-list/requisition", onMutation$1, false, onPageRefreshed$2);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded();
+			return isPageProbablyLoaded$1();
 		}
 	};
 	var RecentRequestsObserver = class extends PartialUrlObserver {
@@ -32841,25 +32841,25 @@ Total Duration: ${a - u}ms`);
 			super("request-info-list/recentrequests", onRecentRequestMutation, false, onRecentRequestPageRefreshed);
 		}
 		isPageReallyLoaded() {
-			return isPageProbablyLoaded();
+			return isPageProbablyLoaded$1();
 		}
 	};
 	let requestObservers = {
 		aanvragenObserver: new AanvragenObserver(),
 		recentRequestsObsverver: new RecentRequestsObserver()
 	};
-	function onPageRefreshed$1() {
+	function onPageRefreshed$2() {
 		gringo("onPageRefreshed()");
-		checkDecorations();
+		checkDecorations$1();
 	}
 	function onRecentRequestPageRefreshed() {
 		checkRecentRequestsDecorations();
 	}
-	function isPageProbablyLoaded() {
+	function isPageProbablyLoaded$1() {
 		return !!getPagination();
 	}
-	function onMutation(mutation) {
-		checkDecorations();
+	function onMutation$1(mutation) {
+		checkDecorations$1();
 		return false;
 	}
 	function onRecentRequestMutation(mutation) {
@@ -32877,16 +32877,16 @@ Total Duration: ${a - u}ms`);
 		if (tabs?.querySelectorAll("div").length == 0) return null;
 		return tabs;
 	}
-	function checkDecorations() {
-		checkAndSetDecoration(document.querySelector("body"), decorateBody);
+	function checkDecorations$1() {
+		checkAndSetDecoration(document.querySelector("body"), decorateBody$1);
 		checkAndSetDecoration(document.querySelector("main"), decorateMain);
 		checkAndSetDecoration(checkandGetTabsFilled(), decorateTabs);
 		checkAndSetDecoration(document.querySelector(".request-search-panel"), decorateSearchPanel);
 		checkAndSetDecoration(getListTabDecoratedElement(), (el) => decoratePagination(), checkAndSetListPageDecorated);
 	}
-	function decorateBody() {}
+	function decorateBody$1() {}
 	function checkRecentRequestsDecorations() {
-		checkAndSetDecoration(document.querySelector("body"), decorateBody);
+		checkAndSetDecoration(document.querySelector("body"), decorateBody$1);
 		checkAndSetDecoration(document.querySelector("main"), decorateMain);
 		checkAndSetDecoration(document.querySelector("nav.requests-nav div.tablist-element"), decorateTabs);
 	}
@@ -33066,6 +33066,34 @@ Total Duration: ${a - u}ms`);
 		}
 	}
 	//#endregion
+	//#region typescript/homePage/observer.ts
+	var HomePageObserver = class extends PartialUrlObserver {
+		constructor() {
+			super("s1-eu.ariba.com/gb/?", onMutation, false, onPageRefreshed$1);
+		}
+		isPageReallyLoaded() {
+			return isPageProbablyLoaded();
+		}
+	};
+	let homePageObserver = new HomePageObserver();
+	function onPageRefreshed$1() {
+		gringo("onPageRefreshed()");
+		checkDecorations();
+	}
+	function isPageProbablyLoaded() {
+		return true;
+	}
+	function onMutation() {
+		checkDecorations();
+		return false;
+	}
+	function checkDecorations() {
+		checkAndSetDecoration(document.querySelector("body"), decorateBody);
+	}
+	function decorateBody() {
+		gringo("homepage: decorateBody()");
+	}
+	//#endregion
 	//#region typescript/main.ts
 	init();
 	function init() {
@@ -33083,6 +33111,7 @@ Total Duration: ${a - u}ms`);
 			registerObserver(observer_default.requisitionObserver);
 			registerObserver(observer_default.viewReqObserver);
 			registerObserver(observer_default$1);
+			registerObserver(homePageObserver);
 			onPageChanged();
 			if (document.readyState == "complete") {
 				console.log("document ready. firing onPageRefreshed.");

@@ -1,3 +1,26 @@
+* Boomstructuur
+  >>> json: https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/33e8a2ba14be4e8457dfd4791f19487e1ac0f60ce8ad811e0506bf866c9d6e1d/resource/wellknown/PopularPage
+  > see LandingPage.ts type def.
+
+  > * Drill down:
+   >>> https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/33e8a2ba14be4e8457dfd4791f19487e1ac0f60ce8ad811e0506bf866c9d6e1d/resource/container/cfd62906-06c8-49ba-9fec-292b3679c2cc?browserRequestId=Tile1792609936390&pu=PU_AG+Stedelijk+Onderwijs&puHierarchyPath=PU_AG+Stedelijk+Onderwijs,All
+
+* PRs "In aanmaak" are not listed?
+
+* artikel opzoeken op basis van commodity code om artikel opnieuw te bestellen.
+
+* start new PR from overview -> in new tab.
+
+* opmerking bij meta
+
+* lean list: also on 1st tab
+  > or in separate tab, which is the first one?
+    > optional
+
+* ter info: aantal dagen tussen aanmaak en laatste wijziging
+
+* check if attachment is REALLY added and shared with supplier
+
 * update PrData in fireStore
   > based on last_changed date in fireStore?
     > is this safe enough?

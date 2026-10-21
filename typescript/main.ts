@@ -2,6 +2,7 @@ import {getOptions, observers, registerObserver, settingsObservers} from "./glob
 import requestObservers from "./aanvragen/observer";
 import aanvraagObservers from "./aanvraag/observer";
 import reqFormObserver from "./reqForm/observer";
+import homePageObserver from "./homePage/observer";
 
 init();
 
@@ -29,6 +30,7 @@ function init() {
         registerObserver(aanvraagObservers.requisitionObserver);
         registerObserver(aanvraagObservers.viewReqObserver);
         registerObserver(reqFormObserver);
+        registerObserver(homePageObserver);
 
         onPageChanged();
         if(document.readyState == "complete") {
@@ -44,7 +46,6 @@ function init() {
     });
 }
 
-let lastCheckTime = Date.now();
 function onSettingsChanged() {
     console.log("on settings changed.");
     for(let observer of settingsObservers) {
