@@ -544,6 +544,7 @@
 	//#endregion
 	//#region typescript/def.ts
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
+	const KEY_CLOUD_TILE_TREE_FILENAME = "gringo/tileTree.json";
 	const GLOBAL_SETTINGS_FILENAME = "gringo/gringo_global_settings.json";
 	//#endregion
 	//#region typescript/cloud.ts
@@ -553,7 +554,7 @@
 		upload: uploadJson
 	} };
 	async function fetchJson(fileName) {
-		return fetch(JSON_URL + "?fileName=" + fileName, { method: "GET" }).then((res) => res.json());
+		return (await fetch(JSON_URL + "?fileName=" + fileName, { method: "GET" })).json();
 	}
 	async function uploadJson(fileName, data) {
 		return await (await fetch(JSON_URL + "?fileName=" + fileName, {
@@ -601,6 +602,11 @@
 			console.log(err);
 			return defaultGlobalSettings;
 		});
+	}
+	//#endregion
+	//#region typescript/sap/SapUserInfo.ts
+	async function getUserInfo() {
+		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
 	}
 	//#endregion
 	//#region typescript/globals.ts
@@ -696,6 +702,11 @@
 		tagElement.title = tagDef.description;
 		tagElement.classList.toggle("selected", selected);
 		tagElement.classList.toggle("strikeThrough", strikeThrough);
+	}
+	async function getBaseUrlWithTenantAndUser() {
+		let userInfo = await getUserInfo();
+		let userId = userInfo.hashedUser;
+		return `https://s1-eu.ariba.com/gb/tenant/${userInfo.tenant}/user/${userId}`;
 	}
 	//#endregion
 	//#region typescript/pageObserver.ts
@@ -999,11 +1010,6 @@
 	async function fetchShoppingCart() {
 		let userInfo = await fetchUserInfoCached();
 		return await (await fetch(`https://s1-eu.ariba.com/gb/tenant/744379882-C1/user/${userInfo?.hashedUser}/shoppingCart`)).json();
-	}
-	//#endregion
-	//#region typescript/sap/SapUserInfo.ts
-	async function getUserInfo() {
-		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
 	}
 	//#endregion
 	//#region typescript/calculator/cursor.ts
@@ -30135,11 +30141,9 @@ Total Duration: ${a - u}ms`);
 		});
 	}
 	async function fetchReqFormInfo() {
-		let userInfo = await getUserInfo();
-		let userId = userInfo.hashedUser;
-		let tenant = userInfo.tenant;
 		let resourceId = new URLSearchParams(location.search).get("fromresourceid");
-		let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${location.pathname.split("/").pop()}?resourceId=${resourceId}`;
+		let formId = location.pathname.split("/").pop();
+		let daUrl = `${await getBaseUrlWithTenantAndUser()}/resource/formwithresourceoverride/${formId}?resourceId=${resourceId}`;
 		return await (await fetch(daUrl)).json();
 	}
 	function triggerFieldChanged(input) {
@@ -33092,6 +33096,47 @@ Total Duration: ${a - u}ms`);
 	}
 	function decorateBody() {
 		gringo("homepage: decorateBody()");
+		fetchTileTree(true).then((tree) => {
+			gringo(tree);
+		});
+	}
+	async function fetchTileTree(refresh) {
+		if (!refresh) {
+			let tileTree = await cloud.json.fetch(KEY_CLOUD_TILE_TREE_FILENAME);
+			if (tileTree) return tileTree;
+		}
+		let baseUrl = await getBaseUrlWithTenantAndUser();
+		let popularPageUrl = `${baseUrl}/resource/wellknown/PopularPage`;
+		let chain = new FetchChain();
+		await chain.fetch(popularPageUrl);
+		let rootPage = chain.getJson();
+		let flatList = [];
+		flatList.push({
+			id: "",
+			label: rootPage.title,
+			uniqueName: rootPage.uniqueName
+		});
+		await addResourcesToFlatList(flatList, rootPage, baseUrl, "");
+		await cloud.json.upload(KEY_CLOUD_TILE_TREE_FILENAME, flatList);
+		return flatList;
+	}
+	async function addResourcesToFlatList(flatList, tilePage, baseUrl, parentId) {
+		for (let [index, resource] of tilePage.resources.entries()) {
+			if (resource.type == "GeneralCarousel") break;
+			let tile = {
+				id: parentId + "." + index,
+				label: resource.title,
+				uniqueName: resource.uniqueName
+			};
+			if (resource.commodityCode) tile.commodityCode = resource.commodityCode;
+			flatList.push(tile);
+			if (resource.type == "Page") {
+				let tilePageUrl = `${baseUrl}/resource/container/${resource.id}?pu=PU_AG+Stedelijk+Onderwijs&puHierarchyPath=PU_AG+Stedelijk+Onderwijs,All`;
+				let tilePageChain = new FetchChain();
+				await tilePageChain.fetch(tilePageUrl);
+				await addResourcesToFlatList(flatList, tilePageChain.getJson(), baseUrl, tile.id);
+			}
+		}
 	}
 	//#endregion
 	//#region typescript/main.ts

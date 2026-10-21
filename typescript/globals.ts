@@ -3,7 +3,7 @@ import {emmet} from "../libs/Emmeter/html";
 import {fetchGlobalSettings, GlobalSettings, options, setGlobalSetting} from "./plugin_options/options";
 import {Actions, sendRequest, TabType} from "./messaging";
 import {TagDef} from "./aanvragen/requests";
-import {InfoBlock} from "./infoBlock/infoBlock";
+import {getUserInfo} from "./sap/SapUserInfo";
 
 export let observers: Observer[] = [];
 export let settingsObservers: (() => void)[] = [];
@@ -255,4 +255,11 @@ export function paintTag(tagElement: HTMLElement, tagDef: TagDef, selected: bool
     tagElement.title = tagDef.description;
     tagElement.classList.toggle("selected", selected);
     tagElement.classList.toggle("strikeThrough", strikeThrough);
+}
+
+export async function getBaseUrlWithTenantAndUser() {
+    let userInfo = await getUserInfo();
+    let userId = userInfo.hashedUser;
+    let tenant = userInfo.tenant;
+    return `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}`;
 }

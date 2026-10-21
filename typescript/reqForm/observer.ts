@@ -1,7 +1,6 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
-import {fakeAnchorClick, fakeRadioButtonClick, formatPrice, gringo} from "../globals";
+import {fakeAnchorClick, fakeRadioButtonClick, formatPrice, getBaseUrlWithTenantAndUser, gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter";
-import {getUserInfo} from "../sap/SapUserInfo";
 import {ProcurementForm} from "../sap/ProcurementForm";
 import {ExpandedProcurementForm} from "../aanvragen/requests";
 import {Parser} from "../calculator/parser";
@@ -147,13 +146,10 @@ function decorateFieldQuantity(fieldQuantity: HTMLElement) {
 }
 
 async function fetchReqFormInfo() {
-    let userInfo = await getUserInfo();
-    let userId = userInfo.hashedUser;
-    let tenant = userInfo.tenant;
     let params = new URLSearchParams(location.search);
     let resourceId = params.get("fromresourceid");
     let formId = location.pathname.split("/").pop();
-    let daUrl = `https://s1-eu.ariba.com/gb/tenant/${tenant}/user/${userId}/resource/formwithresourceoverride/${formId}?resourceId=${resourceId}`;
+    let daUrl = `${await getBaseUrlWithTenantAndUser()}/resource/formwithresourceoverride/${formId}?resourceId=${resourceId}`;
     let res = await fetch(daUrl);
     return await res.json() as ProcurementForm;
 }

@@ -9,8 +9,8 @@ export let cloud = {
 };
 
 async function fetchJson(fileName: string) {
-    return fetch(def.JSON_URL + "?fileName="+fileName, {method: "GET"})
-        .then((res) => res.json());
+    let res = await fetch(def.JSON_URL + "?fileName="+fileName, {method: "GET"});
+    return res.json();
 }
 
 async function uploadJson(fileName: string, data: any) {
