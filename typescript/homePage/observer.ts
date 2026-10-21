@@ -57,7 +57,7 @@ function createTilesTable(tiles: Tile[]) {
     `).last as HTMLDivElement;
     for(let tile of tiles) {
         let indent = "   ".repeat(tile.id.length);
-        let titleClass = tile.commodityCode ? "" : ".bold";
+        let titleClass = tile.leaf ? "" : ".bold";
         emmet.indent.appendChild(tBody, `
             tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
                 td
@@ -71,6 +71,7 @@ export interface Tile {
     label: string;
     uniqueName: string;
     commodityCode?: string;
+    leaf: boolean;
 }
 
 async function getTiles(refresh: boolean = false) {
@@ -100,7 +101,8 @@ async function addResourcesToFlatList(flatList: Tile[], tilePage: AribaLandingPa
     for(let [index, resource] of tilePage.resources!.entries()) {
         if(resource.type == "GeneralCarousel")
             break; //skip the next sections.
-        let tile: Tile = {id: parentId+"."+index, label: resource.title!, uniqueName: resource.uniqueName};
+        let leaf = resource.type != "Page";
+        let tile: Tile = {id: parentId+"."+index, label: resource.title!, uniqueName: resource.uniqueName, leaf};
         if(resource.commodityCode)
             tile.commodityCode = resource.commodityCode as string;
         flatList.push(tile);

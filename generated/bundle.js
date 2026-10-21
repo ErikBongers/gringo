@@ -33118,7 +33118,7 @@ Total Duration: ${a - u}ms`);
     `).last;
 		for (let tile of tiles) {
 			let indent = "   ".repeat(tile.id.length);
-			let titleClass = tile.commodityCode ? "" : ".bold";
+			let titleClass = tile.leaf ? "" : ".bold";
 			emmet.indent.appendChild(tBody, `
             tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
                 td
@@ -33149,10 +33149,12 @@ Total Duration: ${a - u}ms`);
 	async function addResourcesToFlatList(flatList, tilePage, baseUrl, parentId) {
 		for (let [index, resource] of tilePage.resources.entries()) {
 			if (resource.type == "GeneralCarousel") break;
+			let leaf = resource.type != "Page";
 			let tile = {
 				id: parentId + "." + index,
 				label: resource.title,
-				uniqueName: resource.uniqueName
+				uniqueName: resource.uniqueName,
+				leaf
 			};
 			if (resource.commodityCode) tile.commodityCode = resource.commodityCode;
 			flatList.push(tile);
