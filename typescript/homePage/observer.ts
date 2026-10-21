@@ -5,6 +5,7 @@ import {AribaLandingPage, AribaLandingPageResource} from "../sap/LandingPage";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER, KEY_CLOUD_TILE_TREE_FILENAME} from "../def";
 import {getLocalCache} from "../db/idb/localDb";
+import {emmet} from "../../libs/Emmeter";
 
 class HomePageObserver extends PartialUrlObserver {
     constructor() {
@@ -40,7 +41,29 @@ function decorateBody() {
     gringo("homepage: decorateBody()");
     getTiles().then(async (tree) => {
         gringo(tree);
+        let popularDiv = document.querySelector("#popular") as HTMLDivElement;
+        emmet.indent.appendChild(popularDiv, `
+            div#tilesTableContainer
+        `);
+        createTilesTable(tree);
     });
+}
+
+function createTilesTable(tiles: Tile[]) {
+    let tilesTableContainer = document.querySelector("#tilesTableContainer") as HTMLDivElement;
+    let tBody = emmet.indent.appendChild(tilesTableContainer, `
+        table#tilesTable
+            tbody
+    `).last as HTMLDivElement;
+    for(let tile of tiles) {
+        let indent = "   ".repeat(tile.id.length);
+        let titleClass = tile.commodityCode ? "" : ".bold";
+        emmet.indent.appendChild(tBody, `
+            tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
+                td
+                    span.pre${titleClass}{${indent+tile.label}}
+        `);
+    }
 }
 
 export interface Tile {

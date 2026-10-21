@@ -33103,7 +33103,28 @@ Total Duration: ${a - u}ms`);
 		gringo("homepage: decorateBody()");
 		getTiles().then(async (tree) => {
 			gringo(tree);
+			let popularDiv = document.querySelector("#popular");
+			emmet.indent.appendChild(popularDiv, `
+            div#tilesTableContainer
+        `);
+			createTilesTable(tree);
 		});
+	}
+	function createTilesTable(tiles) {
+		let tilesTableContainer = document.querySelector("#tilesTableContainer");
+		let tBody = emmet.indent.appendChild(tilesTableContainer, `
+        table#tilesTable
+            tbody
+    `).last;
+		for (let tile of tiles) {
+			let indent = "   ".repeat(tile.id.length);
+			let titleClass = tile.commodityCode ? "" : ".bold";
+			emmet.indent.appendChild(tBody, `
+            tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
+                td
+                    span.pre${titleClass}{${indent + tile.label}}
+        `);
+		}
 	}
 	async function getTiles(refresh = false) {
 		let localCache = await getLocalCache();
