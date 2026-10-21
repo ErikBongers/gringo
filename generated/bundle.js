@@ -544,7 +544,6 @@
 	//#endregion
 	//#region typescript/def.ts
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
-	const KEY_CLOUD_TILE_TREE_FILENAME = "gringo/tileTree.json";
 	const GLOBAL_SETTINGS_FILENAME = "gringo/gringo_global_settings.json";
 	//#endregion
 	//#region typescript/cloud.ts
@@ -31361,7 +31360,7 @@ Total Duration: ${a - u}ms`);
 	};
 	//#endregion
 	//#region typescript/db/idb/localDb.ts
-	const DB_VERSION = 14;
+	const DB_VERSION = 15;
 	const LOCAL_DB_PREFIX = "LocalGringoDb";
 	let cacheMap = /* @__PURE__ */ new Map();
 	async function getLocalCache(schoolId = "Berchem") {
@@ -31380,12 +31379,17 @@ Total Duration: ${a - u}ms`);
 		get PrListData() {
 			return this._PrListData;
 		}
+		get Tiles() {
+			return this._Tiles;
+		}
 		_KeyValues;
 		_PrListData;
+		_Tiles;
 		constructor(db) {
 			this.db = db;
 			this._KeyValues = new Repository(this.db, "KeyValues");
 			this._PrListData = new Repository(this.db, "PrListData");
+			this._Tiles = new Repository(this.db, "Tiles");
 		}
 		static getDbName(schoolId) {
 			return `${LOCAL_DB_PREFIX}_${schoolId}`;
@@ -31396,6 +31400,7 @@ Total Duration: ${a - u}ms`);
 				if (oldVersion < 2) db.createObjectStore("PrListData", { keyPath: "prId" });
 				if (oldVersion < 13) await upgradeTo13(transaction, (prData) => true);
 				if (oldVersion < 14) db.deleteObjectStore("PrMetas");
+				if (oldVersion < 15) db.createObjectStore("Tiles", { keyPath: "id" });
 			} }));
 		}
 	};
@@ -33096,28 +33101,28 @@ Total Duration: ${a - u}ms`);
 	}
 	function decorateBody() {
 		gringo("homepage: decorateBody()");
-		fetchTileTree(true).then((tree) => {
+		getTiles().then(async (tree) => {
 			gringo(tree);
 		});
 	}
-	async function fetchTileTree(refresh) {
+	async function getTiles(refresh = false) {
+		let localCache = await getLocalCache();
 		if (!refresh) {
-			let tileTree = await cloud.json.fetch(KEY_CLOUD_TILE_TREE_FILENAME);
-			if (tileTree) return tileTree;
+			let tileTree = await localCache.Tiles.getAll();
+			if (tileTree.length > 0) return tileTree;
 		}
+		let tileTree = await fetchTileTree();
+		await localCache.Tiles.bulkPut(tileTree);
+		return tileTree;
+	}
+	async function fetchTileTree() {
 		let baseUrl = await getBaseUrlWithTenantAndUser();
 		let popularPageUrl = `${baseUrl}/resource/wellknown/PopularPage`;
 		let chain = new FetchChain();
 		await chain.fetch(popularPageUrl);
 		let rootPage = chain.getJson();
 		let flatList = [];
-		flatList.push({
-			id: "",
-			label: rootPage.title,
-			uniqueName: rootPage.uniqueName
-		});
 		await addResourcesToFlatList(flatList, rootPage, baseUrl, "");
-		await cloud.json.upload(KEY_CLOUD_TILE_TREE_FILENAME, flatList);
 		return flatList;
 	}
 	async function addResourcesToFlatList(flatList, tilePage, baseUrl, parentId) {

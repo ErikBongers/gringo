@@ -4,6 +4,7 @@ import {FetchChain} from "../utils/fetchChain";
 import {AribaLandingPage, AribaLandingPageResource} from "../sap/LandingPage";
 import {cloud} from "../cloud";
 import {KEY_CLOUD_GRINGO_FOLDER, KEY_CLOUD_TILE_TREE_FILENAME} from "../def";
+import {getLocalCache} from "../db/idb/localDb";
 
 class HomePageObserver extends PartialUrlObserver {
     constructor() {
@@ -37,7 +38,7 @@ function checkDecorations() {
 
 function decorateBody() {
     gringo("homepage: decorateBody()");
-    fetchTileTree(true).then((tree) => {
+    getTiles().then(async (tree) => {
         gringo(tree);
     });
 }
@@ -49,22 +50,26 @@ export interface Tile {
     commodityCode?: string;
 }
 
-async function fetchTileTree(refresh: boolean) {
+async function getTiles(refresh: boolean = false) {
+    let localCache = await getLocalCache();
     if(!refresh) {
-        let tileTree = await cloud.json.fetch(KEY_CLOUD_TILE_TREE_FILENAME) as Tile[];
-        if(tileTree)
+        let tileTree = await localCache.Tiles.getAll();
+        if(tileTree.length > 0)
             return tileTree;
     }
+    let tileTree = await fetchTileTree();
+    await localCache.Tiles.bulkPut(tileTree);
+    return tileTree;
+}
 
+async function fetchTileTree() {
     let baseUrl = await getBaseUrlWithTenantAndUser();
     let popularPageUrl = `${baseUrl}/resource/wellknown/PopularPage`;
     let chain = new FetchChain();
     await chain.fetch(popularPageUrl);
     let rootPage: AribaLandingPage = chain.getJson() as AribaLandingPage;
     let flatList: Tile[] = [];
-    flatList.push({id: "", label: rootPage.title!, uniqueName: rootPage.uniqueName});
     await addResourcesToFlatList(flatList, rootPage, baseUrl, "");
-    await cloud.json.upload(KEY_CLOUD_TILE_TREE_FILENAME, flatList);
     return flatList;
 }
 

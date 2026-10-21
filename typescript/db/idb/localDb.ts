@@ -1,8 +1,10 @@
 import {DBSchema, IDBPDatabase, IDBPTransaction, openDB} from 'idb';
 import {Repository} from "./repository";
 import {getSuppliers, PrListPrData, PrMeta} from "../../aanvragen/requests";
+import {AribaLandingPageResource} from "../../sap/LandingPage";
+import {Tile} from "../../homePage/observer";
 
-const DB_VERSION = 14;
+const DB_VERSION = 15;
 const LOCAL_DB_PREFIX = 'LocalGringoDb';
 
 export interface LocalDb extends DBSchema {
@@ -14,6 +16,11 @@ export interface LocalDb extends DBSchema {
     PrListData: {
         key: string;
         value: PrListPrData;
+        indexes: {};
+    },
+    Tiles: {
+        key: string;
+        value: Tile;
         indexes: {};
     }
 }
@@ -37,13 +44,18 @@ export class LocalCache {
     get PrListData(): Repository<LocalDb, "PrListData"> {
         return this._PrListData;
     }
+    get Tiles(): Repository<LocalDb, "Tiles"> {
+        return this._Tiles;
+    }
 
     private readonly _KeyValues: Repository<LocalDb, "KeyValues">;
     private readonly _PrListData: Repository<LocalDb, "PrListData">;
+    private readonly _Tiles: Repository<LocalDb, "Tiles">;
 
     constructor(private db: IDBPDatabase<LocalDb>) {
         this._KeyValues = new Repository<LocalDb, "KeyValues">(this.db, 'KeyValues');
         this._PrListData = new Repository<LocalDb, "PrListData">(this.db, 'PrListData');
+        this._Tiles = new Repository<LocalDb, "Tiles">(this.db, 'Tiles');
     }
 
     private static getDbName(schoolId: string) {
@@ -66,13 +78,16 @@ export class LocalCache {
                     //@ts-ignore
                     db.deleteObjectStore("PrMetas");
                 }
+                if (oldVersion < 15) {
+                    db.createObjectStore("Tiles", {keyPath: "id"});
+                }
             },
         }));
     }
 }
 
 async function upgradeTo13(
-    transaction: IDBPTransaction<LocalDb, ["KeyValues", "PrListData"], "versionchange">,
+    transaction: IDBPTransaction<LocalDb, ["KeyValues", "PrListData", "Tiles"], "versionchange">,
     isInvalid: (prData: PrListPrData) => boolean
 ) {
     let prDatas = await transaction.objectStore("PrListData").getAll();
