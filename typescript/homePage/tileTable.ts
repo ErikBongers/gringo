@@ -110,7 +110,8 @@ async function addResourcesToFlatList(flatList: Tile[], tilePage: AribaLandingPa
         if (resource.type == "GeneralCarousel")
             break; //skip the next sections.
         let leaf = resource.type != "Page";
-        let tile: Tile = {id: parentId + "." + index, label: resource.title!, uniqueName: resource.uniqueName, leaf, type: resource.type};
+        let indexStr = index.toString().padStart(2, '0');
+        let tile: Tile = {id: parentId + "." + indexStr, label: resource.title!, uniqueName: resource.uniqueName, leaf, type: resource.type};
         if(isTileAdHocItem(tile)) {
             tile.adhocFormId = resource.adhocFormId as string;
         }

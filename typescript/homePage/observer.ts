@@ -35,7 +35,7 @@ function checkDecorations() {
 
 function decorateBody() {
     gringo("homepage: decorateBody()");
-    getTiles().then(async (tree) => {
+    getTiles(true).then(async (tree) => {
         gringo(tree);
         let popularDiv = document.querySelector("#popular") as HTMLDivElement;
         emmet.indent.appendChild(popularDiv, `

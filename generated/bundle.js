@@ -33137,8 +33137,9 @@ Total Duration: ${a - u}ms`);
 		for (let [index, resource] of tilePage.resources.entries()) {
 			if (resource.type == "GeneralCarousel") break;
 			let leaf = resource.type != "Page";
+			let indexStr = index.toString().padStart(2, "0");
 			let tile = {
-				id: parentId + "." + index,
+				id: parentId + "." + indexStr,
 				label: resource.title,
 				uniqueName: resource.uniqueName,
 				leaf,
@@ -33183,7 +33184,7 @@ Total Duration: ${a - u}ms`);
 	}
 	function decorateBody() {
 		gringo("homepage: decorateBody()");
-		getTiles().then(async (tree) => {
+		getTiles(true).then(async (tree) => {
 			gringo(tree);
 			let popularDiv = document.querySelector("#popular");
 			emmet.indent.appendChild(popularDiv, `
