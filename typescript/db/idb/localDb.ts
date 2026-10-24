@@ -2,7 +2,8 @@ import {DBSchema, IDBPDatabase, IDBPTransaction, openDB} from 'idb';
 import {Repository} from "./repository";
 import {getSuppliers, PrListPrData, PrMeta} from "../../aanvragen/requests";
 import {AribaLandingPageResource} from "../../sap/LandingPage";
-import {Tile} from "../../homePage/observer";
+
+import {Tile} from "../../homePage/tileTable";
 
 const DB_VERSION = 15;
 const LOCAL_DB_PREFIX = 'LocalGringoDb';
