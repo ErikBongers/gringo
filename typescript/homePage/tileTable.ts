@@ -13,6 +13,7 @@ export interface Tile {
     uniqueName: string;
     commodityCode?: string;
     leaf: boolean;
+    favorite: boolean;
 }
 
 export interface TilePage extends Tile {
@@ -53,33 +54,59 @@ export function createTilesTable(tiles: Tile[]) {
     for (let tile of tiles) {
         let indent = "   ".repeat(tile.id.length);
         let titleClass = tile.leaf ? "" : ".bold";
-        let buttonText = tile.leaf ? `button.naked.midBlueText.squircle>i.fa.fa-arrow-right` : "span";
+        let gotoButtonText = tile.leaf ? `button.goto.naked.midBlueText.squircle>i.fa.fa-arrow-right` : "span";
         let tr = emmet.indent.appendChild(tBody, `
             tr#tile${tile.id}[data-tile-unique-name="${tile.uniqueName}"]
                 td
                     span.pre${titleClass}{${indent + tile.label}}
-                    ${buttonText}
+                    button.naked.star
+                        i.far.fa-star
+                    ${gotoButtonText}
         `).first as HTMLTableRowElement;
+        let starButton = tr.querySelector("button.star") as HTMLButtonElement;
+        starButton.addEventListener("click", async () => {
+            await onTileFavoriteClick(tile, starButton);
+        });
+        setFavoriteButton(starButton, tile);
         if(tile.leaf) {
-            let button = tr.querySelector("button") as HTMLButtonElement;
-            button.addEventListener("click", () => {
-                if (isTileAdHocItem(tile)) {
-                    let url = BASE_URL + `/reqform/${tile.adhocFormId}`;
-                    window.open(url, '_blank');
-                } else if (isTileGBSearch(tile)) {
-                    let keyWordsObject = JSON.parse(tile.keyWords);
-                    let url = BASE_URL + `/search/search-result/explore/${keyWordsObject.keyword}`; //todo url escape
-                    window.open(url, '_blank');
-                }
-                //gewoon artikel: reqform: type = "AdHocItem", adhocFormId: ...b6b:
-                //  > https://s1-eu.ariba.com/gb/reqform/35dac74f-c190-40d9-a6b6-4ff6e5bf7b6b?realm=744379882-C1
-                //raamovereenkomst: "type": "GBSearch", "keyWords": "{\"keyword\":\"\\\"SO2022_1329V ,\\\"\"}",
-                // > https://s1-eu.ariba.com/gb/search/search-result/explore/%22SO2022_1329V%20,%22?realm=744379882-C1
-                //      > %22 = double quote
-                // >> lists
+            let gotoButton = tr.querySelector("button.goto") as HTMLButtonElement;
+            gotoButton.addEventListener("click", () => {
+                onTileGotoClick(tile);
             });
         }
     }
+}
+
+function onTileGotoClick(tile: Tile | TileAdHocItem | TileGBSearch) {
+    if (isTileAdHocItem(tile)) {
+        let url = BASE_URL + `/reqform/${tile.adhocFormId}`;
+        window.open(url, '_blank');
+    } else if (isTileGBSearch(tile)) {
+        let keyWordsObject = JSON.parse(tile.keyWords);
+        let url = BASE_URL + `/search/search-result/explore/${keyWordsObject.keyword}`; //todo url escape
+        window.open(url, '_blank');
+    }
+    //gewoon artikel: reqform: type = "AdHocItem", adhocFormId: ...b6b:
+    //  > https://s1-eu.ariba.com/gb/reqform/35dac74f-c190-40d9-a6b6-4ff6e5bf7b6b?realm=744379882-C1
+    //raamovereenkomst: "type": "GBSearch", "keyWords": "{\"keyword\":\"\\\"SO2022_1329V ,\\\"\"}",
+    // > https://s1-eu.ariba.com/gb/search/search-result/explore/%22SO2022_1329V%20,%22?realm=744379882-C1
+    //      > %22 = double quote
+    // >> lists
+}
+
+function setFavoriteButton(starButton: HTMLButtonElement, tile: Tile) {
+    starButton.classList.toggle("selected", tile.favorite);
+    let i = starButton.querySelector("i") as HTMLButtonElement;
+    i.classList.toggle("fa", tile.favorite);
+    i.classList.toggle("far", !tile.favorite);
+}
+
+async function onTileFavoriteClick(tile: Tile, starButton: HTMLButtonElement) {
+    tile.favorite = !tile.favorite;
+
+    let cache = await getLocalCache();
+    await cache.Tiles.put(tile);
+    setFavoriteButton(starButton, tile);
 }
 
 export async function getTiles(infoBlock: InfoBlock, refresh: boolean = false) {
@@ -118,7 +145,7 @@ async function addResourcesToFlatList(flatList: Tile[], tilePage: AribaLandingPa
             break; //skip the next sections.
         let leaf = resource.type != "Page";
         let indexStr = index.toString().padStart(2, '0');
-        let tile: Tile = {id: parentId + "_" + indexStr, label: resource.title!, uniqueName: resource.uniqueName, leaf, type: resource.type};
+        let tile: Tile = {id: parentId + "_" + indexStr, label: resource.title!, uniqueName: resource.uniqueName, leaf, type: resource.type, favorite: false};
         if(isTileAdHocItem(tile)) {
             tile.adhocFormId = resource.adhocFormId as string;
         }

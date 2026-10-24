@@ -33095,23 +33095,44 @@ Total Duration: ${a - u}ms`);
 		for (let tile of tiles) {
 			let indent = "   ".repeat(tile.id.length);
 			let titleClass = tile.leaf ? "" : ".bold";
-			let buttonText = tile.leaf ? `button.naked.midBlueText.squircle>i.fa.fa-arrow-right` : "span";
+			let gotoButtonText = tile.leaf ? `button.goto.naked.midBlueText.squircle>i.fa.fa-arrow-right` : "span";
 			let tr = emmet.indent.appendChild(tBody, `
             tr#tile${tile.id}[data-tile-unique-name="${tile.uniqueName}"]
                 td
                     span.pre${titleClass}{${indent + tile.label}}
-                    ${buttonText}
+                    button.naked.star
+                        i.far.fa-star
+                    ${gotoButtonText}
         `).first;
-			if (tile.leaf) tr.querySelector("button").addEventListener("click", () => {
-				if (isTileAdHocItem(tile)) {
-					let url = `https://s1-eu.ariba.com/gb/reqform/${tile.adhocFormId}`;
-					window.open(url, "_blank");
-				} else if (isTileGBSearch(tile)) {
-					let url = `https://s1-eu.ariba.com/gb/search/search-result/explore/${JSON.parse(tile.keyWords).keyword}`;
-					window.open(url, "_blank");
-				}
+			let starButton = tr.querySelector("button.star");
+			starButton.addEventListener("click", async () => {
+				await onTileFavoriteClick(tile, starButton);
+			});
+			setFavoriteButton(starButton, tile);
+			if (tile.leaf) tr.querySelector("button.goto").addEventListener("click", () => {
+				onTileGotoClick(tile);
 			});
 		}
+	}
+	function onTileGotoClick(tile) {
+		if (isTileAdHocItem(tile)) {
+			let url = `https://s1-eu.ariba.com/gb/reqform/${tile.adhocFormId}`;
+			window.open(url, "_blank");
+		} else if (isTileGBSearch(tile)) {
+			let url = `https://s1-eu.ariba.com/gb/search/search-result/explore/${JSON.parse(tile.keyWords).keyword}`;
+			window.open(url, "_blank");
+		}
+	}
+	function setFavoriteButton(starButton, tile) {
+		starButton.classList.toggle("selected", tile.favorite);
+		let i = starButton.querySelector("i");
+		i.classList.toggle("fa", tile.favorite);
+		i.classList.toggle("far", !tile.favorite);
+	}
+	async function onTileFavoriteClick(tile, starButton) {
+		tile.favorite = !tile.favorite;
+		await (await getLocalCache()).Tiles.put(tile);
+		setFavoriteButton(starButton, tile);
 	}
 	async function getTiles(infoBlock, refresh = false) {
 		let localCache = await getLocalCache();
@@ -33150,7 +33171,8 @@ Total Duration: ${a - u}ms`);
 				label: resource.title,
 				uniqueName: resource.uniqueName,
 				leaf,
-				type: resource.type
+				type: resource.type,
+				favorite: false
 			};
 			if (isTileAdHocItem(tile)) tile.adhocFormId = resource.adhocFormId;
 			if (isTileGBSearch(tile)) tile.keyWords = resource.keyWords;

@@ -578,3 +578,13 @@ button.toggle {
         background-color: var(--table-row-hover-background-color);
     }
 }
+
+button.star {
+    opacity: .5;
+    &:hover {
+        opacity: 1;
+    }
+    &.selected {
+        color: yellow;
+    }
+}

@@ -1,10 +1,7 @@
 * Tile table
-  > create links (on a button)
-  > search with collapse
-    > show all parents.
   > create favorites
     > this is a filter
-  > save filter state
+    > on REFRESH - remember and restore favorites !!!!!
 
 
 * PRs "In aanmaak" are not listed?
