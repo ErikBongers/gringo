@@ -42,6 +42,8 @@ function showTileTable(divContainer: HTMLDivElement, divOrgTiles: HTMLDivElement
     let tilesTableWrapper = divContainer.querySelector("#tilesTableWrapper") as HTMLDivElement;
     tilesTableWrapper.classList.toggle("hide", !showTilesTableSetting);
     divOrgTiles.classList.toggle("hide", !tilesTableWrapper.classList.contains("hide"));
+    let button = divContainer.querySelector("button") as HTMLButtonElement;
+    button.innerText = showTilesTableSetting ? "Toon tegels" : "Toon volledige boomstructuur";
 }
 
 function decorateBody() {
@@ -52,7 +54,7 @@ function decorateBody() {
     let divContainer = emmet.indent.insertBefore(divOrgTiles, `
         div.gringo
             div.flexRow.center
-                button.naked.blueBlock{Toon volledige boomstructuur}
+                button.naked.blueBlock
             div#tileInfoBlock
             div#tilesTableWrapper.hide
                 div#tileFilterBlock.flexRow

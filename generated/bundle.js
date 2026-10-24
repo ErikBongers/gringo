@@ -33214,6 +33214,8 @@ Total Duration: ${a - u}ms`);
 		let tilesTableWrapper = divContainer.querySelector("#tilesTableWrapper");
 		tilesTableWrapper.classList.toggle("hide", !showTilesTableSetting);
 		divOrgTiles.classList.toggle("hide", !tilesTableWrapper.classList.contains("hide"));
+		let button = divContainer.querySelector("button");
+		button.innerText = showTilesTableSetting ? "Toon tegels" : "Toon volledige boomstructuur";
 	}
 	function decorateBody() {
 		gringo("homepage: decorateBody()");
@@ -33221,7 +33223,7 @@ Total Duration: ${a - u}ms`);
 		let divContainer = emmet.indent.insertBefore(divOrgTiles, `
         div.gringo
             div.flexRow.center
-                button.naked.blueBlock{Toon volledige boomstructuur}
+                button.naked.blueBlock
             div#tileInfoBlock
             div#tilesTableWrapper.hide
                 div#tileFilterBlock.flexRow
