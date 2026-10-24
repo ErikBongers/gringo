@@ -586,5 +586,9 @@ button.star {
     }
     &.selected {
         color: yellow;
+        opacity: 1;
+        i {
+            text-shadow: 0 0 1px black;
+        }
     }
 }
