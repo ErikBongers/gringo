@@ -45,19 +45,17 @@ export function createTilesTable(tiles: Tile[]) {
     let tBody = emmet.indent.appendChild(tilesTableContainer, `
         table#tilesTable
             thead
-                th{Tile}
-                th
+                th{Tiles}
             tbody
     `).last as HTMLDivElement;
     for (let tile of tiles) {
         let indent = "   ".repeat(tile.id.length);
         let titleClass = tile.leaf ? "" : ".bold";
-        let buttonText = tile.leaf ? `button.naked.midBlueText.squircle>i.fa.fa-plus` : "span";
+        let buttonText = tile.leaf ? `button.naked.midBlueText.squircle>i.fa.fa-arrow-right` : "span";
         let tr = emmet.indent.appendChild(tBody, `
             tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
                 td
                     span.pre${titleClass}{${indent + tile.label}}
-                td
                     ${buttonText}
         `).first as HTMLTableRowElement;
         if(tile.leaf) {
@@ -90,6 +88,8 @@ export async function getTiles(refresh: boolean = false) {
             return tileTree;
     }
     let tileTree = await fetchTileTree();
+    tileTree.splice(0, 1);
+    await localCache.Tiles.clear();
     await localCache.Tiles.bulkPut(tileTree);
     return tileTree;
 }
