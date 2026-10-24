@@ -2,7 +2,7 @@ import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter";
 import {createTilesTable, filterTiles, getTiles} from "./tileTable";
-import {getInfoBlock} from "../infoBlock/infoBlock";
+import {getInfoBlock, InfoBlock} from "../infoBlock/infoBlock";
 import {createSearchField} from "../utils/searchField";
 import {KEY_TILE_TEXT_FILTER} from "../def";
 
@@ -54,13 +54,15 @@ function decorateBody() {
     let divContainer = emmet.indent.insertBefore(divOrgTiles, `
         div.gringo
             div.flexRow.center
-                button.naked.blueBlock
+                button#showTilesTable.naked.blueBlock{Toon tegels of tabel}
             div#tileInfoBlock
             div#tilesTableWrapper.hide
-                div#tileFilterBlock.flexRow
+                div.flexRow
+                    div#tileFilterBlock
+                    button#refreshTiles.naked.blueBlock.flexRight{Refresh}
                 div#tilesTableContainer
     `).first as HTMLDivElement;
-    let button = divContainer.querySelector("button") as HTMLButtonElement;
+    let button = divContainer.querySelector("#showTilesTable") as HTMLButtonElement;
     button.addEventListener("click", (ev) => {
         let showTilesTableSetting = localStorage.getItem("showTilesTable") == "true";
         showTilesTableSetting = !showTilesTableSetting;
@@ -70,16 +72,33 @@ function decorateBody() {
         ev.preventDefault();
         ev.stopImmediatePropagation();
     });
+
+    let buttonRefresh = divContainer.querySelector("#refreshTiles") as HTMLButtonElement;
+    buttonRefresh.addEventListener("click", (ev) => {
+        getAndShowTiles(infoBlock, true);
+        ev.stopPropagation();
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+    });
     showTileTable(divContainer, divOrgTiles);
     let infoBlock = getInfoBlock(divContainer.querySelector("#tileInfoBlock") as HTMLDivElement);
     let filterBlock = divContainer.querySelector("#tileFilterBlock") as HTMLDivElement;
     let tileTextFilter = localStorage.getItem(KEY_TILE_TEXT_FILTER)??"";
-    let textField = createSearchField("tileTextSearch", filterTiles, tileTextFilter);
+    let textField = createSearchField("tileTextSearch", onTileFilterChanged, tileTextFilter);
     filterBlock.appendChild(textField);
-    getTiles(infoBlock).then(async (tree) => {
-        gringo(tree);
+    getAndShowTiles(infoBlock);
+}
+
+function onTileFilterChanged(text: string) {
+    gringo("filterTiles(): " + text);
+    localStorage.setItem(KEY_TILE_TEXT_FILTER, text);
+    filterTiles();
+}
+
+function getAndShowTiles(infoBlock: InfoBlock, refresh: boolean = false) {
+    getTiles(infoBlock, refresh).then(async (tree) => {
         createTilesTable(tree);
-        filterTiles(tileTextFilter);
+        filterTiles();
     });
 }
 

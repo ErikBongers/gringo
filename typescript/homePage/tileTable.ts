@@ -43,6 +43,7 @@ export function isTileAdHocItem(tile: Tile): tile is TileAdHocItem {
 
 export function createTilesTable(tiles: Tile[]) {
     let tilesTableContainer = document.querySelector("#tilesTableContainer") as HTMLDivElement;
+    tilesTableContainer.innerHTML = "";
     let tBody = emmet.indent.appendChild(tilesTableContainer, `
         table#tilesTable
             thead
@@ -107,6 +108,7 @@ async function fetchTileTree(infoBlock: InfoBlock) {
     let flatList: Tile[] = [];
     await addResourcesToFlatList(flatList, rootPage, baseUrl, "", infoBlock);
     infoBlock.progressBar.hide();
+    infoBlock.infoBar.setInfoLine("");
     return flatList;
 }
 
@@ -137,9 +139,8 @@ async function addResourcesToFlatList(flatList: Tile[], tilePage: AribaLandingPa
     }
 }
 
-export function filterTiles(text: string) {
-    gringo("filterTiles(): " + text);
-    localStorage.setItem(KEY_TILE_TEXT_FILTER, text);
+export function filterTiles() {
+    let text = localStorage.getItem(KEY_TILE_TEXT_FILTER)??"";
     let table = document.querySelector("#tilesTableContainer table") as HTMLTableElement;
     let rows = table.querySelectorAll("tr");
     let matchingIds: string[] = [];

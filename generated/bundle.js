@@ -33085,6 +33085,7 @@ Total Duration: ${a - u}ms`);
 	}
 	function createTilesTable(tiles) {
 		let tilesTableContainer = document.querySelector("#tilesTableContainer");
+		tilesTableContainer.innerHTML = "";
 		let tBody = emmet.indent.appendChild(tilesTableContainer, `
         table#tilesTable
             thead
@@ -33136,6 +33137,7 @@ Total Duration: ${a - u}ms`);
 		let flatList = [];
 		await addResourcesToFlatList(flatList, rootPage, baseUrl, "", infoBlock);
 		infoBlock.progressBar.hide();
+		infoBlock.infoBar.setInfoLine("");
 		return flatList;
 	}
 	async function addResourcesToFlatList(flatList, tilePage, baseUrl, parentId, infoBlock) {
@@ -33163,9 +33165,8 @@ Total Duration: ${a - u}ms`);
 			}
 		}
 	}
-	function filterTiles(text) {
-		gringo("filterTiles(): " + text);
-		localStorage.setItem(KEY_TILE_TEXT_FILTER, text);
+	function filterTiles() {
+		let text = localStorage.getItem("tileTextFilter") ?? "";
 		let table = document.querySelector("#tilesTableContainer table");
 		let rows = table.querySelectorAll("tr");
 		let matchingIds = [];
@@ -33223,13 +33224,15 @@ Total Duration: ${a - u}ms`);
 		let divContainer = emmet.indent.insertBefore(divOrgTiles, `
         div.gringo
             div.flexRow.center
-                button.naked.blueBlock
+                button#showTilesTable.naked.blueBlock{Toon tegels of tabel}
             div#tileInfoBlock
             div#tilesTableWrapper.hide
-                div#tileFilterBlock.flexRow
+                div.flexRow
+                    div#tileFilterBlock
+                    button#refreshTiles.naked.blueBlock.flexRight{Refresh}
                 div#tilesTableContainer
     `).first;
-		divContainer.querySelector("button").addEventListener("click", (ev) => {
+		divContainer.querySelector("#showTilesTable").addEventListener("click", (ev) => {
 			let showTilesTableSetting = localStorage.getItem("showTilesTable") == "true";
 			showTilesTableSetting = !showTilesTableSetting;
 			localStorage.setItem("showTilesTable", showTilesTableSetting.toString());
@@ -33238,16 +33241,28 @@ Total Duration: ${a - u}ms`);
 			ev.preventDefault();
 			ev.stopImmediatePropagation();
 		});
+		divContainer.querySelector("#refreshTiles").addEventListener("click", (ev) => {
+			getAndShowTiles(infoBlock, true);
+			ev.stopPropagation();
+			ev.preventDefault();
+			ev.stopImmediatePropagation();
+		});
 		showTileTable(divContainer, divOrgTiles);
 		let infoBlock = getInfoBlock(divContainer.querySelector("#tileInfoBlock"));
 		let filterBlock = divContainer.querySelector("#tileFilterBlock");
-		let tileTextFilter = localStorage.getItem("tileTextFilter") ?? "";
-		let textField = createSearchField("tileTextSearch", filterTiles, tileTextFilter);
+		let textField = createSearchField("tileTextSearch", onTileFilterChanged, localStorage.getItem("tileTextFilter") ?? "");
 		filterBlock.appendChild(textField);
-		getTiles(infoBlock).then(async (tree) => {
-			gringo(tree);
+		getAndShowTiles(infoBlock);
+	}
+	function onTileFilterChanged(text) {
+		gringo("filterTiles(): " + text);
+		localStorage.setItem(KEY_TILE_TEXT_FILTER, text);
+		filterTiles();
+	}
+	function getAndShowTiles(infoBlock, refresh = false) {
+		getTiles(infoBlock, refresh).then(async (tree) => {
 			createTilesTable(tree);
-			filterTiles(tileTextFilter);
+			filterTiles();
 		});
 	}
 	//#endregion
