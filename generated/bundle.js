@@ -33094,15 +33094,23 @@ Total Duration: ${a - u}ms`);
 		for (let tile of tiles) {
 			let indent = "   ".repeat(tile.id.length);
 			let titleClass = tile.leaf ? "" : ".bold";
-			let buttonText = tile.leaf ? "span" : `button.naked.midBlueText.squircle>i.fa.fa-plus`;
-			emmet.indent.appendChild(tBody, `
+			let buttonText = tile.leaf ? `button.naked.midBlueText.squircle>i.fa.fa-plus` : "span";
+			let tr = emmet.indent.appendChild(tBody, `
             tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
                 td
                     span.pre${titleClass}{${indent + tile.label}}
                 td
                     ${buttonText}
-        `);
-			tBody.querySelector("button").addEventListener("click", () => {});
+        `).first;
+			if (tile.leaf) tr.querySelector("button").addEventListener("click", () => {
+				if (isTileAdHocItem(tile)) {
+					let url = `https://s1-eu.ariba.com/gb/reqform/${tile.adhocFormId}`;
+					window.open(url, "_blank");
+				} else if (isTileGBSearch(tile)) {
+					let url = `https://s1-eu.ariba.com/gb/search/search-result/explore/${JSON.parse(tile.keyWords).keyword}`;
+					window.open(url, "_blank");
+				}
+			});
 		}
 	}
 	async function getTiles(refresh = false) {
@@ -33164,7 +33172,7 @@ Total Duration: ${a - u}ms`);
 		checkDecorations();
 	}
 	function isPageProbablyLoaded() {
-		return true;
+		return document.querySelector("#popular") != null;
 	}
 	function onMutation() {
 		checkDecorations();

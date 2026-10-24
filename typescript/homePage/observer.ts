@@ -21,7 +21,7 @@ function onPageRefreshed() {
 }
 
 function isPageProbablyLoaded(): boolean {
-    return true;
+    return document.querySelector("#popular") != null;
 }
 
 function onMutation() {

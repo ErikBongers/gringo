@@ -3,6 +3,7 @@ import {AribaLandingPage} from "../sap/LandingPage";
 import {FetchChain} from "../utils/fetchChain";
 import {getLocalCache} from "../db/idb/localDb";
 import {getBaseUrlWithTenantAndUser} from "../globals";
+import {BASE_URL} from "../def";
 
 export interface Tile {
     id: string;
@@ -51,24 +52,33 @@ export function createTilesTable(tiles: Tile[]) {
     for (let tile of tiles) {
         let indent = "   ".repeat(tile.id.length);
         let titleClass = tile.leaf ? "" : ".bold";
-        let buttonText = tile.leaf ? "span" : `button.naked.midBlueText.squircle>i.fa.fa-plus`;
-        emmet.indent.appendChild(tBody, `
+        let buttonText = tile.leaf ? `button.naked.midBlueText.squircle>i.fa.fa-plus` : "span";
+        let tr = emmet.indent.appendChild(tBody, `
             tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
                 td
                     span.pre${titleClass}{${indent + tile.label}}
                 td
                     ${buttonText}
-        `);
-        let button = tBody.querySelector("button") as HTMLButtonElement;
-        button.addEventListener("click", () => {
-            //gewoon artikel: reqform: type = "AdHocItem", adhocFormId: ...b6b:
-            //  > https://s1-eu.ariba.com/gb/reqform/35dac74f-c190-40d9-a6b6-4ff6e5bf7b6b?realm=744379882-C1
-            //raamovereenkomst: "type": "GBSearch", "keyWords": "{\"keyword\":\"\\\"SO2022_1329V ,\\\"\"}",
-            // > https://s1-eu.ariba.com/gb/search/search-result/explore/%22SO2022_1329V%20,%22?realm=744379882-C1
-            //      > %22 = double quote
-            // >> lists
-
-        });
+        `).first as HTMLTableRowElement;
+        if(tile.leaf) {
+            let button = tr.querySelector("button") as HTMLButtonElement;
+            button.addEventListener("click", () => {
+                if (isTileAdHocItem(tile)) {
+                    let url = BASE_URL + `/reqform/${tile.adhocFormId}`;
+                    window.open(url, '_blank');
+                } else if (isTileGBSearch(tile)) {
+                    let keyWordsObject = JSON.parse(tile.keyWords);
+                    let url = BASE_URL + `/search/search-result/explore/${keyWordsObject.keyword}`; //todo url escape
+                    window.open(url, '_blank');
+                }
+                //gewoon artikel: reqform: type = "AdHocItem", adhocFormId: ...b6b:
+                //  > https://s1-eu.ariba.com/gb/reqform/35dac74f-c190-40d9-a6b6-4ff6e5bf7b6b?realm=744379882-C1
+                //raamovereenkomst: "type": "GBSearch", "keyWords": "{\"keyword\":\"\\\"SO2022_1329V ,\\\"\"}",
+                // > https://s1-eu.ariba.com/gb/search/search-result/explore/%22SO2022_1329V%20,%22?realm=744379882-C1
+                //      > %22 = double quote
+                // >> lists
+            });
+        }
     }
 }
 
