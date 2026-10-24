@@ -592,3 +592,10 @@ button.star {
         }
     }
 }
+
+#tileFilterBlock {
+    button.star {
+        font-size: 1.3em;
+        margin-inline-start: .7ch;
+    }
+}

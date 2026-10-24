@@ -3,7 +3,7 @@ import {AribaLandingPage} from "../sap/LandingPage";
 import {FetchChain} from "../utils/fetchChain";
 import {getLocalCache} from "../db/idb/localDb";
 import {getBaseUrlWithTenantAndUser, gringo} from "../globals";
-import {BASE_URL, KEY_TILE_TEXT_FILTER} from "../def";
+import {BASE_URL, KEY_TILE_FAVORITE_FILTER, KEY_TILE_TEXT_FILTER} from "../def";
 import {InfoBlock} from "../infoBlock/infoBlock";
 
 export interface Tile {
@@ -168,13 +168,17 @@ async function addResourcesToFlatList(flatList: Tile[], tilePage: AribaLandingPa
 
 export function filterTiles() {
     let text = localStorage.getItem(KEY_TILE_TEXT_FILTER)??"";
+    let favorite = localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true";
+    let tileFilter: TileFilter = {
+        text: text,
+        favorite: favorite
+    };
     let table = document.querySelector("#tilesTableContainer table") as HTMLTableElement;
     let rows = table.querySelectorAll("tr");
     let matchingIds: string[] = [];
     for (let row of rows) {
         row.classList.add("hide");
-        let textContent = row.textContent;
-        if (textContent.toLowerCase().includes(text.toLowerCase())) {
+        if (rowFilter(row, tileFilter)) {
             matchingIds.push(row.id);
         }
     }
@@ -193,4 +197,20 @@ export function filterTiles() {
     for(let hiddenRow of table.querySelectorAll("tr.hide")) {
         hiddenRow.classList.toggle("hide", !matchingIds.some(id => hiddenRow.id.startsWith(id))); //todo: more efficient match? because cartesian product.
     }
+}
+
+interface TileFilter {
+    text: string;
+    favorite: boolean;
+}
+
+function rowFilter(tr: HTMLTableRowElement, tileFilter: TileFilter) {
+    let textContent = tr.textContent;
+    if (tileFilter.text && !textContent.toLowerCase().includes(tileFilter.text.toLowerCase()))
+        return false;
+    let favorite = tr.querySelector("button.selected")?.classList.contains("selected") ?? false;
+    // noinspection RedundantIfStatementJS
+    if (tileFilter.favorite && !favorite)
+        return false;
+    return true;
 }

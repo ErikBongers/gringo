@@ -4,7 +4,7 @@ import {emmet} from "../../libs/Emmeter";
 import {createTilesTable, filterTiles, getTiles} from "./tileTable";
 import {getInfoBlock, InfoBlock} from "../infoBlock/infoBlock";
 import {createSearchField} from "../utils/searchField";
-import {KEY_TILE_TEXT_FILTER} from "../def";
+import {KEY_TILE_FAVORITE_FILTER, KEY_TILE_TEXT_FILTER} from "../def";
 
 class HomePageObserver extends PartialUrlObserver {
     constructor() {
@@ -86,7 +86,25 @@ function decorateBody() {
     let tileTextFilter = localStorage.getItem(KEY_TILE_TEXT_FILTER)??"";
     let textField = createSearchField("tileTextSearch", onTileFilterChanged, tileTextFilter);
     filterBlock.appendChild(textField);
+    let buttonStar = emmet.indent.appendChild(filterBlock, `
+        button.star.naked
+            i.far.fa-star
+    `).first as HTMLButtonElement;
+    buttonStar.addEventListener("click", (ev) => {
+        onButtonStarClicked(ev);
+        ev.stopPropagation();
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+    });
+    let favoritesFilter = localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true";
+    buttonStar.classList.toggle("selected", favoritesFilter);
     getAndShowTiles(infoBlock);
+}
+
+function onButtonStarClicked(ev: PointerEvent) {
+    let favoritesFilter = localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true";
+    localStorage.setItem(KEY_TILE_FAVORITE_FILTER, favoritesFilter ? "false" : "true");
+    filterTiles();
 }
 
 function onTileFilterChanged(text: string) {

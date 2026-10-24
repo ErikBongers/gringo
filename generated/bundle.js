@@ -546,6 +546,7 @@
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
 	const GLOBAL_SETTINGS_FILENAME = "gringo/gringo_global_settings.json";
 	const KEY_TILE_TEXT_FILTER = "tileTextFilter";
+	const KEY_TILE_FAVORITE_FILTER = "tileFavoriteFilter";
 	//#endregion
 	//#region typescript/cloud.ts
 	let cloud = { json: {
@@ -33188,13 +33189,16 @@ Total Duration: ${a - u}ms`);
 		}
 	}
 	function filterTiles() {
-		let text = localStorage.getItem("tileTextFilter") ?? "";
+		let tileFilter = {
+			text: localStorage.getItem("tileTextFilter") ?? "",
+			favorite: localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true"
+		};
 		let table = document.querySelector("#tilesTableContainer table");
 		let rows = table.querySelectorAll("tr");
 		let matchingIds = [];
 		for (let row of rows) {
 			row.classList.add("hide");
-			if (row.textContent.toLowerCase().includes(text.toLowerCase())) matchingIds.push(row.id);
+			if (rowFilter(row, tileFilter)) matchingIds.push(row.id);
 		}
 		let parentIds = [];
 		for (let id of matchingIds) {
@@ -33205,6 +33209,13 @@ Total Duration: ${a - u}ms`);
 		gringo("parentIds: " + parentIds);
 		for (let id of matchingIds.concat(parentIds)) document.getElementById(id)?.classList.remove("hide");
 		for (let hiddenRow of table.querySelectorAll("tr.hide")) hiddenRow.classList.toggle("hide", !matchingIds.some((id) => hiddenRow.id.startsWith(id)));
+	}
+	function rowFilter(tr, tileFilter) {
+		let textContent = tr.textContent;
+		if (tileFilter.text && !textContent.toLowerCase().includes(tileFilter.text.toLowerCase())) return false;
+		let favorite = tr.querySelector("button.selected")?.classList.contains("selected") ?? false;
+		if (tileFilter.favorite && !favorite) return false;
+		return true;
 	}
 	//#endregion
 	//#region typescript/homePage/observer.ts
@@ -33274,7 +33285,24 @@ Total Duration: ${a - u}ms`);
 		let filterBlock = divContainer.querySelector("#tileFilterBlock");
 		let textField = createSearchField("tileTextSearch", onTileFilterChanged, localStorage.getItem("tileTextFilter") ?? "");
 		filterBlock.appendChild(textField);
+		let buttonStar = emmet.indent.appendChild(filterBlock, `
+        button.star.naked
+            i.far.fa-star
+    `).first;
+		buttonStar.addEventListener("click", (ev) => {
+			onButtonStarClicked(ev);
+			ev.stopPropagation();
+			ev.preventDefault();
+			ev.stopImmediatePropagation();
+		});
+		let favoritesFilter = localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true";
+		buttonStar.classList.toggle("selected", favoritesFilter);
 		getAndShowTiles(infoBlock);
+	}
+	function onButtonStarClicked(ev) {
+		let favoritesFilter = localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true";
+		localStorage.setItem(KEY_TILE_FAVORITE_FILTER, favoritesFilter ? "false" : "true");
+		filterTiles();
 	}
 	function onTileFilterChanged(text) {
 		gringo("filterTiles(): " + text);
