@@ -1,7 +1,7 @@
 .request-item-container {
     request-info-item {
         &:hover {
-            background: rgb(72 61 139 / 0.05);
+            background: var(--table-row-hover-background-color);
         }
         & div {
             background: inherit;

@@ -529,6 +529,9 @@ tr.hidden {
 .ngx-app button.solo {
     font-weight: bold;
     margin-left: .3ch;
+}
+
+.squircle {
     padding: .3ch;
     width: 3ch;
     border-radius: 1ch;
@@ -563,4 +566,10 @@ button.toggle {
     padding: .5ch;
     background: #f0f0f0;
     border-radius: 999px;
+}
+
+#tilesTable {
+    tr:hover {
+        background-color: var(--table-row-hover-background-color);
+    }
 }

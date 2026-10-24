@@ -6,26 +6,69 @@ import {getBaseUrlWithTenantAndUser} from "../globals";
 
 export interface Tile {
     id: string;
+    type: string;
     label: string;
     uniqueName: string;
     commodityCode?: string;
     leaf: boolean;
 }
 
+export interface TilePage extends Tile {
+    type: "Page";
+}
+
+export interface TileGBSearch extends Tile {
+    type: "GBSearch";
+    keyWords: string;
+}
+
+export interface TileAdHocItem extends Tile {
+    type: "AdHocItem";
+    adhocFormId: string;
+}
+
+export function isTilePage(tile: Tile): tile is TilePage {
+    return tile.type === "Page";
+}
+
+export function isTileGBSearch(tile: Tile): tile is TileGBSearch {
+    return tile.type === "GBSearch";
+}
+
+export function isTileAdHocItem(tile: Tile): tile is TileAdHocItem {
+    return tile.type === "AdHocItem";
+}
+
 export function createTilesTable(tiles: Tile[]) {
     let tilesTableContainer = document.querySelector("#tilesTableContainer") as HTMLDivElement;
     let tBody = emmet.indent.appendChild(tilesTableContainer, `
         table#tilesTable
+            thead
+                th{Tile}
+                th
             tbody
     `).last as HTMLDivElement;
     for (let tile of tiles) {
         let indent = "   ".repeat(tile.id.length);
         let titleClass = tile.leaf ? "" : ".bold";
+        let buttonText = tile.leaf ? "span" : `button.naked.midBlueText.squircle>i.fa.fa-plus`;
         emmet.indent.appendChild(tBody, `
             tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
                 td
                     span.pre${titleClass}{${indent + tile.label}}
+                td
+                    ${buttonText}
         `);
+        let button = tBody.querySelector("button") as HTMLButtonElement;
+        button.addEventListener("click", () => {
+            //gewoon artikel: reqform: type = "AdHocItem", adhocFormId: ...b6b:
+            //  > https://s1-eu.ariba.com/gb/reqform/35dac74f-c190-40d9-a6b6-4ff6e5bf7b6b?realm=744379882-C1
+            //raamovereenkomst: "type": "GBSearch", "keyWords": "{\"keyword\":\"\\\"SO2022_1329V ,\\\"\"}",
+            // > https://s1-eu.ariba.com/gb/search/search-result/explore/%22SO2022_1329V%20,%22?realm=744379882-C1
+            //      > %22 = double quote
+            // >> lists
+
+        });
     }
 }
 
@@ -57,7 +100,13 @@ async function addResourcesToFlatList(flatList: Tile[], tilePage: AribaLandingPa
         if (resource.type == "GeneralCarousel")
             break; //skip the next sections.
         let leaf = resource.type != "Page";
-        let tile: Tile = {id: parentId + "." + index, label: resource.title!, uniqueName: resource.uniqueName, leaf};
+        let tile: Tile = {id: parentId + "." + index, label: resource.title!, uniqueName: resource.uniqueName, leaf, type: resource.type};
+        if(isTileAdHocItem(tile)) {
+            tile.adhocFormId = resource.adhocFormId as string;
+        }
+        if (isTileGBSearch(tile)) {
+            tile.keyWords = resource.keyWords as string;
+        }
         if (resource.commodityCode)
             tile.commodityCode = resource.commodityCode as string;
         flatList.push(tile);

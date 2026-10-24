@@ -40,7 +40,7 @@ export async function createSearchPanel(divSearchPanel: HTMLDivElement, applyFil
     let searchWrapper = divSearchPanel.querySelector(".searchTextWrapper") as HTMLDivElement;
     searchWrapper.appendChild(searchField);
     let soloButton = emmet.indent.appendChild(searchWrapper, `
-        button.w2ch.naked.greenBkg.white.solo.toggle{S}[title="Solo"]
+        button.w2ch.naked.greenBkg.white.squircle.solo.toggle{S}[title="Solo"]
     `).first as HTMLButtonElement;
     soloButton.addEventListener("click", () => {
         soloButton.classList.toggle("active");

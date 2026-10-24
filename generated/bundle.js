@@ -32301,7 +32301,7 @@ Total Duration: ${a - u}ms`);
 		let searchWrapper = divSearchPanel.querySelector(".searchTextWrapper");
 		searchWrapper.appendChild(searchField);
 		let soloButton = emmet.indent.appendChild(searchWrapper, `
-        button.w2ch.naked.greenBkg.white.solo.toggle{S}[title="Solo"]
+        button.w2ch.naked.greenBkg.white.squircle.solo.toggle{S}[title="Solo"]
     `).first;
 		soloButton.addEventListener("click", () => {
 			soloButton.classList.toggle("active");
@@ -33075,6 +33075,80 @@ Total Duration: ${a - u}ms`);
 		}
 	}
 	//#endregion
+	//#region typescript/homePage/tileTable.ts
+	function isTileGBSearch(tile) {
+		return tile.type === "GBSearch";
+	}
+	function isTileAdHocItem(tile) {
+		return tile.type === "AdHocItem";
+	}
+	function createTilesTable(tiles) {
+		let tilesTableContainer = document.querySelector("#tilesTableContainer");
+		let tBody = emmet.indent.appendChild(tilesTableContainer, `
+        table#tilesTable
+            thead
+                th{Tile}
+                th
+            tbody
+    `).last;
+		for (let tile of tiles) {
+			let indent = "   ".repeat(tile.id.length);
+			let titleClass = tile.leaf ? "" : ".bold";
+			let buttonText = tile.leaf ? "span" : `button.naked.midBlueText.squircle>i.fa.fa-plus`;
+			emmet.indent.appendChild(tBody, `
+            tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
+                td
+                    span.pre${titleClass}{${indent + tile.label}}
+                td
+                    ${buttonText}
+        `);
+			tBody.querySelector("button").addEventListener("click", () => {});
+		}
+	}
+	async function getTiles(refresh = false) {
+		let localCache = await getLocalCache();
+		if (!refresh) {
+			let tileTree = await localCache.Tiles.getAll();
+			if (tileTree.length > 0) return tileTree;
+		}
+		let tileTree = await fetchTileTree();
+		await localCache.Tiles.bulkPut(tileTree);
+		return tileTree;
+	}
+	async function fetchTileTree() {
+		let baseUrl = await getBaseUrlWithTenantAndUser();
+		let popularPageUrl = `${baseUrl}/resource/wellknown/PopularPage`;
+		let chain = new FetchChain();
+		await chain.fetch(popularPageUrl);
+		let rootPage = chain.getJson();
+		let flatList = [];
+		await addResourcesToFlatList(flatList, rootPage, baseUrl, "");
+		return flatList;
+	}
+	async function addResourcesToFlatList(flatList, tilePage, baseUrl, parentId) {
+		for (let [index, resource] of tilePage.resources.entries()) {
+			if (resource.type == "GeneralCarousel") break;
+			let leaf = resource.type != "Page";
+			let tile = {
+				id: parentId + "." + index,
+				label: resource.title,
+				uniqueName: resource.uniqueName,
+				leaf,
+				type: resource.type
+			};
+			if (isTileAdHocItem(tile)) tile.adhocFormId = resource.adhocFormId;
+			if (isTileGBSearch(tile)) tile.keyWords = resource.keyWords;
+			if (resource.commodityCode) tile.commodityCode = resource.commodityCode;
+			flatList.push(tile);
+			if (resource.type == "Page") {
+				let tilePageUrl = `${baseUrl}/resource/container/${resource.id}?pu=PU_AG+Stedelijk+Onderwijs&puHierarchyPath=PU_AG+Stedelijk+Onderwijs,All`;
+				let tilePageChain = new FetchChain();
+				await tilePageChain.fetch(tilePageUrl);
+				await addResourcesToFlatList(flatList, tilePageChain.getJson(), baseUrl, tile.id);
+			}
+		}
+	}
+	//#endregion
 	//#region typescript/homePage/observer.ts
 	var HomePageObserver = class extends PartialUrlObserver {
 		constructor() {
@@ -33109,62 +33183,6 @@ Total Duration: ${a - u}ms`);
         `);
 			createTilesTable(tree);
 		});
-	}
-	function createTilesTable(tiles) {
-		let tilesTableContainer = document.querySelector("#tilesTableContainer");
-		let tBody = emmet.indent.appendChild(tilesTableContainer, `
-        table#tilesTable
-            tbody
-    `).last;
-		for (let tile of tiles) {
-			let indent = "   ".repeat(tile.id.length);
-			let titleClass = tile.leaf ? "" : ".bold";
-			emmet.indent.appendChild(tBody, `
-            tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
-                td
-                    span.pre${titleClass}{${indent + tile.label}}
-        `);
-		}
-	}
-	async function getTiles(refresh = false) {
-		let localCache = await getLocalCache();
-		if (!refresh) {
-			let tileTree = await localCache.Tiles.getAll();
-			if (tileTree.length > 0) return tileTree;
-		}
-		let tileTree = await fetchTileTree();
-		await localCache.Tiles.bulkPut(tileTree);
-		return tileTree;
-	}
-	async function fetchTileTree() {
-		let baseUrl = await getBaseUrlWithTenantAndUser();
-		let popularPageUrl = `${baseUrl}/resource/wellknown/PopularPage`;
-		let chain = new FetchChain();
-		await chain.fetch(popularPageUrl);
-		let rootPage = chain.getJson();
-		let flatList = [];
-		await addResourcesToFlatList(flatList, rootPage, baseUrl, "");
-		return flatList;
-	}
-	async function addResourcesToFlatList(flatList, tilePage, baseUrl, parentId) {
-		for (let [index, resource] of tilePage.resources.entries()) {
-			if (resource.type == "GeneralCarousel") break;
-			let leaf = resource.type != "Page";
-			let tile = {
-				id: parentId + "." + index,
-				label: resource.title,
-				uniqueName: resource.uniqueName,
-				leaf
-			};
-			if (resource.commodityCode) tile.commodityCode = resource.commodityCode;
-			flatList.push(tile);
-			if (resource.type == "Page") {
-				let tilePageUrl = `${baseUrl}/resource/container/${resource.id}?pu=PU_AG+Stedelijk+Onderwijs&puHierarchyPath=PU_AG+Stedelijk+Onderwijs,All`;
-				let tilePageChain = new FetchChain();
-				await tilePageChain.fetch(tilePageUrl);
-				await addResourcesToFlatList(flatList, tilePageChain.getJson(), baseUrl, tile.id);
-			}
-		}
 	}
 	//#endregion
 	//#region typescript/main.ts
