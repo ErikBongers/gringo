@@ -259,6 +259,11 @@ request-info-item.hidden {
     margin-inline-start: auto;
 }
 
+.flexRow.center {
+    align-items: center;
+    justify-content: center;
+}
+
 .newTotal {
     font-weight: bold;
     font-size: 1.3em;

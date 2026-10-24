@@ -6,3 +6,4 @@ export const KEY_CLOUD_PR_FOLDER = KEY_CLOUD_GRINGO_FOLDER + "pr/";
 export const GLOBAL_SETTINGS_FILENAME = KEY_CLOUD_GRINGO_FOLDER + "gringo_global_settings.json";
 export const KEY_ALL_PRS_FILENAME_NOEXT = KEY_CLOUD_PR_FOLDER + "allPrs";
 export const BASE_URL = "https://s1-eu.ariba.com/gb";
+export const KEY_TILE_TEXT_FILTER = "tileTextFilter";

@@ -2,8 +2,9 @@ import {emmet} from "../../libs/Emmeter";
 import {AribaLandingPage} from "../sap/LandingPage";
 import {FetchChain} from "../utils/fetchChain";
 import {getLocalCache} from "../db/idb/localDb";
-import {getBaseUrlWithTenantAndUser} from "../globals";
-import {BASE_URL} from "../def";
+import {getBaseUrlWithTenantAndUser, gringo} from "../globals";
+import {BASE_URL, KEY_TILE_TEXT_FILTER} from "../def";
+import {InfoBlock} from "../infoBlock/infoBlock";
 
 export interface Tile {
     id: string;
@@ -45,7 +46,7 @@ export function createTilesTable(tiles: Tile[]) {
     let tBody = emmet.indent.appendChild(tilesTableContainer, `
         table#tilesTable
             thead
-                th{Tiles}
+                th
             tbody
     `).last as HTMLDivElement;
     for (let tile of tiles) {
@@ -53,7 +54,7 @@ export function createTilesTable(tiles: Tile[]) {
         let titleClass = tile.leaf ? "" : ".bold";
         let buttonText = tile.leaf ? `button.naked.midBlueText.squircle>i.fa.fa-arrow-right` : "span";
         let tr = emmet.indent.appendChild(tBody, `
-            tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
+            tr#tile${tile.id}[data-tile-unique-name="${tile.uniqueName}"]
                 td
                     span.pre${titleClass}{${indent + tile.label}}
                     ${buttonText}
@@ -80,38 +81,42 @@ export function createTilesTable(tiles: Tile[]) {
     }
 }
 
-export async function getTiles(refresh: boolean = false) {
+export async function getTiles(infoBlock: InfoBlock, refresh: boolean = false) {
     let localCache = await getLocalCache();
     if (!refresh) {
         let tileTree = await localCache.Tiles.getAll();
         if (tileTree.length > 0)
             return tileTree;
     }
-    let tileTree = await fetchTileTree();
+    let tileTree = await fetchTileTree(infoBlock);
     tileTree.splice(0, 1);
     await localCache.Tiles.clear();
     await localCache.Tiles.bulkPut(tileTree);
     return tileTree;
 }
 
-async function fetchTileTree() {
+async function fetchTileTree(infoBlock: InfoBlock) {
+    infoBlock.infoBar.setInfoLine("Ophalen alle tegels...")
+    infoBlock.progressBar.start(500);//estimate
     let baseUrl = await getBaseUrlWithTenantAndUser();
     let popularPageUrl = `${baseUrl}/resource/wellknown/PopularPage`;
     let chain = new FetchChain();
     await chain.fetch(popularPageUrl);
+    infoBlock.progressBar.next();
     let rootPage: AribaLandingPage = chain.getJson() as AribaLandingPage;
     let flatList: Tile[] = [];
-    await addResourcesToFlatList(flatList, rootPage, baseUrl, "");
+    await addResourcesToFlatList(flatList, rootPage, baseUrl, "", infoBlock);
+    infoBlock.progressBar.hide();
     return flatList;
 }
 
-async function addResourcesToFlatList(flatList: Tile[], tilePage: AribaLandingPage, baseUrl: string, parentId: string) {
+async function addResourcesToFlatList(flatList: Tile[], tilePage: AribaLandingPage, baseUrl: string, parentId: string, infoBlock: InfoBlock) {
     for (let [index, resource] of tilePage.resources!.entries()) {
         if (resource.type == "GeneralCarousel")
             break; //skip the next sections.
         let leaf = resource.type != "Page";
         let indexStr = index.toString().padStart(2, '0');
-        let tile: Tile = {id: parentId + "." + indexStr, label: resource.title!, uniqueName: resource.uniqueName, leaf, type: resource.type};
+        let tile: Tile = {id: parentId + "_" + indexStr, label: resource.title!, uniqueName: resource.uniqueName, leaf, type: resource.type};
         if(isTileAdHocItem(tile)) {
             tile.adhocFormId = resource.adhocFormId as string;
         }
@@ -125,8 +130,39 @@ async function addResourcesToFlatList(flatList: Tile[], tilePage: AribaLandingPa
             let tilePageUrl = `${baseUrl}/resource/container/${resource.id}?pu=PU_AG+Stedelijk+Onderwijs&puHierarchyPath=PU_AG+Stedelijk+Onderwijs,All`;
             let tilePageChain = new FetchChain();
             await tilePageChain.fetch(tilePageUrl);
+            infoBlock.progressBar.next();
             let tilePage: AribaLandingPage = tilePageChain.getJson() as AribaLandingPage;
-            await addResourcesToFlatList(flatList, tilePage, baseUrl, tile.id);
+            await addResourcesToFlatList(flatList, tilePage, baseUrl, tile.id, infoBlock);
         }
+    }
+}
+
+export function filterTiles(text: string) {
+    gringo("filterTiles(): " + text);
+    localStorage.setItem(KEY_TILE_TEXT_FILTER, text);
+    let table = document.querySelector("#tilesTableContainer table") as HTMLTableElement;
+    let rows = table.querySelectorAll("tr");
+    let matchingIds: string[] = [];
+    for (let row of rows) {
+        row.classList.add("hide");
+        let textContent = row.textContent;
+        if (textContent.toLowerCase().includes(text.toLowerCase())) {
+            matchingIds.push(row.id);
+        }
+    }
+    let parentIds: string[] = [];
+    for (let id of matchingIds) {
+        let splits = id.split("_");
+        while(splits.pop())
+            parentIds.push(splits.join("_"));
+    }
+    gringo("matchingIds: " + matchingIds);
+    gringo("parentIds: " + parentIds);
+
+    for(let id of matchingIds.concat(parentIds)) {
+        document.getElementById(id)?.classList.remove("hide");
+    }
+    for(let hiddenRow of table.querySelectorAll("tr.hide")) {
+        hiddenRow.classList.toggle("hide", !matchingIds.some(id => hiddenRow.id.startsWith(id))); //todo: more efficient match? because cartesian product.
     }
 }

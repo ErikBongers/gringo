@@ -545,6 +545,7 @@
 	//#region typescript/def.ts
 	const JSON_URL = "https://europe-west1-ebo-tain.cloudfunctions.net/json";
 	const GLOBAL_SETTINGS_FILENAME = "gringo/gringo_global_settings.json";
+	const KEY_TILE_TEXT_FILTER = "tileTextFilter";
 	//#endregion
 	//#region typescript/cloud.ts
 	let cloud = { json: {
@@ -33087,7 +33088,7 @@ Total Duration: ${a - u}ms`);
 		let tBody = emmet.indent.appendChild(tilesTableContainer, `
         table#tilesTable
             thead
-                th{Tiles}
+                th
             tbody
     `).last;
 		for (let tile of tiles) {
@@ -33095,7 +33096,7 @@ Total Duration: ${a - u}ms`);
 			let titleClass = tile.leaf ? "" : ".bold";
 			let buttonText = tile.leaf ? `button.naked.midBlueText.squircle>i.fa.fa-arrow-right` : "span";
 			let tr = emmet.indent.appendChild(tBody, `
-            tr[datatile-id="${tile.id}" data-tile-unique-name="${tile.uniqueName}"]
+            tr#tile${tile.id}[data-tile-unique-name="${tile.uniqueName}"]
                 td
                     span.pre${titleClass}{${indent + tile.label}}
                     ${buttonText}
@@ -33111,35 +33112,39 @@ Total Duration: ${a - u}ms`);
 			});
 		}
 	}
-	async function getTiles(refresh = false) {
+	async function getTiles(infoBlock, refresh = false) {
 		let localCache = await getLocalCache();
 		if (!refresh) {
 			let tileTree = await localCache.Tiles.getAll();
 			if (tileTree.length > 0) return tileTree;
 		}
-		let tileTree = await fetchTileTree();
+		let tileTree = await fetchTileTree(infoBlock);
 		tileTree.splice(0, 1);
 		await localCache.Tiles.clear();
 		await localCache.Tiles.bulkPut(tileTree);
 		return tileTree;
 	}
-	async function fetchTileTree() {
+	async function fetchTileTree(infoBlock) {
+		infoBlock.infoBar.setInfoLine("Ophalen alle tegels...");
+		infoBlock.progressBar.start(500);
 		let baseUrl = await getBaseUrlWithTenantAndUser();
 		let popularPageUrl = `${baseUrl}/resource/wellknown/PopularPage`;
 		let chain = new FetchChain();
 		await chain.fetch(popularPageUrl);
+		infoBlock.progressBar.next();
 		let rootPage = chain.getJson();
 		let flatList = [];
-		await addResourcesToFlatList(flatList, rootPage, baseUrl, "");
+		await addResourcesToFlatList(flatList, rootPage, baseUrl, "", infoBlock);
+		infoBlock.progressBar.hide();
 		return flatList;
 	}
-	async function addResourcesToFlatList(flatList, tilePage, baseUrl, parentId) {
+	async function addResourcesToFlatList(flatList, tilePage, baseUrl, parentId, infoBlock) {
 		for (let [index, resource] of tilePage.resources.entries()) {
 			if (resource.type == "GeneralCarousel") break;
 			let leaf = resource.type != "Page";
 			let indexStr = index.toString().padStart(2, "0");
 			let tile = {
-				id: parentId + "." + indexStr,
+				id: parentId + "_" + indexStr,
 				label: resource.title,
 				uniqueName: resource.uniqueName,
 				leaf,
@@ -33153,9 +33158,30 @@ Total Duration: ${a - u}ms`);
 				let tilePageUrl = `${baseUrl}/resource/container/${resource.id}?pu=PU_AG+Stedelijk+Onderwijs&puHierarchyPath=PU_AG+Stedelijk+Onderwijs,All`;
 				let tilePageChain = new FetchChain();
 				await tilePageChain.fetch(tilePageUrl);
-				await addResourcesToFlatList(flatList, tilePageChain.getJson(), baseUrl, tile.id);
+				infoBlock.progressBar.next();
+				await addResourcesToFlatList(flatList, tilePageChain.getJson(), baseUrl, tile.id, infoBlock);
 			}
 		}
+	}
+	function filterTiles(text) {
+		gringo("filterTiles(): " + text);
+		localStorage.setItem(KEY_TILE_TEXT_FILTER, text);
+		let table = document.querySelector("#tilesTableContainer table");
+		let rows = table.querySelectorAll("tr");
+		let matchingIds = [];
+		for (let row of rows) {
+			row.classList.add("hide");
+			if (row.textContent.toLowerCase().includes(text.toLowerCase())) matchingIds.push(row.id);
+		}
+		let parentIds = [];
+		for (let id of matchingIds) {
+			let splits = id.split("_");
+			while (splits.pop()) parentIds.push(splits.join("_"));
+		}
+		gringo("matchingIds: " + matchingIds);
+		gringo("parentIds: " + parentIds);
+		for (let id of matchingIds.concat(parentIds)) document.getElementById(id)?.classList.remove("hide");
+		for (let hiddenRow of table.querySelectorAll("tr.hide")) hiddenRow.classList.toggle("hide", !matchingIds.some((id) => hiddenRow.id.startsWith(id)));
 	}
 	//#endregion
 	//#region typescript/homePage/observer.ts
@@ -33173,6 +33199,7 @@ Total Duration: ${a - u}ms`);
 		checkDecorations();
 	}
 	function isPageProbablyLoaded() {
+		gringo("checking page loaded...");
 		return document.querySelector("#popular") != null;
 	}
 	function onMutation() {
@@ -33180,17 +33207,45 @@ Total Duration: ${a - u}ms`);
 		return false;
 	}
 	function checkDecorations() {
-		checkAndSetDecoration(document.querySelector("body"), decorateBody);
+		checkAndSetDecoration(document.querySelector("#popular"), decorateBody);
+	}
+	function showTileTable(divContainer, divOrgTiles) {
+		let showTilesTableSetting = localStorage.getItem("showTilesTable") == "true";
+		let tilesTableWrapper = divContainer.querySelector("#tilesTableWrapper");
+		tilesTableWrapper.classList.toggle("hide", !showTilesTableSetting);
+		divOrgTiles.classList.toggle("hide", !tilesTableWrapper.classList.contains("hide"));
 	}
 	function decorateBody() {
 		gringo("homepage: decorateBody()");
-		getTiles(true).then(async (tree) => {
+		let divOrgTiles = document.querySelector("#popular").querySelector(".product-list").closest(".row");
+		let divContainer = emmet.indent.insertBefore(divOrgTiles, `
+        div.gringo
+            div.flexRow.center
+                button.naked.blueBlock{Toon volledige boomstructuur}
+            div#tileInfoBlock
+            div#tilesTableWrapper.hide
+                div#tileFilterBlock.flexRow
+                div#tilesTableContainer
+    `).first;
+		divContainer.querySelector("button").addEventListener("click", (ev) => {
+			let showTilesTableSetting = localStorage.getItem("showTilesTable") == "true";
+			showTilesTableSetting = !showTilesTableSetting;
+			localStorage.setItem("showTilesTable", showTilesTableSetting.toString());
+			showTileTable(divContainer, divOrgTiles);
+			ev.stopPropagation();
+			ev.preventDefault();
+			ev.stopImmediatePropagation();
+		});
+		showTileTable(divContainer, divOrgTiles);
+		let infoBlock = getInfoBlock(divContainer.querySelector("#tileInfoBlock"));
+		let filterBlock = divContainer.querySelector("#tileFilterBlock");
+		let tileTextFilter = localStorage.getItem("tileTextFilter") ?? "";
+		let textField = createSearchField("tileTextSearch", filterTiles, tileTextFilter);
+		filterBlock.appendChild(textField);
+		getTiles(infoBlock).then(async (tree) => {
 			gringo(tree);
-			let popularDiv = document.querySelector("#popular");
-			emmet.indent.appendChild(popularDiv, `
-            div#tilesTableContainer
-        `);
 			createTilesTable(tree);
+			filterTiles(tileTextFilter);
 		});
 	}
 	//#endregion
