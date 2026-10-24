@@ -1,7 +1,7 @@
 import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter";
-import {createTilesTable, filterTiles, getTiles} from "./tileTable";
+import {createTilesTable, filterTiles, getTiles, setFavoriteButton} from "./tileTable";
 import {getInfoBlock, InfoBlock} from "../infoBlock/infoBlock";
 import {createSearchField} from "../utils/searchField";
 import {KEY_TILE_FAVORITE_FILTER, KEY_TILE_TEXT_FILTER} from "../def";
@@ -97,13 +97,17 @@ function decorateBody() {
         ev.stopImmediatePropagation();
     });
     let favoritesFilter = localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true";
-    buttonStar.classList.toggle("selected", favoritesFilter);
+    setFavoriteButton(buttonStar, favoritesFilter);
+
     getAndShowTiles(infoBlock);
 }
 
 function onButtonStarClicked(ev: PointerEvent) {
     let favoritesFilter = localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true";
-    localStorage.setItem(KEY_TILE_FAVORITE_FILTER, favoritesFilter ? "false" : "true");
+    favoritesFilter = !favoritesFilter;
+    localStorage.setItem(KEY_TILE_FAVORITE_FILTER, favoritesFilter ? "true" : "false");
+    let buttonStar = ev.currentTarget as HTMLButtonElement;
+    setFavoriteButton(buttonStar, favoritesFilter);
     filterTiles();
 }
 

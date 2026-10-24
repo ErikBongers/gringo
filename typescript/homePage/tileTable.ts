@@ -67,7 +67,7 @@ export function createTilesTable(tiles: Tile[]) {
         starButton.addEventListener("click", async () => {
             await onTileFavoriteClick(tile, starButton);
         });
-        setFavoriteButton(starButton, tile);
+        setFavoriteButton(starButton, tile.favorite);
         if(tile.leaf) {
             let gotoButton = tr.querySelector("button.goto") as HTMLButtonElement;
             gotoButton.addEventListener("click", () => {
@@ -94,11 +94,11 @@ function onTileGotoClick(tile: Tile | TileAdHocItem | TileGBSearch) {
     // >> lists
 }
 
-function setFavoriteButton(starButton: HTMLButtonElement, tile: Tile) {
-    starButton.classList.toggle("selected", tile.favorite);
+export function setFavoriteButton(starButton: HTMLButtonElement, favorite: boolean) {
+    starButton.classList.toggle("selected", favorite);
     let i = starButton.querySelector("i") as HTMLButtonElement;
-    i.classList.toggle("fa", tile.favorite);
-    i.classList.toggle("far", !tile.favorite);
+    i.classList.toggle("fa", favorite);
+    i.classList.toggle("far", !favorite);
 }
 
 async function onTileFavoriteClick(tile: Tile, starButton: HTMLButtonElement) {
@@ -106,7 +106,7 @@ async function onTileFavoriteClick(tile: Tile, starButton: HTMLButtonElement) {
 
     let cache = await getLocalCache();
     await cache.Tiles.put(tile);
-    setFavoriteButton(starButton, tile);
+    setFavoriteButton(starButton, tile.favorite);
 }
 
 export async function getTiles(infoBlock: InfoBlock, refresh: boolean = false) {

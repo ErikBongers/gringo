@@ -33109,7 +33109,7 @@ Total Duration: ${a - u}ms`);
 			starButton.addEventListener("click", async () => {
 				await onTileFavoriteClick(tile, starButton);
 			});
-			setFavoriteButton(starButton, tile);
+			setFavoriteButton(starButton, tile.favorite);
 			if (tile.leaf) tr.querySelector("button.goto").addEventListener("click", () => {
 				onTileGotoClick(tile);
 			});
@@ -33124,16 +33124,16 @@ Total Duration: ${a - u}ms`);
 			window.open(url, "_blank");
 		}
 	}
-	function setFavoriteButton(starButton, tile) {
-		starButton.classList.toggle("selected", tile.favorite);
+	function setFavoriteButton(starButton, favorite) {
+		starButton.classList.toggle("selected", favorite);
 		let i = starButton.querySelector("i");
-		i.classList.toggle("fa", tile.favorite);
-		i.classList.toggle("far", !tile.favorite);
+		i.classList.toggle("fa", favorite);
+		i.classList.toggle("far", !favorite);
 	}
 	async function onTileFavoriteClick(tile, starButton) {
 		tile.favorite = !tile.favorite;
 		await (await getLocalCache()).Tiles.put(tile);
-		setFavoriteButton(starButton, tile);
+		setFavoriteButton(starButton, tile.favorite);
 	}
 	async function getTiles(infoBlock, refresh = false) {
 		let localCache = await getLocalCache();
@@ -33295,13 +33295,15 @@ Total Duration: ${a - u}ms`);
 			ev.preventDefault();
 			ev.stopImmediatePropagation();
 		});
-		let favoritesFilter = localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true";
-		buttonStar.classList.toggle("selected", favoritesFilter);
+		setFavoriteButton(buttonStar, localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true");
 		getAndShowTiles(infoBlock);
 	}
 	function onButtonStarClicked(ev) {
 		let favoritesFilter = localStorage.getItem(KEY_TILE_FAVORITE_FILTER) == "true";
-		localStorage.setItem(KEY_TILE_FAVORITE_FILTER, favoritesFilter ? "false" : "true");
+		favoritesFilter = !favoritesFilter;
+		localStorage.setItem(KEY_TILE_FAVORITE_FILTER, favoritesFilter ? "true" : "false");
+		let buttonStar = ev.currentTarget;
+		setFavoriteButton(buttonStar, favoritesFilter);
 		filterTiles();
 	}
 	function onTileFilterChanged(text) {
