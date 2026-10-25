@@ -28,17 +28,13 @@ export async function fillTotalsTab() {
     let totalsTab = document.querySelector("div.gringo.totalsTab") as HTMLElement;
     totalsTab.innerHTML = "";
     emmet.indent.appendChild(totalsTab, `
-        button.naked.refresh
-            i.fa.fa-repeat
         button.naked.copyToClipboard
             i.fa.fa-copy
         div.infoContainer
         div.tabsContainer
         div.popoversContainer
     `);
-    let button = totalsTab.querySelector("button.refresh") as HTMLButtonElement;
-    button.onclick = (ev) => onRefreshClicked(ev);
-    button = totalsTab.querySelector("button.copyToClipboard") as HTMLButtonElement;
+    let button = totalsTab.querySelector("button.copyToClipboard") as HTMLButtonElement;
     button.onclick = (ev) => onCopyToClipboardClicked(ev);
     let infoContainer = totalsTab.querySelector("div.infoContainer") as HTMLElement;
     let tabsContainer = totalsTab.querySelector("div.tabsContainer") as HTMLElement;
@@ -94,11 +90,6 @@ export async function fillTotalsTab() {
         }),
     };
     await cloud.json.upload(KEY_CLOUD_GRINGO_FOLDER + "expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
-}
-
-async function onRefreshClicked(ev: PointerEvent) {
-    sessionStorage.removeItem("jsonPrData");
-    await fillTotalsTab();
 }
 
 async function onCopyToClipboardClicked(ev: PointerEvent) {

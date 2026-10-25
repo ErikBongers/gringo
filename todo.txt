@@ -1,15 +1,11 @@
-* Add projects
-  - In lean list add the text + a pencil button (on hover?)
-    > display:
-         <input type="text" name="product" list="productName" />
-         <datalist id="productName">
-           <option value="Pen">Pen</option>
-           <option value="Pencil">Pencil</option>
-           <option value="Paper">Paper</option>
-         </datalist>
-    > create a createProjectField() for this
-    > get distinct list of projects from metas.
+* Top menu
+  > how to open lean list and totals?
+    > in separate tab?
+      > yes. this avoids confusion with Ariba navigation.
+      > but: is this possible? All data available? Session data needed?
 
+
+* Add projects: get distinct list of projects from metas.
 
 * Add totals column under PRs.
 

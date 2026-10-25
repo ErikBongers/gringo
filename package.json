@@ -9,6 +9,7 @@
     "build_all_quick": "rolldown -c rolldown_all.config.js",
     "build_content": "tsc --build &&  rolldown -c",
     "build_serviceworker": "tsc --project ./tsconfig_service.json && rolldown -c rolldown_service.config.js",
+    "build_totals_tab": "tsc --project ./tsconfig_totals_tab.json && rolldown -c rolldown_totals_tab.config.ts",
     "build_options": "tsc --project ./tsconfig_options.json && rolldown -c rolldown_options.config.js"
   },
   "author": "",
