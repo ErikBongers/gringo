@@ -111,16 +111,36 @@ async function onTileFavoriteClick(tile: Tile, starButton: HTMLButtonElement) {
 
 export async function getTiles(infoBlock: InfoBlock, refresh: boolean = false) {
     let localCache = await getLocalCache();
+    let tileTree = await localCache.Tiles.getAll();
     if (!refresh) {
-        let tileTree = await localCache.Tiles.getAll();
         if (tileTree.length > 0)
             return tileTree;
     }
-    let tileTree = await fetchTileTree(infoBlock);
+    let favoriteNames = getFavoriteUniqueNames(tileTree);
+    tileTree = await fetchTileTree(infoBlock);
     tileTree.splice(0, 1);
+    await setAndSaveFavorites(tileTree, favoriteNames);
     await localCache.Tiles.clear();
     await localCache.Tiles.bulkPut(tileTree);
     return tileTree;
+}
+
+function getFavoriteUniqueNames(tileTree: Tile[]) {
+    let favoriteUniqueNames: string[] = [];
+    tileTree.forEach(tile => {
+        if(tile.favorite) {
+            favoriteUniqueNames.push(tile.uniqueName);
+        }
+    });
+    return favoriteUniqueNames;
+}
+
+async function setAndSaveFavorites(tileTree: Tile[], uniqueNames: string[]) {
+    let localCache = await getLocalCache();
+    tileTree.forEach(tile => {
+        tile.favorite = uniqueNames.includes(tile.uniqueName);
+    });
+    await localCache.Tiles.bulkPut(tileTree.filter(tile => tile.favorite));
 }
 
 async function fetchTileTree(infoBlock: InfoBlock) {
@@ -188,8 +208,6 @@ export function filterTiles() {
         while(splits.pop())
             parentIds.push(splits.join("_"));
     }
-    gringo("matchingIds: " + matchingIds);
-    gringo("parentIds: " + parentIds);
 
     for(let id of matchingIds.concat(parentIds)) {
         document.getElementById(id)?.classList.remove("hide");
