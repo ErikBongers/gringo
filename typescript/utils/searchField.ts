@@ -20,3 +20,28 @@ export function createSearchField(id: string, onSearchInput: (text: string) => a
     };
     return span;
 }
+
+let listIdCounter = 0;
+export function createEditListField(onTextConfirmed: (text: string) => any, value: string, options: string[]) {
+    listIdCounter++;
+    let listId = `editList${listIdCounter}`;
+    let div = emmet.indent.createElement(`
+        div.editListField.flexRow
+            input[type="text" list="${listId}"]
+            datalist[id="${listId}"]
+            button.naked.blueBlock.squircle.op05
+                i.fa.fa-floppy-disk[style="font-size:1.4em;"]
+    `) as HTMLDivElement;
+    let input = div.querySelector("input")!;
+    input.value = value;
+    let dataList = div.querySelector("datalist")!;
+    for (let option of options) {
+        let optionElement = dataList.appendChild(document.createElement("option"));
+        optionElement.value = option;
+    }
+    let button = div.querySelector("button") as HTMLButtonElement;
+    button.onclick = () => {
+        onTextConfirmed(input.value);
+    };
+    return div;
+}

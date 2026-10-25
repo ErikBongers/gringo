@@ -31845,6 +31845,51 @@ Total Duration: ${a - u}ms`);
 		saveBudgetSubGroupings
 	} };
 	//#endregion
+	//#region typescript/utils/searchField.ts
+	function createSearchField(id, onSearchInput, value) {
+		let input = document.createElement("input");
+		input.type = "text";
+		input.id = id;
+		input.classList.add("tableFilter");
+		input.oninput = (event) => onSearchInput(event.target.value);
+		input.value = value;
+		input.placeholder = "filter";
+		let span = document.createElement("span");
+		span.classList.add("searchButton");
+		span.appendChild(input);
+		let { first: clearButton } = emmet.appendChild(span, `button>img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"`);
+		clearButton.onclick = () => {
+			input.value = "";
+			onSearchInput("");
+			input.focus();
+		};
+		return span;
+	}
+	let listIdCounter = 0;
+	function createEditListField(onTextConfirmed, value, options) {
+		listIdCounter++;
+		let listId = `editList${listIdCounter}`;
+		let div = emmet.indent.createElement(`
+        div.editListField.flexRow
+            input[type="text" list="${listId}"]
+            datalist[id="${listId}"]
+            button.naked.blueBlock.squircle.op05
+                i.fa.fa-floppy-disk[style="font-size:1.4em;"]
+    `);
+		let input = div.querySelector("input");
+		input.value = value;
+		let dataList = div.querySelector("datalist");
+		for (let option of options) {
+			let optionElement = dataList.appendChild(document.createElement("option"));
+			optionElement.value = option;
+		}
+		let button = div.querySelector("button");
+		button.onclick = () => {
+			onTextConfirmed(input.value);
+		};
+		return div;
+	}
+	//#endregion
 	//#region typescript/aanvragen/metaBlock.ts
 	async function onTagsPopupButtonClick(meta, button, afterMetaChange) {
 		let popover = showPopover("gringo-tags-popover", button);
@@ -31900,6 +31945,29 @@ Total Duration: ${a - u}ms`);
         div.deptWrapper.flexRow
     `).first;
 		updateDepartmentBlock(wrapper, meta, departments);
+	}
+	function addProjectsBlock(container, meta, onMetaChange, allProjects) {
+		container = getElement(container);
+		container.innerHTML = "";
+		emmet.indent.appendChild(container, `
+        div.flexRow
+            span{${meta.projects ?? ""}}
+            button.naked.blueBlock.squircle
+                i.fa.fa-pencil
+    `).first.querySelector("button").addEventListener("click", () => {
+			addProjectEditBlock(container, meta, onMetaChange, allProjects);
+		});
+	}
+	function addProjectEditBlock(container, meta, onMetaChange, allProjects) {
+		container = getElement(container);
+		let projectsElement = createEditListField(async (text) => {
+			meta.projects = text;
+			onMetaChange(meta);
+			await saveMeta(meta);
+			addProjectsBlock(container, meta, onMetaChange, allProjects);
+		}, meta.projects ?? "", allProjects);
+		container.innerHTML = "";
+		container.appendChild(projectsElement);
 	}
 	function updateDepartmentBlock(wrapper, meta, departments) {
 		wrapper.innerHTML = "";
@@ -32274,27 +32342,6 @@ Total Duration: ${a - u}ms`);
 	async function filterTable(table, rowFilter) {
 		table = getElement(table);
 		for (let tr of table.tBodies[0].rows) tr.classList.toggle("hidden", !rowFilter.rowFilter(rowFilter.rowConverter(tr), rowFilter.context));
-	}
-	//#endregion
-	//#region typescript/utils/searchField.ts
-	function createSearchField(id, onSearchInput, value) {
-		let input = document.createElement("input");
-		input.type = "text";
-		input.id = id;
-		input.classList.add("tableFilter");
-		input.oninput = (event) => onSearchInput(event.target.value);
-		input.value = value;
-		input.placeholder = "filter";
-		let span = document.createElement("span");
-		span.classList.add("searchButton");
-		span.appendChild(input);
-		let { first: clearButton } = emmet.appendChild(span, `button>img[src="${chrome.runtime.getURL("images/circle-xmark-regular.svg")}"`);
-		clearButton.onclick = () => {
-			input.value = "";
-			onSearchInput("");
-			input.focus();
-		};
-		return span;
 	}
 	//#endregion
 	//#region typescript/aanvragen/searchPanel.ts
@@ -32791,11 +32838,12 @@ Total Duration: ${a - u}ms`);
                 td.bruto{${formatPrice(pr.bruto)}}
                 td.departmentBlock
                 td.tagsBlock
-                td{reserved for project(s))}
+                td.projectsBlock
         `).first;
 			tr.dataset.prId = pr.prListData.prId;
 			addTagsBlock(tr.querySelector("td.tagsBlock"), pr.meta, tagsMap, (meta) => decorateRowWithMeta(tr, meta));
 			addDepartmentBlock(tr.querySelector("td.departmentBlock"), pr.meta, departments, (meta) => decorateRowWithMeta(tr, meta));
+			addProjectsBlock(tr.querySelector("td.projectsBlock"), pr.meta, (meta) => decorateRowWithMeta(tr, meta), ["Test 1", "Test 2"]);
 			let button = tr.querySelector("button");
 			let container = tr.querySelector("div.menuContainer");
 			button?.addEventListener("click", () => {
@@ -32806,6 +32854,7 @@ Total Duration: ${a - u}ms`);
 	}
 	function decorateRowWithMeta(el, meta) {
 		el.dataset.gringoTags = ";" + meta.tags.join(";") + ";";
+		el.dataset.gringoProjects = meta.projects ?? "";
 	}
 	function showPrCopyMenu(container, button, prId, poIds) {
 		let dropDownMenu = new DropDownMenu(container, button, true, false);

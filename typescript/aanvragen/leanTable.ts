@@ -1,7 +1,7 @@
 import {ExpandedPrListData, getGlobalTags, PrMeta} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {acronym, formatPrice, formatShortDate, getOptions, gringo} from "../globals";
-import {addDepartmentBlock, addTagsBlock} from "./metaBlock";
+import {addDepartmentBlock, addProjectsBlock, addTagsBlock} from "./metaBlock";
 import {filterTable} from "../filterTable";
 import {createRowFilter, getPrFilterStrings} from "./searchPanel";
 import {getLocalCache} from "../db/idb/localDb";
@@ -80,11 +80,13 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement, prLi
                 td.bruto{${formatPrice(pr.bruto)}}
                 td.departmentBlock
                 td.tagsBlock
-                td{reserved for project(s))}
+                td.projectsBlock
         `).first as HTMLTableRowElement;
         tr.dataset.prId = pr.prListData.prId;
         addTagsBlock(tr.querySelector("td.tagsBlock")!, pr.meta, tagsMap, (meta) => decorateRowWithMeta(tr, meta));
         addDepartmentBlock(tr.querySelector("td.departmentBlock")!, pr.meta, departments, (meta) => decorateRowWithMeta(tr, meta));
+        let testProjects = ["Test 1", "Test 2"];
+        addProjectsBlock(tr.querySelector("td.projectsBlock")!, pr.meta, (meta) => decorateRowWithMeta(tr, meta), testProjects);
         let button = tr.querySelector("button");
         let container = tr.querySelector("div.menuContainer") as HTMLDivElement;
         button?.addEventListener("click", () => {
@@ -96,6 +98,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement, prLi
 
 export function decorateRowWithMeta(el: HTMLElement, meta: PrMeta) {
     el.dataset.gringoTags = ";" + meta.tags.join(";") + ";";
+    el.dataset.gringoProjects = meta.projects??"";
 }
 
 function showPrCopyMenu(container: HTMLElement, button: HTMLElement, prId: string, poIds: string[]) {

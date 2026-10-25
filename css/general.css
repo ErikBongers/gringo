@@ -599,3 +599,9 @@ button.star {
         margin-inline-start: .7ch;
     }
 }
+
+.editListField {
+    button:hover {
+        opacity: 1;
+    }
+}

@@ -2,6 +2,7 @@ import {getGlobalTags, PrMeta, saveMeta, TagDef} from "./requests";
 import {emmet} from "../../libs/Emmeter";
 import {getGlobalSettingsCached} from "../plugin_options/options";
 import {addButtonClickNoPropagation, ElementOrSelector, getElement, paintTag, showPopover} from "../globals";
+import {createEditListField} from "../utils/searchField";
 
 async function onTagsPopupButtonClick(meta: PrMeta, button: HTMLButtonElement, afterMetaChange: (meta: PrMeta) => Promise<any>) {
     let popover = showPopover("gringo-tags-popover", button);
@@ -68,6 +69,7 @@ export function addTagsBlock(container: ElementOrSelector<HTMLDivElement>, meta:
     updateTagsBlock(container, meta, tagsMap, onMetaChange);
 }
 
+//todo: why is onMetaChange not used?
 export function addDepartmentBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, departments: string[], onMetaChange: (meta: PrMeta)=> void) {
     container = getElement(container);
     let wrapper = emmet.indent.appendChild(container, `
@@ -76,6 +78,32 @@ export function addDepartmentBlock(container: ElementOrSelector<HTMLDivElement>,
     updateDepartmentBlock(wrapper, meta, departments);
 }
 
+export function addProjectsBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, onMetaChange: (meta: PrMeta)=> void, allProjects: string[]) {
+    container = getElement(container);
+    container.innerHTML = "";
+    let div = emmet.indent.appendChild(container, `
+        div.flexRow
+            span{${meta.projects??""}}
+            button.naked.blueBlock.squircle
+                i.fa.fa-pencil
+    `).first as HTMLElement;
+    let button = div.querySelector("button")!;
+    button.addEventListener("click", () => {
+        addProjectEditBlock(container, meta, onMetaChange, allProjects);
+    });
+}
+
+function addProjectEditBlock(container: ElementOrSelector<HTMLDivElement>, meta: PrMeta, onMetaChange: (meta: PrMeta)=> void, allProjects: string[]) {
+    container = getElement(container);
+    let projectsElement = createEditListField(async (text) => {
+        meta.projects = text;
+        onMetaChange(meta);
+        await saveMeta(meta);
+        addProjectsBlock(container, meta, onMetaChange, allProjects);
+    }, meta.projects??"", allProjects);
+    container.innerHTML = "";
+    container.appendChild(projectsElement);
+}
 
 function updateDepartmentBlock(wrapper: HTMLElement, meta: PrMeta, departments: string[]) {
     wrapper.innerHTML = "";
