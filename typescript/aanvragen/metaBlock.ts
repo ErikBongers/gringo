@@ -79,17 +79,17 @@ export function addDepartmentBlock(container: ElementOrSelector<HTMLDivElement>,
 
 function updateDepartmentBlock(wrapper: HTMLElement, meta: PrMeta, departments: string[]) {
     wrapper.innerHTML = "";
-    let project = meta.project??SELECT_PROJECT;
+    let project = meta.department??SELECT_PROJECT;
     if(project == SELECT_PROJECT) {
         let select = cloneDeptSelectTemplate(departments);
         wrapper.appendChild(select);
-        select.value = meta.project??SELECT_PROJECT;
+        select.value = meta.department??SELECT_PROJECT;
         select.onchange = async () => {
             await onSelectDepartmentClick(meta, select, departments);
         }
     } else {
         emmet.appendChild(wrapper, `
-            span{${meta.project}}
+            span{${meta.department}}
         `);
     }
     wrapper.classList.toggle("hasProject", project != SELECT_PROJECT);
@@ -113,7 +113,7 @@ function cloneDeptSelectTemplate(departments: string[]) {
 }
 
 async function onSelectDepartmentClick(meta: PrMeta, select: HTMLSelectElement, departments: string[]) {
-    meta.project = select.value;
+    meta.department = select.value;
     await saveMeta(meta);
     updateDepartmentBlock(select.closest(".deptWrapper")!, meta, departments);
 }

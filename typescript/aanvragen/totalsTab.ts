@@ -108,7 +108,7 @@ async function createProjectItemGroups(expenses: JsonPrItem[]) {
     let metaCache = await getMetaCache();
     let perProject = await getItemsPerGroup(expenses, async (item) => {
         let meta = await metaCache.get(item.prId);
-        return meta.project ?? "";
+        return meta.department ?? "";
     }, (await getGlobalSettingsCached()).projects);
 
     let projectItemGroups: PrItemGroup[] = [...perProject.entries()].map((mappedItem) => {

@@ -30817,11 +30817,171 @@ Total Duration: ${a - u}ms`);
 		["24200000", "Muziekinstrumenten"]
 	];
 	//#endregion
+	//#region typescript/infoBlock/infoBar.ts
+	var InfoBar = class InfoBar {
+		parent;
+		container;
+		divInfoLine;
+		divTempLine;
+		divExtraLine;
+		divErrorLine;
+		tempMessage;
+		divCacheInfo;
+		static ID = "dp3p_infoContainer";
+		static EXTRA_ID = "dp3_extraInfo";
+		static ERROR_ID = "dp3_errorInfo";
+		static TEMP_ID = "dp3_tempInfo";
+		static CACHE_ID = "dp3p_cacheInfo";
+		constructor(parent) {
+			this.parent = parent;
+			this.tempMessage = "";
+			let container = parent.querySelector(`div#${InfoBar.ID}`);
+			if (!container) {
+				container = emmet.appendChild(parent, `div#${InfoBar.ID}`).first;
+				this.divExtraLine = emmet.appendChild(container, `div#${InfoBar.EXTRA_ID}.infoMessage`).last;
+				this.divErrorLine = emmet.appendChild(container, `div#${InfoBar.ERROR_ID}.infoError`).last;
+				this.divInfoLine = emmet.appendChild(container, "div.infoLine").last;
+				this.divTempLine = emmet.appendChild(container, `div#${InfoBar.TEMP_ID}.infoMessage.tempLine`).last;
+				this.divCacheInfo = emmet.appendChild(container, `div#${InfoBar.CACHE_ID}.cacheInfo`).last;
+			} else {
+				this.divExtraLine = container.querySelector(`#${InfoBar.EXTRA_ID}`);
+				this.divErrorLine = container.querySelector(`#${InfoBar.ERROR_ID}`);
+				this.divInfoLine = container.querySelector("div.infoLine");
+				this.divTempLine = container.querySelector(`#${InfoBar.TEMP_ID}`);
+				this.divCacheInfo = container.querySelector(`#${InfoBar.CACHE_ID}`);
+			}
+			this.container = container;
+		}
+		setTempMessage(msg) {
+			this.tempMessage = msg;
+			this.#updateTempMessage();
+			setTimeout(this.clearTempMessage.bind(this), 4e3);
+		}
+		clearTempMessage() {
+			this.tempMessage = "";
+			this.#updateTempMessage();
+		}
+		#updateTempMessage() {
+			this.divTempLine.innerHTML = this.tempMessage;
+		}
+		setInfoLine(message) {
+			this.divInfoLine.innerHTML = message;
+		}
+		setErrorLine(message) {
+			this.divErrorLine.innerHTML = message;
+		}
+		setCacheInfo(info, reset_onclick) {
+			this.divCacheInfo.innerHTML = info;
+			let button = emmet.appendChild(this.divCacheInfo, "button.likeLink").first;
+			button.innerHTML = "refresh";
+			button.onclick = reset_onclick;
+		}
+		setExtraInfo(message, click_element_id, callback) {
+			this.divExtraLine.innerHTML = message;
+			if (click_element_id) {
+				if (callback) document.getElementById(click_element_id).onclick = callback;
+			}
+		}
+	};
+	//#endregion
+	//#region typescript/infoBlock/progressBar.ts
+	var ProgressBar = class ProgressBar {
+		barElement;
+		parent;
+		container;
+		maxCount;
+		count;
+		static ID = "progressBarContainer";
+		constructor(parent) {
+			this.parent = parent;
+			let container = this.parent.querySelector("#" + ProgressBar.ID);
+			if (!container) container = emmet.indent.appendChild(this.parent, `
+                div#${ProgressBar.ID}
+                    div.progressBar
+            `).first;
+			this.container = container;
+			this.barElement = this.container.querySelector(".progressBar");
+			this.hide();
+			this.maxCount = 0;
+			this.count = 0;
+		}
+		reset(maxCount) {
+			this.maxCount = maxCount;
+			this.count = 0;
+			this.barElement.innerHTML = "";
+			for (let i = 0; i < maxCount; i++) {
+				let block = document.createElement("div");
+				this.barElement.appendChild(block);
+				block.classList.add("progressBlock");
+				if (maxCount > 50) block.classList.add("mini");
+			}
+		}
+		start(maxCount) {
+			this.reset(maxCount);
+			this.container.style.display = "";
+			this.next();
+		}
+		hide() {
+			this.container.style.display = "none";
+		}
+		stop() {
+			this.hide();
+		}
+		next() {
+			if (this.count >= this.maxCount) return false;
+			this.barElement.children[this.count].classList.remove("iddle", "loaded");
+			this.barElement.children[this.count].classList.add("loading");
+			for (let i = 0; i < this.count; i++) {
+				this.barElement.children[i].classList.remove("iddle", "loading");
+				this.barElement.children[i].classList.add("loaded");
+			}
+			for (let i = this.count + 1; i < this.maxCount; i++) {
+				this.barElement.children[i].classList.remove("loaded", "loading");
+				this.barElement.children[i].classList.add("iddle");
+			}
+			this.count++;
+			return true;
+		}
+	};
+	//#endregion
+	//#region typescript/infoBlock/infoBlock.ts
+	function getInfoBlock(parent) {
+		return {
+			infoBar: new InfoBar(parent),
+			progressBar: new ProgressBar(parent)
+		};
+	}
+	function getInfoBlockForCurrentPage() {
+		let infoContainer = document.querySelector("div.infoContainer");
+		if (!infoContainer) infoContainer = emmet.indent.insertAfter(document.getElementById("navigation"), "div").first;
+		return getInfoBlock(infoContainer);
+	}
+	//#endregion
 	//#region typescript/db/metaCache.ts
 	let prMetasCache = null;
+	async function upgradeMetas(prMetas) {
+		let metasToSave = [];
+		for (let meta of prMetas) if (meta.version < 1) {
+			delete meta.project;
+			meta.version = 1;
+			metasToSave.push(meta);
+		}
+		if (metasToSave.length > 0) {
+			let infoBlock = getInfoBlockForCurrentPage();
+			infoBlock.infoBar.setInfoLine("Updating metadata...");
+			infoBlock.progressBar.start(metasToSave.length);
+			for (let meta of metasToSave) {
+				await saveMeta(meta);
+				infoBlock.progressBar.next();
+			}
+			infoBlock.progressBar.stop();
+			infoBlock.infoBar.setInfoLine("");
+		}
+	}
 	async function getMetaCache() {
 		if (!prMetasCache) {
 			let prMetas = await firestore.fetchPrMetas(null);
+			await upgradeMetas(prMetas);
 			prMetasCache = new Map(prMetas.map((m) => [m.prId, m]));
 		}
 		return { get: fetchMetaCached };
@@ -30832,7 +30992,8 @@ Total Duration: ${a - u}ms`);
 		if (!meta) {
 			meta = {
 				prId,
-				tags: []
+				tags: [],
+				version: 1
 			};
 			await saveMeta(meta);
 			prMetasCache.set(prId, meta);
@@ -31419,146 +31580,6 @@ Total Duration: ${a - u}ms`);
 		}
 	}
 	//#endregion
-	//#region typescript/infoBlock/infoBar.ts
-	var InfoBar = class InfoBar {
-		parent;
-		container;
-		divInfoLine;
-		divTempLine;
-		divExtraLine;
-		divErrorLine;
-		tempMessage;
-		divCacheInfo;
-		static ID = "dp3p_infoContainer";
-		static EXTRA_ID = "dp3_extraInfo";
-		static ERROR_ID = "dp3_errorInfo";
-		static TEMP_ID = "dp3_tempInfo";
-		static CACHE_ID = "dp3p_cacheInfo";
-		constructor(parent) {
-			this.parent = parent;
-			this.tempMessage = "";
-			let container = parent.querySelector(`div#${InfoBar.ID}`);
-			if (!container) {
-				container = emmet.appendChild(parent, `div#${InfoBar.ID}`).first;
-				this.divExtraLine = emmet.appendChild(container, `div#${InfoBar.EXTRA_ID}.infoMessage`).last;
-				this.divErrorLine = emmet.appendChild(container, `div#${InfoBar.ERROR_ID}.infoError`).last;
-				this.divInfoLine = emmet.appendChild(container, "div.infoLine").last;
-				this.divTempLine = emmet.appendChild(container, `div#${InfoBar.TEMP_ID}.infoMessage.tempLine`).last;
-				this.divCacheInfo = emmet.appendChild(container, `div#${InfoBar.CACHE_ID}.cacheInfo`).last;
-			} else {
-				this.divExtraLine = container.querySelector(`#${InfoBar.EXTRA_ID}`);
-				this.divErrorLine = container.querySelector(`#${InfoBar.ERROR_ID}`);
-				this.divInfoLine = container.querySelector("div.infoLine");
-				this.divTempLine = container.querySelector(`#${InfoBar.TEMP_ID}`);
-				this.divCacheInfo = container.querySelector(`#${InfoBar.CACHE_ID}`);
-			}
-			this.container = container;
-		}
-		setTempMessage(msg) {
-			this.tempMessage = msg;
-			this.#updateTempMessage();
-			setTimeout(this.clearTempMessage.bind(this), 4e3);
-		}
-		clearTempMessage() {
-			this.tempMessage = "";
-			this.#updateTempMessage();
-		}
-		#updateTempMessage() {
-			this.divTempLine.innerHTML = this.tempMessage;
-		}
-		setInfoLine(message) {
-			this.divInfoLine.innerHTML = message;
-		}
-		setErrorLine(message) {
-			this.divErrorLine.innerHTML = message;
-		}
-		setCacheInfo(info, reset_onclick) {
-			this.divCacheInfo.innerHTML = info;
-			let button = emmet.appendChild(this.divCacheInfo, "button.likeLink").first;
-			button.innerHTML = "refresh";
-			button.onclick = reset_onclick;
-		}
-		setExtraInfo(message, click_element_id, callback) {
-			this.divExtraLine.innerHTML = message;
-			if (click_element_id) {
-				if (callback) document.getElementById(click_element_id).onclick = callback;
-			}
-		}
-	};
-	//#endregion
-	//#region typescript/infoBlock/progressBar.ts
-	var ProgressBar = class ProgressBar {
-		barElement;
-		parent;
-		container;
-		maxCount;
-		count;
-		static ID = "progressBarContainer";
-		constructor(parent) {
-			this.parent = parent;
-			let container = this.parent.querySelector("#" + ProgressBar.ID);
-			if (!container) container = emmet.indent.appendChild(this.parent, `
-                div#${ProgressBar.ID}
-                    div.progressBar
-            `).first;
-			this.container = container;
-			this.barElement = this.container.querySelector(".progressBar");
-			this.hide();
-			this.maxCount = 0;
-			this.count = 0;
-		}
-		reset(maxCount) {
-			this.maxCount = maxCount;
-			this.count = 0;
-			this.barElement.innerHTML = "";
-			for (let i = 0; i < maxCount; i++) {
-				let block = document.createElement("div");
-				this.barElement.appendChild(block);
-				block.classList.add("progressBlock");
-				if (maxCount > 50) block.classList.add("mini");
-			}
-		}
-		start(maxCount) {
-			this.reset(maxCount);
-			this.container.style.display = "";
-			this.next();
-		}
-		hide() {
-			this.container.style.display = "none";
-		}
-		stop() {
-			this.hide();
-		}
-		next() {
-			if (this.count >= this.maxCount) return false;
-			this.barElement.children[this.count].classList.remove("iddle", "loaded");
-			this.barElement.children[this.count].classList.add("loading");
-			for (let i = 0; i < this.count; i++) {
-				this.barElement.children[i].classList.remove("iddle", "loading");
-				this.barElement.children[i].classList.add("loaded");
-			}
-			for (let i = this.count + 1; i < this.maxCount; i++) {
-				this.barElement.children[i].classList.remove("loaded", "loading");
-				this.barElement.children[i].classList.add("iddle");
-			}
-			this.count++;
-			return true;
-		}
-	};
-	//#endregion
-	//#region typescript/infoBlock/infoBlock.ts
-	function getInfoBlock(parent) {
-		return {
-			infoBar: new InfoBar(parent),
-			progressBar: new ProgressBar(parent)
-		};
-	}
-	function getInfoBlockForCurrentPage() {
-		let infoContainer = document.querySelector("div.infoContainer");
-		if (!infoContainer) infoContainer = emmet.indent.insertAfter(document.getElementById("navigation"), "div").first;
-		return getInfoBlock(infoContainer);
-	}
-	//#endregion
 	//#region typescript/aanvragen/requests.ts
 	async function fetchRequestListChunk(chain, userInfo, zSince) {
 		if (!zSince) zSince = (/* @__PURE__ */ new Date()).toISOString().replaceAll("T", " ").split(".")[0] + " GMT";
@@ -31882,16 +31903,16 @@ Total Duration: ${a - u}ms`);
 	}
 	function updateDepartmentBlock(wrapper, meta, departments) {
 		wrapper.innerHTML = "";
-		let project = meta.project ?? SELECT_PROJECT;
+		let project = meta.department ?? SELECT_PROJECT;
 		if (project == SELECT_PROJECT) {
 			let select = cloneDeptSelectTemplate(departments);
 			wrapper.appendChild(select);
-			select.value = meta.project ?? SELECT_PROJECT;
+			select.value = meta.department ?? SELECT_PROJECT;
 			select.onchange = async () => {
 				await onSelectDepartmentClick(meta, select, departments);
 			};
 		} else emmet.appendChild(wrapper, `
-            span{${meta.project}}
+            span{${meta.department}}
         `);
 		wrapper.classList.toggle("hasProject", project != SELECT_PROJECT);
 	}
@@ -31911,7 +31932,7 @@ Total Duration: ${a - u}ms`);
 		return templateDeptSelect.cloneNode(true);
 	}
 	async function onSelectDepartmentClick(meta, select, departments) {
-		meta.project = select.value;
+		meta.department = select.value;
 		await saveMeta(meta);
 		updateDepartmentBlock(select.closest(".deptWrapper"), meta, departments);
 	}
@@ -32017,7 +32038,7 @@ Total Duration: ${a - u}ms`);
 	async function createProjectItemGroups(expenses) {
 		let metaCache = await getMetaCache();
 		return [...(await getItemsPerGroup(expenses, async (item) => {
-			return (await metaCache.get(item.prId)).project ?? "";
+			return (await metaCache.get(item.prId)).department ?? "";
 		}, (await getGlobalSettingsCached()).projects)).entries()].map((mappedItem) => {
 			let groupId = mappedItem[0];
 			let items = mappedItem[1].map((item) => {

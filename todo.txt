@@ -1,7 +1,32 @@
-* Tile table
-  > create favorites
-    > this is a filter
-    > on REFRESH - remember and restore favorites !!!!!
+* Add projects
+  - add field to meta
+  - add a list of projects?
+    > where? in options?
+    > just a text field!?
+      > yeah...like dko3 tags.
+      > all metas need to be queried for projects.
+
+* Add totals column under PRs.
+
+
+* Make every part optional.
+  - bruto
+  - lean table
+  - tile table
+  - totals
+  > but...
+    > if management relies on this stuff...not optional!
+
+* What is usable for all academies:
+  - tile table, for sure.
+  - bruto price, no meta.
+    > check...
+
+* Can a user have 2 academies?
+  > maybe this isnt' even possible?
+    > other "team"?
+      > yeah...is filtering per team possible in overview?
+        > NO!
 
 
 * PRs "In aanmaak" are not listed?

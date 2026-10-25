@@ -56,10 +56,12 @@ export interface FetchListContext {
 }
 
 export interface PrMeta {
+    version: number;
     prId: string,
     tags: string[],
-    project?: string,
     changed_date?: string;
+    department?: string;
+    projects?: string;
 }
 
 export interface ExpandedPr {

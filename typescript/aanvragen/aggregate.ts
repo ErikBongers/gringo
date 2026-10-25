@@ -94,7 +94,7 @@ export async function exportPrItemsToExcel(infoBlock: InfoBlock){
         row.push(item.itemNo);
         row.push(item.bruto.toString());
         row.push(item.tarif);
-        row.push(meta.project??"");
+        row.push(meta.department??"");
         row.push(meta.tags.join(","));
         row.push(item.title);
         row.push(item.budget);
