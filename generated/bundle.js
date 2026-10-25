@@ -32034,17 +32034,13 @@ Total Duration: ${a - u}ms`);
 		let totalsTab = document.querySelector("div.gringo.totalsTab");
 		totalsTab.innerHTML = "";
 		emmet.indent.appendChild(totalsTab, `
-        button.naked.refresh
-            i.fa.fa-repeat
         button.naked.copyToClipboard
             i.fa.fa-copy
         div.infoContainer
         div.tabsContainer
         div.popoversContainer
     `);
-		let button = totalsTab.querySelector("button.refresh");
-		button.onclick = (ev) => onRefreshClicked(ev);
-		button = totalsTab.querySelector("button.copyToClipboard");
+		let button = totalsTab.querySelector("button.copyToClipboard");
 		button.onclick = (ev) => onCopyToClipboardClicked(ev);
 		let infoContainer = totalsTab.querySelector("div.infoContainer");
 		let tabsContainer = totalsTab.querySelector("div.tabsContainer");
@@ -32097,10 +32093,6 @@ Total Duration: ${a - u}ms`);
 			})
 		};
 		await cloud.json.upload("gringo/expenses/Academie_Berchem_2026_expenses.json", cloudBudgets);
-	}
-	async function onRefreshClicked(ev) {
-		sessionStorage.removeItem("jsonPrData");
-		await fillTotalsTab();
 	}
 	async function onCopyToClipboardClicked(ev) {}
 	async function createProjectItemGroups(expenses) {
@@ -33343,7 +33335,7 @@ Total Duration: ${a - u}ms`);
 			menu.addItem("item 1", 0, (ev) => {
 				gringo("item 1 clicked");
 			});
-			menu.addItem("item 2", 1, (ev) => {
+			menu.addItem("item 2", 0, (ev) => {
 				gringo("item 2 clicked");
 			});
 			menu.show();
