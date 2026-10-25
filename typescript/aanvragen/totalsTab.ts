@@ -109,7 +109,7 @@ async function createProjectItemGroups(expenses: JsonPrItem[]) {
     let perProject = await getItemsPerGroup(expenses, async (item) => {
         let meta = await metaCache.get(item.prId);
         return meta.department ?? "";
-    }, (await getGlobalSettingsCached()).projects);
+    }, (await getGlobalSettingsCached()).departments);
 
     let projectItemGroups: PrItemGroup[] = [...perProject.entries()].map((mappedItem) => {
         let groupId = mappedItem[0];
@@ -213,7 +213,7 @@ async function createAndShowPopover(item: JsonPrItem, anchorTo: HTMLElement) {
         window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, '_blank')!.focus();
     };
     let metaFieldsContainer = popover.querySelector(".metaFieldsContainer") as HTMLDivElement;
-    let departments = (await getGlobalSettingsCached()).projects;
+    let departments = (await getGlobalSettingsCached()).departments;
     let tagsMap = await getGlobalTags();
     displayMetaFields(metaFieldsContainer, meta, departments, tagsMap, () => {});
 }

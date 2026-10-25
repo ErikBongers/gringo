@@ -553,7 +553,7 @@
 		upload: uploadJson
 	} };
 	async function fetchJson(fileName) {
-		return fetch(JSON_URL + "?fileName=" + fileName, { method: "GET" }).then((res) => res.json());
+		return (await fetch(JSON_URL + "?fileName=" + fileName, { method: "GET" })).json();
 	}
 	async function uploadJson(fileName, data) {
 		return await (await fetch(JSON_URL + "?fileName=" + fileName, {
@@ -587,7 +587,6 @@
 		});
 	}
 	let defaultGlobalSettings = {
-		projects: [],
 		tagDefs: structuredClone([{
 			name: "BB>",
 			description: "Bestelbon verzonden",
@@ -600,7 +599,8 @@
 			color: "green",
 			bkgColor: "",
 			order: 100
-		}])
+		}]),
+		departments: []
 	};
 	let globalSettings = null;
 	async function getGlobalSettingsCached() {
@@ -635,11 +635,10 @@
 	};
 	async function saveGlobalsFromGui() {
 		if (prompt("Zijdezeker? Tik dan GRINGO en klik Ok.") != "GRINGO") return;
-		let projects = document.getElementById("txtProjects").value.split("\n").map((l) => l.trim()).filter((l) => l != "");
+		let departments = document.getElementById("txtDepartments").value.split("\n").map((l) => l.trim()).filter((l) => l != "");
 		let tags = document.getElementById("txtGlobalTags").value.split("\n").map((l) => l.trim()).filter((l) => l != "");
 		let order = 0;
 		await saveGlobalSettings({
-			projects,
 			tagDefs: tags.map((t) => {
 				let values = t.split(",").map((t) => t.trim());
 				let name = "";
@@ -657,7 +656,8 @@
 					bkgColor,
 					order: order++
 				};
-			})
+			}),
+			departments
 		});
 	}
 	async function restoreOptionsToGui() {
@@ -670,11 +670,11 @@
 		}
 	}
 	async function fillGlobalOptionsInGui() {
-		let txtProjects = document.getElementById("txtProjects");
+		let txtDepartments = document.getElementById("txtDepartments");
 		let txtGlobalTags = document.getElementById("txtGlobalTags");
 		setGlobalSetting(await fetchGlobalSettings());
 		let globalSettings = await getGlobalSettingsCached();
-		txtProjects.value = globalSettings.projects.join("\n");
+		txtDepartments.value = globalSettings.departments.join("\n");
 		txtGlobalTags.value = globalSettings.tagDefs.map((tagDef) => {
 			if (tagDef.bkgColor != "") return `${tagDef.name}, ${tagDef.description}, ${tagDef.color}, ${tagDef.bkgColor}`;
 			else if (tagDef.color != "") return `${tagDef.name}, ${tagDef.description}, ${tagDef.color}`;

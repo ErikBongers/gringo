@@ -50,7 +50,7 @@ export async function createLeanListTable(divLeanListPanel: HTMLDivElement, prLi
 
     let tbody = table.querySelector("tbody")!; //! ok
     gringo("LEAN: get extra data...");
-    let departments = (await getGlobalSettingsCached()).projects;
+    let departments = (await getGlobalSettingsCached()).departments;
     let tagsMap = await getGlobalTags();
     let anchorTarget = "";
     let options = await getOptions();

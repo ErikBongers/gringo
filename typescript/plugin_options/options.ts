@@ -35,8 +35,8 @@ export function defineHtmlOption(id: string, property: string, label: string, bl
 }
 
 export interface GlobalSettings {
-    projects: string[];
     tagDefs: TagDef[];
+    departments: string[];
 }
 
 const defaultTags: TagDef[] = [
@@ -54,8 +54,8 @@ const defaultTags: TagDef[] = [
 
 
 let defaultGlobalSettings: GlobalSettings = {
-    projects: [],
     tagDefs: structuredClone(defaultTags),
+    departments: [],
 }
 
 let globalSettings: GlobalSettings | null = null;

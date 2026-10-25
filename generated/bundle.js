@@ -575,7 +575,6 @@
 		openPrInNewTab: false
 	};
 	let defaultGlobalSettings = {
-		projects: [],
 		tagDefs: structuredClone([{
 			name: "BB>",
 			description: "Bestelbon verzonden",
@@ -588,7 +587,8 @@
 			color: "green",
 			bkgColor: "",
 			order: 100
-		}])
+		}]),
+		departments: []
 	};
 	let globalSettings = null;
 	async function getGlobalSettingsCached() {
@@ -32039,7 +32039,7 @@ Total Duration: ${a - u}ms`);
 		let metaCache = await getMetaCache();
 		return [...(await getItemsPerGroup(expenses, async (item) => {
 			return (await metaCache.get(item.prId)).department ?? "";
-		}, (await getGlobalSettingsCached()).projects)).entries()].map((mappedItem) => {
+		}, (await getGlobalSettingsCached()).departments)).entries()].map((mappedItem) => {
 			let groupId = mappedItem[0];
 			let items = mappedItem[1].map((item) => {
 				return {
@@ -32132,7 +32132,7 @@ Total Duration: ${a - u}ms`);
 			window.open(`https://s1-eu.ariba.com/gb/viewRequisition/${item.prId}`, "_blank").focus();
 		};
 		let metaFieldsContainer = popover.querySelector(".metaFieldsContainer");
-		let departments = (await getGlobalSettingsCached()).projects;
+		let departments = (await getGlobalSettingsCached()).departments;
 		displayMetaFields(metaFieldsContainer, meta, departments, await getGlobalTags(), () => {});
 	}
 	async function displayPerProject(wrapper, tabData) {
@@ -32765,7 +32765,7 @@ Total Duration: ${a - u}ms`);
 		let tbody = table.querySelector("tbody");
 		//! ok
 		gringo("LEAN: get extra data...");
-		let departments = (await getGlobalSettingsCached()).projects;
+		let departments = (await getGlobalSettingsCached()).departments;
 		let tagsMap = await getGlobalTags();
 		let anchorTarget = "";
 		if ((await getOptions()).openPrInNewTab) anchorTarget = `target="_blank"`;
@@ -32960,7 +32960,7 @@ Total Duration: ${a - u}ms`);
 			}
 			await createLeanListTable(divLeanListPanel, prDataList);
 		}
-		let departments = (await getGlobalSettingsCached()).projects;
+		let departments = (await getGlobalSettingsCached()).departments;
 		let tagsMap = await getGlobalTags();
 		gringo("Decorating requests...");
 		let prDataMap = /* @__PURE__ */ new Map();

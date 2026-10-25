@@ -40,8 +40,8 @@ async function saveGlobalsFromGui() {
     let answer = prompt("Zijdezeker? Tik dan GRINGO en klik Ok.");
     if(answer != "GRINGO")
         return;
-    let txtProjects =  document.getElementById("txtProjects") as HTMLTextAreaElement;
-    let projects = txtProjects.value
+    let txtDepartments =  document.getElementById("txtDepartments") as HTMLTextAreaElement;
+    let departments = txtDepartments.value
         .split("\n")
         .map(l => l.trim())
         .filter(l => l != "");
@@ -75,8 +75,8 @@ async function saveGlobalsFromGui() {
         } satisfies TagDef as TagDef;
     });
     let globalSettings: GlobalSettings = {
-        projects,
-        tagDefs
+        tagDefs,
+        departments
     }
 
     await saveGlobalSettings(globalSettings);
@@ -95,11 +95,11 @@ async function restoreOptionsToGui(){
 }
 
 async function fillGlobalOptionsInGui() {
-    let txtProjects =  document.getElementById("txtProjects") as HTMLTextAreaElement;
+    let txtDepartments =  document.getElementById("txtDepartments") as HTMLTextAreaElement;
     let txtGlobalTags =  document.getElementById("txtGlobalTags") as HTMLTextAreaElement;
     setGlobalSetting(await fetchGlobalSettings());
     let globalSettings = await getGlobalSettingsCached();
-    txtProjects.value = globalSettings.projects.join("\n");
+    txtDepartments.value = globalSettings.departments.join("\n");
     txtGlobalTags.value = globalSettings.tagDefs.map(tagDef => {
         if(tagDef.bkgColor != "")
             return `${tagDef.name}, ${tagDef.description}, ${tagDef.color}, ${tagDef.bkgColor}`;

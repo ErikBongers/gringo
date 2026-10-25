@@ -52,7 +52,7 @@ export function distinct<Type>(array: Type[]): Type[] {
 
 export function equals(g1: GlobalSettings, g2: GlobalSettings){
     return (
-        g1.projects == g2.projects
+        g1.departments == g2.departments
     );
 }
 

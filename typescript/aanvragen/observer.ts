@@ -172,7 +172,7 @@ async function decoratePagination() {
         await createLeanListTable(divLeanListPanel, prDataList);
     }
 
-    let departments = (await getGlobalSettingsCached()).projects;
+    let departments = (await getGlobalSettingsCached()).departments;
     let tagsMap = await getGlobalTags();
 
     gringo("Decorating requests...");
