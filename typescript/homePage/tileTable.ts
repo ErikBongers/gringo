@@ -52,11 +52,16 @@ export function createTilesTable(tiles: Tile[]) {
             tbody
     `).last as HTMLDivElement;
     for (let tile of tiles) {
-        let indent = "   ".repeat(tile.id.length);
+        let indent = " ".repeat(tile.id.length-3); //subtract "_01"
+        if(tile.id.length >= 6)
+            indent = " ".repeat(tile.id.length-6);
         let titleClass = tile.leaf ? "" : ".bold";
+        let rowClass = "";
+        if(tile.id.length == 3)
+            rowClass += ".mainTile";
         let gotoButtonText = tile.leaf ? `button.goto.naked.midBlueText.squircle>i.fa.fa-arrow-right` : "span";
         let tr = emmet.indent.appendChild(tBody, `
-            tr#tile${tile.id}[data-tile-unique-name="${tile.uniqueName}"]
+            tr#tile${tile.id}${rowClass}[data-tile-unique-name="${tile.uniqueName}"]
                 td
                     span.pre${titleClass}{${indent + tile.label}}
                     button.naked.star

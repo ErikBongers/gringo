@@ -3,6 +3,7 @@ import requestObservers from "./aanvragen/observer";
 import aanvraagObservers from "./aanvraag/observer";
 import reqFormObserver from "./reqForm/observer";
 import homePageObserver from "./homePage/observer";
+import everyPageObserver from "./everyPage/observer";
 
 init();
 
@@ -31,6 +32,8 @@ function init() {
         registerObserver(aanvraagObservers.viewReqObserver);
         registerObserver(reqFormObserver);
         registerObserver(homePageObserver);
+        //keep this one last as a default
+        registerObserver(everyPageObserver);
 
         onPageChanged();
         if(document.readyState == "complete") {

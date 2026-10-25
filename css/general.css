@@ -249,6 +249,12 @@ request-info-item.hidden {
     margin: 1ch;
 }
 
+.topButton {
+    background-color: var(--dark-blue);
+    border-radius: 1ch;
+    padding-inline: 1ch;
+    padding-block: .5ch;
+}
 .gringo.blueBlock, .gringo .blueBlock {
     background-color: var(--blue-block-blue);
     border-radius: 1ch;
@@ -574,6 +580,21 @@ button.toggle {
 }
 
 #tilesTable {
+    tr {
+        display: block;
+        margin-inline: .5ch;
+    }
+    tr.mainTile {
+        background-color: var(--light-blue);
+        display: block;
+        padding: .5ch;
+        margin-inline: 0;
+        margin-block: .5ch;
+        border-radius: 1ch;
+        &:hover {
+            background-color: var(--almost-light-blue);
+        }
+    }
     tr:hover {
         background-color: var(--table-row-hover-background-color);
     }

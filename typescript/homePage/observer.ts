@@ -5,6 +5,7 @@ import {createTilesTable, filterTiles, getTiles, setFavoriteButton} from "./tile
 import {getInfoBlock, InfoBlock} from "../infoBlock/infoBlock";
 import {createSearchField} from "../utils/searchField";
 import {KEY_TILE_FAVORITE_FILTER, KEY_TILE_TEXT_FILTER} from "../def";
+import {decorateTopBar} from "../everyPage/observer";
 
 class HomePageObserver extends PartialUrlObserver {
     constructor() {
@@ -35,6 +36,7 @@ function onMutation() {
 
 function checkDecorations() {
     checkAndSetDecoration(document.querySelector("#popular"), decorateBody);
+    checkAndSetDecoration(document.querySelector("af-shellbar"), decorateTopBar);
 }
 
 function showTileTable(divContainer: HTMLDivElement, divOrgTiles: HTMLDivElement) {
