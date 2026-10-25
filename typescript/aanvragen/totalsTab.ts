@@ -44,7 +44,7 @@ export async function fillTotalsTab() {
         div.perProjectTab+div.perBudgetTab
     `);
     let tabs = new Tabs(tabsContainer, [
-        { btnId: "btnTabPerProject", tabId: "tabPerProject", btnContent: "Per project"},
+        { btnId: "btnTabPerProject", tabId: "tabPerProject", btnContent: "Per afdeling"},
         { btnId: "btnTabPerBudget", tabId: "tabPerBudget", btnContent: "Per budget"},
     ]);
     emmet.appendChild(tabsContainer, `
@@ -61,7 +61,7 @@ export async function fillTotalsTab() {
 
     let projectItemGroups = await createProjectItemGroups(expenses);
     let tabData: TotalsTabDef = {
-        title: "Per project",
+        title: "Per afdeling",
         groups: projectItemGroups,
         addBelowTabTitle: null,
     };

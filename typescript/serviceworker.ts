@@ -57,10 +57,10 @@ function onMessage(message: ServiceRequest, sender: MessageSender, sendResponse:
                 sendResponse({tabId: _tab.id});
             });
             return true;
-        case Actions.OpenHoursSettings:
+        case Actions.OpenTotalsTab:
             setTabId(TabType.Main, sender.tab!.id!).then(() => {});
             //todo: if already exists: activate?
-            chrome.tabs.create({url: chrome.runtime.getURL(`resources/teacherHoursSetup.html?schoolyear=${message.data.schoolyear}`)}).then(tab => {
+            chrome.tabs.create({url: chrome.runtime.getURL(`resources/totals.html`)}).then(tab => {
                 sendResponse({tabId: tab.id}); //todo: make a Response type.
             });
             return true; //needed because sendResponse is called asynchronously.

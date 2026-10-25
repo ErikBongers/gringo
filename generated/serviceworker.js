@@ -44,9 +44,9 @@
 					sendResponse({ tabId: _tab.id });
 				});
 				return true;
-			case "open_hours_settings":
+			case "open_totals_tab":
 				setTabId("Main", sender.tab.id).then(() => {});
-				chrome.tabs.create({ url: chrome.runtime.getURL(`resources/teacherHoursSetup.html?schoolyear=${message.data.schoolyear}`) }).then((tab) => {
+				chrome.tabs.create({ url: chrome.runtime.getURL(`resources/totals.html`) }).then((tab) => {
 					sendResponse({ tabId: tab.id });
 				});
 				return true;

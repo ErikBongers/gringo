@@ -4,6 +4,7 @@ import {getSuppliers, PrListPrData, PrMeta} from "../../aanvragen/requests";
 import {AribaLandingPageResource} from "../../sap/LandingPage";
 
 import {Tile} from "../../homePage/tileTable";
+import {gringo} from "../../globals";
 
 const DB_VERSION = 15;
 const LOCAL_DB_PREFIX = 'LocalGringoDb';
@@ -76,8 +77,13 @@ export class LocalCache {
                     await upgradeTo13(transaction, (prData: PrListPrData) => true);
                 }
                 if (oldVersion < 14) {
-                    //@ts-ignore
-                    db.deleteObjectStore("PrMetas");
+                    try {
+                        //@ts-ignore
+                        db.deleteObjectStore("PrMetas");
+                    }
+                    catch {
+                        gringo("Could not delete PrMetas");
+                    }
                 }
                 if (oldVersion < 15) {
                     db.createObjectStore("Tiles", {keyPath: "id"});

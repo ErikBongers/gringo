@@ -5,11 +5,8 @@ export enum Actions {
     RequestTabData = "request_tab_data",
     TabData = "tab_data",
     GetParentTabId = "get_parent_tab_id",
-    OpenHoursSettings = "open_hours_settings",
+    OpenTotalsTab = "open_totals_tab",
     OpenDiffSettings = "open_diff_settings",
-    HoursSettingsChanged = "open_hours_settings_changed",
-    DiffSettingsChanged = "diff_settings_changed",
-    GreetingsFromParent = "greetingsFromParent",
     GreetingsFromChild = "greetingsFromChild",
 }
 

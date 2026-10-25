@@ -2,6 +2,7 @@ import {checkAndSetDecoration, PartialUrlObserver} from "../pageObserver";
 import {gringo} from "../globals";
 import {emmet} from "../../libs/Emmeter";
 import {DropDownMenu} from "../utils/dropDownMenus";
+import {Actions, sendRequest, TabType} from "../messaging";
 
 class EveryPageObserver extends PartialUrlObserver {
     constructor() {
@@ -45,8 +46,9 @@ export function decorateTopBar() {
     let button = container.querySelector("button") as HTMLButtonElement;
     button.addEventListener("click", () => {
         let menu = new DropDownMenu(container, button, true, false);
-        menu.addItem("item 1", 0, (ev) => {
+        menu.addItem("Totalen", 0, async (ev) => {
             gringo("item 1 clicked");
+            await sendRequest(Actions.OpenTotalsTab, TabType.Main, TabType.Undefined, undefined, "", "");
         });
         menu.addItem("item 2", 0, (ev) => {
             gringo("item 2 clicked");

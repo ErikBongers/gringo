@@ -605,6 +605,19 @@
 		});
 	}
 	//#endregion
+	//#region typescript/messaging.ts
+	function sendRequest(action, from, to, toId, data, pageTitle) {
+		let req = {
+			action,
+			data,
+			pageTitle,
+			senderTabType: from,
+			targetTabType: to,
+			targetTabId: toId
+		};
+		return chrome.runtime.sendMessage(req);
+	}
+	//#endregion
 	//#region typescript/sap/SapUserInfo.ts
 	async function getUserInfo() {
 		return fetch("https://s1-eu.ariba.com/gb/usercontext?gbst=null&realm=null&isoauth=false").then((res) => res.json());
@@ -33332,8 +33345,9 @@ Total Duration: ${a - u}ms`);
 		let button = container.querySelector("button");
 		button.addEventListener("click", () => {
 			let menu = new DropDownMenu(container, button, true, false);
-			menu.addItem("item 1", 0, (ev) => {
+			menu.addItem("Totalen", 0, async (ev) => {
 				gringo("item 1 clicked");
+				await sendRequest("open_totals_tab", "Main", "Undefined", void 0, "", "");
 			});
 			menu.addItem("item 2", 0, (ev) => {
 				gringo("item 2 clicked");

@@ -359,6 +359,7 @@ function decoratePrWithMeta(request: RequestBasicInfo, meta: PrMeta, departments
 
 export function hideFloatingHelp() {
     let helpPopup = document.querySelector("div.helplinkContainer") as HTMLElement;
+    if(helpPopup)
     helpPopup.style.display = "none";
 }
 
